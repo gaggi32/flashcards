@@ -1,0 +1,7 @@
+/* The website's stylesheets, then the desktop app's own additions. */
+@import './globals.css';
+@import './retro.css';
+@import './retro-ui.css';
+@import './retro-extra.css';
+@import './flashcards.css';
+@import './app.css';

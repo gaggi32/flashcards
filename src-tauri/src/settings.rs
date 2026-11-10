@@ -1,0 +1,183 @@
+//! Preferences, as one JSON file in the per-user app config directory.
+//!
+//! Every field has a default, so a file written by an older build still loads
+//! once new fields appear. Values coming back from the UI are clamped in
+//! [`Settings::sanitized`] before they are stored or acted on.
+
+use std::path::PathBuf;
+
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Manager};
+
+const FILE: &str = "settings.json";
+
+/// ⌘⌥F on macOS, Ctrl+Alt+F elsewhere. Ctrl+Shift+F would steal "search in
+/// files" from every editor, and Dash and Lingo already own Ctrl+Shift+Space/L.
+pub const DEFAULT_HOTKEY: &str = "CommandOrControl+Alt+F";
+pub const DEFAULT_MODEL: &str = "google/gemini-3.8-flash";
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Settings {
+    // --- overlay ---
+    pub hotkey: String,
+    /// Cards per overlay round.
+    pub overlay_round: u32,
+    /// New (never studied) cards mixed into a round once due cards run out.
+    pub overlay_new_cards: u32,
+    /// "term" | "definition" | "mixed": which side the overlay shows first.
+    pub overlay_front: String,
+    pub overlay_hide_on_blur: bool,
+    pub overlay_topmost_watch: bool,
+    // --- study ---
+    pub daily_goal: u32,
+    // --- reminders ---
+    pub reminders: bool,
+    /// "HH:MM", local time.
+    pub reminder_time: String,
+    // --- look ---
+    /// "system" | "light" | "dark"
+    pub theme: String,
+    pub eye_comfort: bool,
+    // --- data ---
+    pub auto_backup: bool,
+    pub backups_kept: u32,
+    // --- AI ---
+    pub ai_model: String,
+    // --- system ---
+    pub check_updates: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            hotkey: DEFAULT_HOTKEY.into(),
+            overlay_round: 10,
+            overlay_new_cards: 5,
+            overlay_front: "term".into(),
+            overlay_hide_on_blur: true,
+            overlay_topmost_watch: false,
+            daily_goal: 20,
+            reminders: false,
+            reminder_time: "18:00".into(),
+            theme: "system".into(),
+            eye_comfort: false,
+            auto_backup: true,
+            backups_kept: 14,
+            ai_model: DEFAULT_MODEL.into(),
+            check_updates: true,
+        }
+    }
+}
+
+fn one_of(value: &str, allowed: &[&str], fallback: &str) -> String {
+    if allowed.contains(&value) { value.into() } else { fallback.into() }
+}
+
+fn valid_time(t: &str) -> bool {
+    let b = t.as_bytes();
+    b.len() == 5
+        && b[2] == b':'
+        && t[..2].parse::<u8>().map_or(false, |h| h < 24)
+        && t[3..].parse::<u8>().map_or(false, |m| m < 60)
+}
+
+/// OpenRouter model slugs: "vendor/model", optionally with ":variant".
+pub fn valid_model(m: &str) -> bool {
+    !m.is_empty()
+        && m.len() <= 100
+        && m.contains('/')
+        && m.chars().all(|c| c.is_ascii_alphanumeric() || "-._/:".contains(c))
+}
+
+impl Settings {
+    pub fn sanitized(mut self) -> Self {
+        let d = Settings::default();
+        self.hotkey = self.hotkey.trim().chars().take(64).collect();
+        if self.hotkey.is_empty() {
+            self.hotkey = d.hotkey;
+        }
+        self.overlay_round = self.overlay_round.clamp(1, 50);
+        self.overlay_new_cards = self.overlay_new_cards.min(50);
+        self.overlay_front = one_of(&self.overlay_front, &["term", "definition", "mixed"], "term");
+        self.daily_goal = self.daily_goal.clamp(1, 1000);
+        if !valid_time(&self.reminder_time) {
+            self.reminder_time = d.reminder_time;
+        }
+        self.theme = one_of(&self.theme, &["system", "light", "dark"], "system");
+        self.backups_kept = self.backups_kept.clamp(1, 90);
+        self.ai_model = self.ai_model.trim().to_string();
+        if !valid_model(&self.ai_model) {
+            self.ai_model = d.ai_model;
+        }
+        self
+    }
+}
+
+fn path(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_config_dir()
+        .map(|d| d.join(FILE))
+        .map_err(|e| e.to_string())
+}
+
+pub fn load(app: &AppHandle) -> Settings {
+    path(app)
+        .ok()
+        .and_then(|p| std::fs::read_to_string(p).ok())
+        .and_then(|raw| serde_json::from_str::<Settings>(&raw).ok())
+        .unwrap_or_default()
+        .sanitized()
+}
+
+pub fn store(app: &AppHandle, settings: &Settings) -> Result<(), String> {
+    let p = path(app)?;
+    if let Some(dir) = p.parent() {
+        std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    }
+    let json = serde_json::to_string_pretty(settings).map_err(|e| e.to_string())?;
+    // Write-then-rename, so a crash mid-write never leaves half a file.
+    let tmp = p.with_extension("json.tmp");
+    std::fs::write(&tmp, json).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, &p).map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn out_of_range_values_are_pulled_back() {
+        let s = Settings {
+            overlay_round: 0,
+            overlay_front: "upside-down".into(),
+            reminder_time: "25:99".into(),
+            theme: "neon".into(),
+            ai_model: "rm -rf /".into(),
+            hotkey: "   ".into(),
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(s.overlay_round, 1);
+        assert_eq!(s.overlay_front, "term");
+        assert_eq!(s.reminder_time, "18:00");
+        assert_eq!(s.theme, "system");
+        assert_eq!(s.ai_model, DEFAULT_MODEL);
+        assert_eq!(s.hotkey, DEFAULT_HOTKEY);
+    }
+
+    #[test]
+    fn an_old_file_with_missing_fields_still_loads() {
+        let s: Settings = serde_json::from_str(r#"{"hotkey":"Alt+K"}"#).unwrap();
+        assert_eq!(s.hotkey, "Alt+K");
+        assert_eq!(s.daily_goal, 20);
+    }
+
+    #[test]
+    fn model_slugs() {
+        assert!(valid_model("google/gemini-3.8-flash"));
+        assert!(valid_model("meta-llama/llama-3.1-8b-instruct:free"));
+        assert!(!valid_model("gpt"));
+        assert!(!valid_model("a/b c"));
+    }
+}

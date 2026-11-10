@@ -1,0 +1,348 @@
+/* ---------------------------------------------------------------------------
+   Retro theme, part three — motion, and the layout pieces that break long
+   pages up: card grids, pixel art frames, keycap grids.
+   Motion here is deliberately *stepped* rather than eased: discrete frames
+   read as period-correct, smooth cubic-beziers read as modern.
+   --------------------------------------------------------------------------- */
+
+/* ===========================  MOTION  ==================================== */
+
+@keyframes rt-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Children of a .rt-boot container step in one after another on load. */
+.rt-boot > * {
+  animation: rt-in 0.3s steps(4) both;
+}
+.rt-boot > *:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.rt-boot > *:nth-child(2) {
+  animation-delay: 0.09s;
+}
+.rt-boot > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+.rt-boot > *:nth-child(4) {
+  animation-delay: 0.23s;
+}
+.rt-boot > *:nth-child(5) {
+  animation-delay: 0.3s;
+}
+.rt-boot > *:nth-child(6) {
+  animation-delay: 0.37s;
+}
+.rt-boot > *:nth-child(7) {
+  animation-delay: 0.44s;
+}
+.rt-boot > *:nth-child(8) {
+  animation-delay: 0.51s;
+}
+.rt-boot > *:nth-child(n + 9) {
+  animation-delay: 0.58s;
+}
+
+/* Title bars: stripes march while the window is hovered. */
+@keyframes rt-stripes {
+  to {
+    background-position: 0 6px;
+  }
+}
+.rt-win__bar {
+  background-position: 0 0;
+}
+.rt-win:hover .rt-win__bar {
+  animation: rt-stripes 0.5s steps(3) infinite;
+}
+
+/* Windows and panels lift on hover — snapped to whole pixels, no easing. */
+.rt-win,
+.rt-row,
+.rt-card {
+  transition: transform 0.08s steps(2), box-shadow 0.08s steps(2);
+}
+.rt-win:hover,
+.rt-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 7px 7px 0 var(--rt-shadow);
+}
+
+/* Pixel icons twitch one pixel on hover — a two-frame sprite. */
+@keyframes rt-twitch {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(0, -2px);
+  }
+}
+.rt-win:hover .rt-proj__icon svg,
+.rt-card:hover .rt-card__icon svg {
+  animation: rt-twitch 0.36s steps(1) infinite;
+}
+
+/* Blinking status light, for "available" style chips. */
+@keyframes rt-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+.rt-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  background: currentColor;
+  vertical-align: baseline;
+  animation: rt-pulse 1.4s steps(1) infinite;
+}
+
+/* Marching dots along section labels. */
+@keyframes rt-march {
+  to {
+    background-position: 8px 0;
+  }
+}
+.rt-label::after {
+  border-top: none;
+  height: 2px;
+  background-image: repeating-linear-gradient(
+    to right,
+    rgba(var(--rt-ink-rgb), 0.4) 0 2px,
+    transparent 2px 4px
+  );
+  animation: rt-march 1.6s linear infinite;
+}
+
+/* Numbered step markers flick to gold as you pass them. */
+.rt-steps > li:hover::before {
+  background: var(--rt-rust);
+  color: var(--rt-hl);
+}
+
+/* The caret in the pixel art overlay. */
+@keyframes rt-caret {
+  50% {
+    opacity: 0;
+  }
+}
+.rt-art__caret {
+  animation: rt-caret 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-boot > *,
+  .rt-win:hover .rt-win__bar,
+  .rt-win:hover .rt-proj__icon svg,
+  .rt-card:hover .rt-card__icon svg,
+  .rt-label::after,
+  .rt-dot,
+  .rt-art__caret {
+    animation: none;
+  }
+  .rt-win,
+  .rt-row,
+  .rt-card {
+    transition: none;
+  }
+}
+
+/* ===========================  LAYOUT  =================================== */
+
+/* Card grid — replaces long bulleted prose lists. */
+.rt-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(215px, 1fr));
+  gap: 14px;
+  margin-top: 6px;
+}
+.rt-card {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 5px 5px 0 var(--rt-shadow);
+  padding: 14px;
+}
+.rt-card__icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-hl);
+  margin-bottom: 10px;
+}
+.rt-card__icon svg {
+  display: block;
+  shape-rendering: crispEdges;
+}
+.rt-card h3 {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+.rt-card p {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--rt-ink-soft);
+}
+
+/* Pixel-art figure frame. */
+.rt-art {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-hl);
+  box-shadow: 5px 5px 0 var(--rt-shadow);
+  padding: 14px;
+  margin-top: 6px;
+}
+.rt-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  shape-rendering: crispEdges;
+}
+.rt-art figcaption {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 2px dotted rgba(var(--rt-ink-rgb), 0.3);
+  font-size: 11.5px;
+  color: var(--rt-ink-faint);
+}
+
+/* Two-up: art beside text. */
+.rt-split {
+  display: grid;
+  gap: 18px;
+  align-items: start;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 720px) {
+  .rt-split {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Shortcut grid — keycaps in columns instead of a long table. */
+.rt-keygrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 22px;
+  margin-top: 8px;
+}
+.rt-keygrid > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dotted rgba(var(--rt-ink-rgb), 0.3);
+  font-size: 12.5px;
+}
+.rt-keygrid > div:hover {
+  background: var(--rt-hl);
+}
+
+/* Step content sitting in its own panel. */
+.rt-steps--boxed > li > div {
+  flex: 1;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 4px 4px 0 var(--rt-shadow);
+  padding: 12px 14px;
+}
+
+/* Notes normally hold a single run of text. When one carries more than a
+   paragraph, Tailwind's preflight has already zeroed the margins, so space them
+   here rather than letting the lines run together. */
+.rt-note p + p {
+  margin-top: 8px;
+}
+
+/* The uninstall binding sits in the same list as the harmless ones, so it is
+   marked rather than left to look like another toggle. */
+.rt-keygrid > div.is-danger {
+  color: var(--rt-rust);
+}
+.rt-danger-tag {
+  margin-left: 8px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid var(--rt-rust);
+  padding: 0 4px;
+}
+
+/* ===========================  PAGE LOADING  ============================== */
+/* app/loading.tsx: a stepped progress bar under the header while the next
+   page renders. It only appears if the wait is long enough to notice. */
+@keyframes rt-pageload {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+@keyframes rt-pageload-in {
+  from {
+    opacity: 0;
+  }
+}
+.rt-pageload {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  animation: rt-pageload-in 0.01s 0.15s both;
+}
+.rt-pageload__bar {
+  display: block;
+  height: 8px;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  overflow: hidden;
+  position: relative;
+}
+.rt-pageload__bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--rt-rust);
+  animation: rt-pageload 1s steps(8) infinite;
+}
+
+/* ---------- signed in elsewhere (components/SessionNotice.tsx) ---------- */
+.rt-elsewhere {
+  position: fixed;
+  z-index: 50;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  margin: 0 auto;
+  max-width: 560px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--rt-ink);
+  font-family: var(--font-mono), monospace;
+  line-height: 1.5;
+}
+.rt-elsewhere__text {
+  flex: 1;
+  min-width: 0;
+}
+.rt-elsewhere a {
+  color: inherit;
+  text-decoration: underline;
+}

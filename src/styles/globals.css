@@ -1,0 +1,71 @@
+
+/* The site runs on one palette in two settings — the retro paper light theme
+   and its night counterpart. Both are defined as tokens in retro.css, which
+   also owns `color-scheme`. This file only dresses the ground the pages sit on
+   and the chrome around them. */
+
+html,
+body {
+  background: var(--rt-paper);
+  color: var(--rt-ink);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-mono), ui-monospace, Menlo, Consolas, monospace;
+}
+
+::selection {
+  background: var(--rt-gold);
+  color: var(--rt-on-gold);
+}
+
+/* Scrollbar — squared off, to match the borders */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--rt-scroll-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--rt-scroll-thumb);
+  border: 2px solid var(--rt-ink);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rt-gold);
+}
+
+/* Every tap is a tap: no wait to see whether a double-tap zoom follows, and
+   two quick presses on "next" are two presses. Pinch zoom still works. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* Nothing on the site is wider than a phone on purpose; a stray long word or
+   URL wraps instead of dragging the whole page sideways. */
+body {
+  overflow-wrap: break-word;
+}
+
+:focus-visible {
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

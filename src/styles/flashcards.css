@@ -1,0 +1,2414 @@
+/* ---------------------------------------------------------------------------
+   Flashcards (/flashcards) — the study app.
+
+   Like the food log, this installs as a PWA and does not wear the retro paper.
+   Studying is reading and recalling, so the page is drawn to stay out of the
+   way: warm off-white ground, ink text, IBM Plex Sans, hairline rules and soft
+   corners, and nothing on screen that moves unless you moved it.
+
+   Colour is kept for things that mean something:
+     --fc-accent  ink blue — the main action, progress, what is selected
+     --rt-teal    got it right
+     --rt-rust    missed it, removing things
+   The accent is deliberately not the green: "do this next" and "that was
+   correct" sit side by side on every question and must not look alike.
+
+   It still runs on the site's token names (`--rt-*`), redefined below while a
+   flashcards page is on screen, so the theme toggle and the shared `rt-*`
+   classes these screens are built from keep working. Those classes are
+   restyled here rather than replaced; the selectors carry `.rt-page.fc-page`
+   so they outrank retro-ui.css (including its `.rt-page a.rt-btn` rules)
+   whatever order the stylesheets land in.
+   --------------------------------------------------------------------------- */
+
+:root:has(.fc-page) {
+  --rt-paper: #f6f4ef;
+  --rt-panel: #fffefb;
+  --rt-panel-2: #f0ede6;
+  --rt-ink: #1c1a17;
+  --rt-ink-rgb: 28, 26, 23;
+  --rt-ink-soft: #5d5850;
+  --rt-ink-faint: #8a8378;
+  --rt-rust: #b5482b;
+  --rt-teal: #4f7458;
+  --rt-gold: #b4872e;
+  --rt-hl: #fffefb;
+  --rt-on-gold: #1c1a17;
+  --rt-shadow: rgba(28, 26, 23, 0.08);
+  --rt-shadow-soft: rgba(28, 26, 23, 0.05);
+  --rt-inset: rgba(28, 26, 23, 0.04);
+  --rt-stripe: transparent;
+  --rt-note-ok-bg: #ebf0e8;
+  --rt-note-warn-bg: #f6efdf;
+  --rt-note-warn-line: #c9a35a;
+  --rt-note-warn-ink: #7a5813;
+  --rt-note-err-bg: #f7e9e3;
+  --rt-scroll-track: #f6f4ef;
+  --rt-scroll-thumb: #d6d1c7;
+
+  --fc-font: var(--font-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fc-mono: var(--font-mono), ui-monospace, Menlo, Consolas, monospace;
+  --fc-accent: #44618a;
+  --fc-accent-soft: #e6ebf2;
+  --fc-line: rgba(var(--rt-ink-rgb), 0.09);
+  --fc-line-strong: rgba(var(--rt-ink-rgb), 0.17);
+  --fc-track: rgba(var(--rt-ink-rgb), 0.08);
+  --fc-radius: 14px;
+  --fc-radius-sm: 10px;
+}
+
+:root[data-theme='dark']:has(.fc-page) {
+  --rt-paper: #131210;
+  --rt-panel: #1b1a17;
+  --rt-panel-2: #25231f;
+  --rt-ink: #ece7dd;
+  --rt-ink-rgb: 236, 231, 221;
+  --rt-ink-soft: #aba498;
+  --rt-ink-faint: #827c73;
+  --rt-rust: #e07b59;
+  --rt-teal: #8fb594;
+  --rt-gold: #d6a64c;
+  --rt-hl: #131210;
+  --rt-on-gold: #131210;
+  --rt-shadow: rgba(0, 0, 0, 0.35);
+  --rt-shadow-soft: rgba(0, 0, 0, 0.2);
+  --rt-inset: rgba(0, 0, 0, 0.25);
+  --rt-note-ok-bg: #1b2419;
+  --rt-note-warn-bg: #272114;
+  --rt-note-warn-line: #a8843d;
+  --rt-note-warn-ink: #e2bd70;
+  --rt-note-err-bg: #2b1a14;
+  --rt-scroll-track: #131210;
+  --rt-scroll-thumb: #34312b;
+
+  --fc-accent: #93b0d6;
+  --fc-accent-soft: #1f2733;
+}
+
+:root[data-theme='light'][data-eye='on']:has(.fc-page) {
+  /* Eye comfort (see retro.css): warm paper, brown ink, and a bronze accent
+     instead of the ink blue, which keeps the main action apart from the
+     olive "correct" without adding blue light. */
+  color-scheme: light;
+  --rt-paper: #f2e8d3;
+  --rt-panel: #f7eedb;
+  --rt-panel-2: #ece1c9;
+  --rt-ink: #3d352b;
+  --rt-ink-rgb: 61, 53, 43;
+  --rt-ink-soft: #605446;
+  --rt-ink-faint: #7a6d5c;
+  --rt-rust: #9e5034;
+  --rt-teal: #4a6a50;
+  --rt-gold: #a07a32;
+  --rt-hl: #f7eedb;
+  --rt-on-gold: #2f281f;
+  --rt-shadow: rgba(61, 53, 43, 0.08);
+  --rt-shadow-soft: rgba(61, 53, 43, 0.05);
+  --rt-inset: rgba(61, 53, 43, 0.04);
+  --rt-stripe: transparent;
+  --rt-note-ok-bg: #e4e7d4;
+  --rt-note-warn-bg: #efe2c3;
+  --rt-note-warn-line: #a8843d;
+  --rt-note-warn-ink: #6e5420;
+  --rt-note-err-bg: #f0dccd;
+  --rt-scroll-track: #f2e8d3;
+  --rt-scroll-thumb: #cdbfa5;
+
+  --fc-accent: #7f5a2c;
+  --fc-accent-soft: #eadbbd;
+}
+
+:root[data-theme='dark'][data-eye='on']:has(.fc-page) {
+  /* Eye comfort, night (see retro.css). */
+  color-scheme: dark;
+  --rt-paper: #17140f;
+  --rt-panel: #1f1b16;
+  --rt-panel-2: #28231c;
+  --rt-ink: #dccfb8;
+  --rt-ink-rgb: 220, 207, 184;
+  --rt-ink-soft: #a99c87;
+  --rt-ink-faint: #857a69;
+  --rt-rust: #d68a63;
+  --rt-teal: #9cb48e;
+  --rt-gold: #cfa555;
+  --rt-hl: #17140f;
+  --rt-on-gold: #17140f;
+  --rt-shadow: rgba(0, 0, 0, 0.35);
+  --rt-shadow-soft: rgba(0, 0, 0, 0.2);
+  --rt-inset: rgba(0, 0, 0, 0.25);
+  --rt-stripe: transparent;
+  --rt-note-ok-bg: #1d2319;
+  --rt-note-warn-bg: #282012;
+  --rt-note-warn-line: #a8843d;
+  --rt-note-warn-ink: #d9b469;
+  --rt-note-err-bg: #2a1b14;
+  --rt-scroll-track: #17140f;
+  --rt-scroll-thumb: #3a332a;
+
+  --fc-accent: #cf9d5c;
+  --fc-accent-soft: #2d2519;
+}
+
+/* ---------- app frame ---------- */
+/* The layout sets viewport-fit=cover, so on an iPhone the page paints under
+   the notch and the home indicator; these insets pay that space back. */
+.rt-page.fc-page {
+  padding: 0 0 calc(56px + env(safe-area-inset-bottom));
+  background-image: none;
+  font-family: var(--fc-font);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  /* A card dragged or thrown off the side must not widen the page and let
+     it scroll sideways. clip, not hidden: no new scroll container. */
+  overflow-x: clip;
+}
+.fc-app {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0
+    max(16px, env(safe-area-inset-left));
+}
+.fc-page ::selection {
+  background: var(--fc-accent-soft);
+  color: var(--rt-ink);
+}
+.fc-page svg {
+  display: block;
+  flex: none;
+}
+.fc-page :focus-visible {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 2px;
+}
+
+/* Links inside running text. Anything with a class of its own — buttons,
+   tabs, the mode cards — is a component and styled below. */
+.rt-page.fc-page a:not([class]) {
+  color: var(--rt-ink);
+  border-bottom: none;
+  text-decoration: underline;
+  text-decoration-color: var(--fc-line-strong);
+  text-underline-offset: 3px;
+}
+.rt-page.fc-page a:not([class]):hover {
+  background: none;
+  color: var(--rt-ink);
+  text-decoration-color: currentColor;
+}
+
+/* The app's name, small: every screen below brings its own heading. */
+.fc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  margin-bottom: 14px;
+}
+.fc-bar__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
+  white-space: nowrap;
+}
+.fc-bar__title svg {
+  color: var(--fc-accent);
+}
+.fc-bar__spacer {
+  flex: 1;
+}
+/* The site-wide theme switch, reduced to a plain icon button. */
+.fc-bar .rt-theme {
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--rt-ink-soft);
+  box-shadow: none;
+  padding: 8px;
+}
+.fc-bar .rt-theme:hover,
+.fc-bar .rt-theme:active {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+  transform: none;
+  box-shadow: none;
+}
+
+/* ---------- shared pieces, restyled ---------- */
+/* The retro sheet steps its sections in on load; here they are simply there. */
+.fc-page .rt-boot > * {
+  animation: none;
+}
+
+.rt-page.fc-page .rt-backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: -6px;
+  padding: 4px 8px 4px 2px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--rt-ink-soft);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.rt-page.fc-page .rt-backlink:hover {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+}
+
+.fc-page .rt-pagehead {
+  margin: 10px 0 6px;
+}
+.fc-page .rt-pagehead h1 {
+  font-family: inherit;
+  font-size: clamp(22px, 5vw, 27px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+/* Only the app's own headings: a set's title is the user's text and is shown
+   as they typed it. */
+.fc-pagehead h1::first-letter {
+  text-transform: uppercase;
+}
+.fc-pagehead {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.fc-page .rt-metarow {
+  gap: 4px 14px;
+  padding-bottom: 0;
+  border-bottom: none;
+  font-size: 13.5px;
+  letter-spacing: 0;
+  color: var(--rt-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fc-gap-sm {
+  gap: 8px;
+}
+.fc-desc {
+  margin-top: 14px;
+  max-width: 62ch;
+  color: var(--rt-ink-soft);
+  white-space: pre-wrap;
+}
+
+.fc-page .rt-section {
+  margin-top: 30px;
+}
+.fc-page .rt-label {
+  display: block;
+  margin-bottom: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
+}
+.fc-page .rt-label::first-letter {
+  text-transform: uppercase;
+}
+.fc-page .rt-label::after {
+  content: none;
+}
+
+/* buttons */
+/* A block rather than a flex box when there is only text in it, so
+   ::first-letter can capitalise the label; one that carries an icon lays out
+   as a row and has its label written capitalised. */
+.rt-page.fc-page .rt-btn {
+  display: inline-block;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  box-shadow: none;
+  padding: 9px 16px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-decoration: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    opacity 0.15s ease;
+}
+.rt-page.fc-page .rt-btn:has(> svg),
+.rt-page.fc-page .rt-btn:has(> .fc-spinner) {
+  display: inline-flex;
+  gap: 6px;
+}
+.rt-page.fc-page .rt-btn::first-letter {
+  text-transform: uppercase;
+}
+.rt-page.fc-page .rt-btn:hover:not(:disabled) {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+  transform: none;
+  box-shadow: none;
+}
+.rt-page.fc-page .rt-btn:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+  opacity: 0.8;
+}
+.rt-page.fc-page .rt-btn:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+.rt-page.fc-page .rt-btn--primary {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent);
+  color: var(--rt-hl);
+}
+.rt-page.fc-page .rt-btn--primary:hover:not(:disabled) {
+  background: var(--fc-accent);
+  color: var(--rt-hl);
+  opacity: 0.88;
+}
+.rt-page.fc-page .rt-btn--danger {
+  color: var(--rt-rust);
+}
+.rt-page.fc-page .rt-btn--danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--rt-rust) 40%, transparent);
+  background: var(--rt-note-err-bg);
+  color: var(--rt-rust);
+}
+.rt-page.fc-page .rt-btn--sm {
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13.5px;
+}
+.fc-page .rt-btnrow {
+  gap: 10px;
+}
+
+.fc-page .rt-linkbtn {
+  border-radius: 4px;
+  color: var(--rt-ink-soft);
+  font-size: 13.5px;
+  text-decoration-color: var(--fc-line-strong);
+  text-underline-offset: 3px;
+}
+.fc-page .rt-linkbtn::first-letter {
+  text-transform: uppercase;
+}
+.fc-page .rt-linkbtn:hover:not(:disabled) {
+  background: none;
+  color: var(--rt-ink);
+  text-decoration-color: currentColor;
+}
+.fc-page .rt-linkbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* forms */
+.fc-page .rt-field__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rt-ink-soft);
+}
+.fc-page .rt-field__label::first-letter {
+  text-transform: uppercase;
+}
+.fc-page .rt-field__label .rt-small {
+  margin-left: 6px;
+  font-weight: 400;
+}
+.fc-page .rt-input {
+  border: 1px solid var(--fc-line-strong);
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel);
+  box-shadow: none;
+  font-size: 15px;
+  padding: 9px 12px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.fc-page .rt-input:focus {
+  outline: none;
+  border-color: var(--fc-accent);
+  box-shadow: 0 0 0 3px var(--fc-accent-soft);
+}
+.fc-page .rt-input:disabled {
+  opacity: 0.6;
+}
+
+/* notices */
+.fc-page .rt-note {
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius-sm);
+  box-shadow: none;
+  padding: 11px 14px;
+  font-size: 13.5px;
+}
+.fc-page .rt-note__title {
+  margin-bottom: 3px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.fc-page .rt-note--ok {
+  border-color: color-mix(in srgb, var(--rt-teal) 30%, transparent);
+}
+.fc-page .rt-note--warn {
+  border-color: color-mix(in srgb, var(--rt-note-warn-line) 40%, transparent);
+}
+.fc-page .rt-note--err {
+  border-color: color-mix(in srgb, var(--rt-rust) 30%, transparent);
+}
+.fc-page .rt-empty {
+  border: 1px dashed var(--fc-line-strong);
+  border-radius: 12px;
+  padding: 26px 20px;
+  font-size: 14px;
+}
+
+/* small things */
+.fc-page .rt-small {
+  font-size: 12.5px;
+}
+.fc-page .rt-mono {
+  border: none;
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--fc-mono);
+  font-size: 12px;
+}
+.fc-page .rt-chip {
+  border: none;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--rt-ink-soft);
+}
+.fc-page .rt-kbd {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border: 1px solid var(--fc-line-strong);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  box-shadow: none;
+  padding: 0 5px;
+  font-family: var(--fc-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  vertical-align: middle;
+  color: var(--rt-ink-soft);
+}
+.fc-page .rt-spec {
+  border-top: 1px solid var(--fc-line);
+  padding-top: 8px;
+  font-size: 13.5px;
+}
+.fc-page .rt-table {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.fc-page .rt-table th,
+.fc-page .rt-table td {
+  border-bottom: 1px solid var(--fc-line);
+}
+.fc-page .rt-table tr:last-child th,
+.fc-page .rt-table tr:last-child td {
+  border-bottom: none;
+}
+.fc-page .rt-table th::first-letter {
+  text-transform: uppercase;
+}
+
+/* ---------- loading ---------- */
+@keyframes fc-skel {
+  50% {
+    opacity: 0.5;
+  }
+}
+.fc-skel {
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-track);
+  animation: fc-skel 1.4s ease-in-out infinite;
+}
+.fc-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+/* ---------- panels ---------- */
+.fc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  box-shadow: 0 1px 2px var(--rt-shadow-soft);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.fc-panel__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fc-panel__title {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.fc-panel__title::first-letter {
+  text-transform: uppercase;
+}
+.fc-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+/* ---------- dashboard rows ---------- */
+.fc-page .rt-rows {
+  gap: 10px;
+}
+.fc-page .rt-row {
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  box-shadow: 0 1px 2px var(--rt-shadow-soft);
+  padding: 14px 16px;
+  transition: border-color 0.15s ease;
+}
+.fc-page .rt-row:hover {
+  border-color: var(--fc-line-strong);
+}
+.fc-page .rt-row__sub {
+  margin-top: 1px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.fc-page .rt-row__actions {
+  align-items: center;
+}
+.fc-row__main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.rt-page.fc-page .fc-row__title {
+  border: none;
+  background: none;
+  color: var(--rt-ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.rt-page.fc-page .fc-row__title:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--fc-line-strong);
+  text-underline-offset: 3px;
+}
+.fc-row__desc {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--rt-ink-soft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---------- set page: mode picker ---------- */
+.fc-modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.rt-page.fc-page .fc-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  box-shadow: 0 1px 2px var(--rt-shadow-soft);
+  padding: 16px;
+  color: var(--rt-ink);
+  transition: border-color 0.15s ease;
+}
+.rt-page.fc-page .fc-mode:hover {
+  border-color: var(--fc-accent);
+}
+.fc-mode__icon {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+}
+.fc-mode__name {
+  font-size: 15.5px;
+  font-weight: 600;
+}
+.fc-mode__name::first-letter {
+  text-transform: uppercase;
+}
+.fc-mode__sub {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--rt-ink-soft);
+}
+
+/* ---------- term list ---------- */
+.fc-terms {
+  list-style: none;
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  overflow: hidden;
+}
+.fc-term {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 16px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--fc-line);
+  font-size: 14.5px;
+  line-height: 1.5;
+}
+.fc-term:last-child {
+  border-bottom: none;
+}
+.fc-term__term,
+.fc-term__def {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fc-term__term {
+  font-weight: 500;
+}
+.fc-term__def {
+  color: var(--rt-ink-soft);
+}
+.fc-terms--compact {
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel-2);
+}
+.fc-terms--compact .fc-term {
+  padding: 6px 12px;
+  font-size: 13.5px;
+}
+
+/* ---------- study header ---------- */
+.fc-studyhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin: 10px 0 22px;
+}
+.fc-studyhead__title {
+  font-size: clamp(19px, 4.4vw, 23px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+/* A segmented control: the track is the group, the raised piece is where you are. */
+.fc-tabs {
+  display: flex;
+  gap: 2px;
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel-2);
+  padding: 3px;
+}
+.rt-page.fc-page .fc-tab {
+  display: block;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--rt-ink-soft);
+  padding: 5px 13px;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+/* The sets screen's tabs carry an icon: a row, like an icon button. */
+.rt-page.fc-page .fc-tab:has(> svg) {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.rt-page.fc-page .fc-tab::first-letter {
+  text-transform: uppercase;
+}
+.rt-page.fc-page .fc-tab:hover {
+  color: var(--rt-ink);
+}
+.rt-page.fc-page .fc-tab.is-active {
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  box-shadow: 0 1px 2px var(--rt-shadow);
+}
+
+/* ---------- progress ---------- */
+.fc-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.fc-progress__count {
+  flex: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rt-ink-soft);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fc-meter {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--fc-track);
+  overflow: hidden;
+}
+.fc-meter__fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--fc-accent);
+  transition: width 0.3s ease;
+}
+
+/* ---------- flip card ---------- */
+.fc-flip {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  perspective: 1600px;
+  -webkit-tap-highlight-color: transparent;
+  /* Vertical drags still scroll the page; horizontal ones are left to the
+     deck, which reads them as a swipe: right for "knew it", left for "didn't
+     know". It also drops double-tap-to-zoom, so two quick flips stay two
+     flips. Pinch zoom is unaffected. */
+  touch-action: pan-y pinch-zoom;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  will-change: transform;
+}
+
+/* The stamp that fades in while the card is dragged toward a pile. Its
+   strength (0–1) is written to --swipe-ok / --swipe-miss by the deck. */
+.fc-swipehint {
+  position: absolute;
+  top: 16px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 2px solid currentColor;
+  border-radius: 10px;
+  background: var(--rt-panel);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateZ(1px);
+}
+.fc-swipehint--ok {
+  left: 16px;
+  color: var(--rt-teal);
+  opacity: var(--swipe-ok, 0);
+  rotate: -8deg;
+}
+.fc-swipehint--miss {
+  right: 16px;
+  color: var(--rt-rust);
+  opacity: var(--swipe-miss, 0);
+  rotate: 8deg;
+}
+.fc-flip__inner {
+  position: relative;
+  display: grid;
+  min-height: clamp(230px, 44vh, 400px);
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.fc-flip.is-flipped .fc-flip__inner {
+  transform: rotateY(180deg);
+}
+/* Both faces share one grid cell, so the card is as tall as its longer side
+   and flipping never changes the page height under the controls. */
+.fc-flip__face {
+  grid-area: 1 / 1;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 44px 28px 36px;
+  border: 1px solid var(--fc-line);
+  border-radius: 18px;
+  background: var(--rt-panel);
+  box-shadow:
+    0 1px 2px var(--rt-shadow-soft),
+    0 10px 28px var(--rt-shadow-soft);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+.fc-flip__face--back {
+  transform: rotateY(180deg);
+}
+/* Which side is up: the one thing on the card that is not the user's text. */
+.fc-flip__side {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--rt-ink-faint);
+}
+.fc-flip__face--back .fc-flip__side {
+  color: var(--fc-accent);
+}
+.fc-flip__text {
+  display: block;
+  max-width: 46ch;
+  font-size: clamp(20px, 3.6vw, 28px);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fc-flip__text--sm {
+  font-size: clamp(16px, 2.4vw, 20px);
+  letter-spacing: 0;
+}
+.fc-flip__text--xs {
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.fc-controls {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+.rt-page.fc-page .fc-controls .rt-btn,
+.rt-page.fc-page .fc-marks .rt-btn {
+  padding-top: 11px;
+  padding-bottom: 11px;
+  /* A quick second tap on next must not read as double-tap-to-zoom. */
+  touch-action: manipulation;
+}
+/* "didn't know" / "knew it": the round's tally sits at the end of the meter. */
+.fc-deck__tally {
+  display: flex;
+  flex: none;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.fc-deck__tally > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.fc-marks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+.rt-page.fc-page .fc-mark--miss {
+  border-color: color-mix(in srgb, var(--rt-rust) 45%, transparent);
+  color: var(--rt-rust);
+}
+.rt-page.fc-page .fc-mark--ok {
+  border-color: color-mix(in srgb, var(--rt-teal) 50%, transparent);
+  color: var(--rt-teal);
+}
+.rt-page.fc-page .fc-mark--miss:hover:not(:disabled),
+.rt-page.fc-page .fc-mark--miss.is-on {
+  border-color: var(--rt-rust);
+  background: var(--rt-note-err-bg);
+  color: var(--rt-rust);
+}
+.rt-page.fc-page .fc-mark--ok:hover:not(:disabled),
+.rt-page.fc-page .fc-mark--ok.is-on {
+  border-color: var(--rt-teal);
+  background: var(--rt-note-ok-bg);
+  color: var(--rt-teal);
+}
+.fc-marks + .fc-controls {
+  margin-top: 10px;
+}
+.fc-deckbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 18px;
+}
+/* Keyboard hints on a desk, gesture hints on a phone. */
+.fc-keys__touch {
+  display: none;
+}
+@media (hover: none) and (pointer: coarse) {
+  .fc-keys__keys {
+    display: none;
+  }
+  .fc-keys__touch {
+    display: inline;
+  }
+}
+.rt-page.fc-page .fc-toggle {
+  color: var(--rt-ink-soft);
+}
+.rt-page.fc-page .fc-toggle.is-on {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+}
+.fc-endnote {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  max-width: none;
+}
+
+/* ---------- write mode ---------- */
+.fc-write {
+  /* Prevent the iOS rubber-band bounce / page-jump when tapping inside the
+     write area while the soft keyboard is open. */
+  overscroll-behavior: contain;
+}
+.fc-writebar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.fc-writebar__round {
+  margin-right: auto;
+  font-size: 13px;
+  font-weight: 600;
+}
+.fc-writebar__round::first-letter {
+  text-transform: uppercase;
+}
+.fc-writebar__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 500;
+  color: var(--rt-ink-soft);
+}
+.fc-writebar__stat--ok {
+  color: var(--rt-teal);
+}
+.fc-writebar__stat--miss {
+  color: var(--rt-rust);
+}
+
+.fc-prompt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: 44px 28px 32px;
+  border: 1px solid var(--fc-line);
+  border-radius: 18px;
+  background: var(--rt-panel);
+  box-shadow:
+    0 1px 2px var(--rt-shadow-soft),
+    0 10px 28px var(--rt-shadow-soft);
+  text-align: center;
+}
+.fc-prompt__text {
+  max-width: 50ch;
+  font-size: clamp(18px, 3vw, 24px);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fc-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 13px 16px;
+  border: 1px solid var(--fc-line);
+  border-radius: 12px;
+  animation: fc-in 0.18s ease-out both;
+}
+.fc-verdict .rt-btnrow {
+  margin-top: 6px;
+}
+.fc-verdict--ok {
+  border-color: color-mix(in srgb, var(--rt-teal) 30%, transparent);
+  background: var(--rt-note-ok-bg);
+}
+.fc-verdict--miss {
+  border-color: color-mix(in srgb, var(--rt-rust) 30%, transparent);
+  background: var(--rt-note-err-bg);
+}
+.fc-verdict__title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.fc-verdict__title::first-letter {
+  text-transform: uppercase;
+}
+.fc-verdict--ok .fc-verdict__title {
+  color: var(--rt-teal);
+}
+.fc-verdict--miss .fc-verdict__title {
+  color: var(--rt-rust);
+}
+.fc-verdict__line {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+}
+.fc-verdict__key {
+  font-size: 12.5px;
+  color: var(--rt-ink-soft);
+}
+.fc-verdict__key::first-letter {
+  text-transform: uppercase;
+}
+.fc-verdict__answer,
+.fc-verdict__given {
+  font-size: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fc-verdict__answer {
+  font-weight: 600;
+}
+.fc-verdict__given {
+  color: var(--rt-ink-soft);
+}
+
+.fc-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+.fc-page .fc-answer__input {
+  font-size: 16px;
+  padding: 12px 14px;
+}
+.fc-page .fc-answer__input.is-wrong {
+  border-color: var(--rt-rust);
+  box-shadow: 0 0 0 3px var(--rt-note-err-bg);
+  animation: fc-shake 0.24s ease-in-out;
+}
+.fc-answer__hint {
+  font-size: 13px;
+  color: var(--rt-rust);
+}
+
+@keyframes fc-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes fc-shake {
+  25% {
+    transform: translateX(-3px);
+  }
+  75% {
+    transform: translateX(3px);
+  }
+}
+
+/* setup */
+/* Narrower than the column, so it is centred in it rather than left hanging. */
+.fc-setup {
+  max-width: 640px;
+  margin-inline: auto;
+}
+.fc-resume-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  background: var(--fc-accent-soft);
+  border: 1px solid var(--fc-accent);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.fc-resume-banner__text {
+  color: var(--rt-ink);
+  line-height: 1.4;
+}
+.fc-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fc-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 12px;
+  background: var(--rt-panel);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.fc-option:hover {
+  border-color: var(--rt-ink-faint);
+}
+.fc-option.is-active {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+.fc-option:focus-within {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 2px;
+}
+/* Visually hidden, still the thing the keyboard and screen readers use. */
+.fc-option__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.fc-option__title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.fc-option__title::first-letter {
+  text-transform: uppercase;
+}
+.fc-option.is-active .fc-option__title {
+  color: var(--fc-accent);
+}
+.fc-option__sub {
+  font-size: 13px;
+  color: var(--rt-ink-soft);
+}
+.fc-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  cursor: pointer;
+}
+.fc-check input,
+.fc-radio input {
+  accent-color: var(--fc-accent);
+}
+.fc-check input {
+  width: 16px;
+  height: 16px;
+}
+.fc-setup__rules {
+  max-width: 60ch;
+  line-height: 1.6;
+}
+
+/* summary */
+.fc-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.fc-stats > div {
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel-2);
+  padding: 10px 14px;
+}
+.fc-stats dt {
+  font-size: 12.5px;
+  color: var(--rt-ink-soft);
+}
+.fc-stats dt::first-letter {
+  text-transform: uppercase;
+}
+.fc-stats dd {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.fc-stats__miss {
+  color: var(--rt-rust);
+}
+.fc-summary .fc-progress,
+.fc-setup .fc-progress {
+  margin-bottom: 0;
+}
+.fc-rounds th {
+  width: auto;
+}
+
+/* ---------- learn mode ---------- */
+/* Most of the screen is write mode's: the bar, the prompt, the verdicts and
+   the answer box. What learn adds is the multiple-choice list. */
+.fc-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  list-style: none;
+}
+/* An fc-option you press rather than select. */
+.fc-choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 12px;
+  background: var(--rt-panel);
+  padding: 11px 14px;
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  /* Two quick taps on different options must not read as a zoom. */
+  touch-action: manipulation;
+}
+.fc-choice:hover:not(:disabled) {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+.fc-choice:disabled {
+  cursor: default;
+}
+.fc-choice__key {
+  flex: none;
+  align-self: flex-start;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--rt-panel-2);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.fc-choice__text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fc-choice.is-correct {
+  border-color: var(--rt-teal);
+  background: var(--rt-note-ok-bg);
+  animation: fc-in 0.18s ease-out both;
+}
+.fc-choice.is-correct .fc-choice__key {
+  background: var(--rt-teal);
+  color: var(--rt-hl);
+}
+.fc-choice.is-wrong {
+  border-color: var(--rt-rust);
+  background: var(--rt-note-err-bg);
+}
+.fc-choice.is-wrong .fc-choice__key {
+  background: var(--rt-rust);
+  color: var(--rt-hl);
+}
+.fc-choice.is-wrong .fc-choice__text {
+  text-decoration: line-through;
+}
+.fc-choice.is-dim {
+  opacity: 0.5;
+}
+.fc-learn__actions {
+  align-items: center;
+  margin-top: 14px;
+}
+.fc-learn__hint {
+  font-size: 14px;
+}
+.fc-learn__hinttext {
+  font-family: var(--fc-mono);
+  letter-spacing: 0.12em;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fc-learn__grade {
+  font-size: 12.5px;
+  color: var(--rt-ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- editor ---------- */
+.fc-editor {
+  margin-top: 14px;
+}
+.fc-page .fc-input-lg {
+  font-size: 17px;
+  font-weight: 500;
+  padding: 10px 12px;
+}
+.fc-textarea {
+  display: block;
+  resize: vertical;
+  min-height: 42px;
+  max-height: 18em;
+  line-height: 1.5;
+  /* Grows with its text where supported; elsewhere the handle still works. */
+  field-sizing: content;
+}
+.fc-cardshead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 26px 0 12px;
+}
+.fc-page .fc-cardshead__label {
+  flex: 1;
+  margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-editrows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+.fc-editrow {
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  box-shadow: 0 1px 2px var(--rt-shadow-soft);
+}
+.fc-editrow:focus-within {
+  border-color: var(--fc-line-strong);
+}
+.fc-editrow__head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 0 16px;
+}
+.fc-editrow__num {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rt-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fc-editrow__spacer {
+  flex: 1;
+}
+.fc-editrow__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px 14px;
+  padding: 4px 16px 16px;
+}
+.fc-editrow__label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--rt-ink-faint);
+}
+.fc-editrow__label::first-letter {
+  text-transform: uppercase;
+}
+/* Same family as the food log's row controls: a quiet square, colour on hover. */
+.fc-iconbtn {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--rt-ink-faint);
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.fc-iconbtn:hover:not(:disabled) {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+}
+.fc-iconbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.fc-iconbtn--del:hover:not(:disabled) {
+  background: var(--rt-note-err-bg);
+  color: var(--rt-rust);
+}
+.fc-addrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px;
+  border: 1px dashed var(--fc-line-strong);
+  border-radius: var(--fc-radius);
+  background: transparent;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+.fc-addrow:hover {
+  border-color: var(--fc-accent);
+  color: var(--fc-accent);
+}
+/* Stays in reach at the bottom of a long set — above the home indicator,
+   when installed on a phone. */
+.fc-savebar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 0 calc(14px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--fc-line);
+  background: color-mix(in srgb, var(--rt-paper) 90%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* import */
+.fc-page .fc-import__text {
+  resize: vertical;
+  min-height: 150px;
+  font-family: var(--fc-mono);
+  font-size: 13.5px;
+  line-height: 1.55;
+  tab-size: 4;
+}
+.fc-import__opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 20px;
+}
+.fc-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+.fc-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.fc-import__custom {
+  margin-top: 8px;
+  max-width: 240px;
+}
+.fc-import__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.fc-import__skipped {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- ai: key panel ---------- */
+.fc-keypanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.fc-keypanel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.fc-keypanel__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.fc-keypanel__title::first-letter {
+  text-transform: uppercase;
+}
+.fc-keypanel__intro {
+  max-width: 64ch;
+  line-height: 1.6;
+}
+.fc-keypanel__balance {
+  margin-top: 0;
+}
+.fc-keypanel__balance dd {
+  font-variant-numeric: tabular-nums;
+}
+.fc-keypanel__balance.is-low dd {
+  color: var(--rt-note-warn-ink);
+}
+.fc-keypanel .rt-field__label {
+  margin-bottom: 0;
+}
+.fc-keypanel__row {
+  display: flex;
+  gap: 10px;
+}
+.fc-keypanel__row .rt-input {
+  flex: 1;
+  min-width: 0;
+}
+.fc-keypanel__note {
+  color: var(--rt-teal);
+}
+
+/* What a call cost — quiet, tabular, never the first thing read. */
+.fc-receipt {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--rt-ink-faint);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- ai: generate panel ---------- */
+.fc-generate__billing {
+  overflow-wrap: anywhere;
+}
+.fc-generate__nokey {
+  max-width: 64ch;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+/* The character count, at the far end of its label's line. */
+.fc-generate .rt-field__label:has(> span + span) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fc-generate .rt-field__label > span:first-child::first-letter {
+  text-transform: uppercase;
+}
+.fc-generate .rt-field__label > span + span {
+  margin-left: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.fc-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px dashed var(--fc-line-strong);
+  border-radius: 12px;
+  background: var(--rt-panel-2);
+  padding: 12px;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.fc-drop.is-over {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+.fc-drop__hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.fc-shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  list-style: none;
+}
+.fc-shot {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 100%;
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel);
+  overflow: hidden;
+}
+.fc-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+/* On a picture, so it brings its own ground rather than borrowing the page's. */
+.fc-shot__del,
+.fc-shot__del:hover:not(:disabled) {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+}
+.fc-shot__del:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.75);
+}
+.fc-generate__text {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.55;
+}
+.fc-generate__opts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px;
+  gap: 12px 16px;
+}
+.fc-over {
+  font-size: 12.5px;
+  color: var(--rt-rust);
+}
+.fc-generate__done {
+  max-width: none;
+}
+.fc-generate__pickhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.fc-picklist {
+  max-height: 420px;
+  overflow-y: auto;
+}
+.fc-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 2fr);
+  align-items: start;
+  gap: 6px 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--fc-line);
+}
+.fc-pick:last-child {
+  border-bottom: none;
+}
+.fc-pick__check {
+  margin-top: 9px;
+  accent-color: var(--fc-accent);
+  cursor: pointer;
+}
+/* Lighter than the editor's fields: still a list to read, just one you can fix in place. */
+.fc-page .fc-pick__field {
+  min-height: 0;
+  padding: 4px 8px;
+  font-size: 13.5px;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+.fc-page .fc-pick__field:hover {
+  border-color: var(--fc-line-strong);
+}
+.fc-page .fc-pick__field:focus {
+  border-color: var(--fc-accent);
+  background: var(--rt-panel);
+}
+.fc-pick__term {
+  font-weight: 500;
+}
+.fc-pick__def {
+  color: var(--rt-ink-soft);
+}
+.fc-pick.is-off .fc-pick__field {
+  color: var(--rt-ink-faint);
+  text-decoration: line-through;
+}
+.fc-ainotice {
+  max-width: none;
+  margin-bottom: 12px;
+}
+.fc-ainotice__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fc-spinner {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: fc-spin 0.7s linear infinite;
+}
+@keyframes fc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- narrow screens ---------- */
+@media (max-width: 600px) {
+  .fc-editrow__fields,
+  .fc-import__opts,
+  .fc-generate__opts,
+  .fc-options {
+    grid-template-columns: 1fr;
+  }
+  .fc-keypanel__row {
+    flex-direction: column;
+  }
+  .fc-term {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+  .fc-pick {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .fc-pick__def {
+    grid-column: 2;
+  }
+  .fc-controls__word {
+    display: none;
+  }
+  /* A set's edit / delete get a line of their own instead of hanging off
+     the right edge under the date. */
+  .fc-page .rt-metarow__status {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  /* Study modes as rows, icon beside the words: all three fit on one
+     screen with the set's terms starting below them. */
+  .rt-page.fc-page .fc-mode {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 2px;
+    align-items: center;
+    padding: 14px;
+  }
+  .fc-mode__icon {
+    grid-row: span 2;
+    margin-bottom: 0;
+  }
+  .fc-modes {
+    gap: 8px;
+  }
+  .fc-flip__face {
+    padding: 40px 18px 30px;
+  }
+  .fc-prompt {
+    padding: 40px 18px 28px;
+  }
+  .fc-panel {
+    padding: 16px;
+  }
+  /* iOS zooms the page on focus for anything under 16px, and does not zoom
+     back out — the same fix the food log's inputs carry. */
+  .fc-page .rt-input {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-spinner,
+  .fc-skel,
+  .fc-verdict,
+  .fc-choice.is-correct,
+  .fc-page .fc-answer__input.is-wrong {
+    animation: none;
+  }
+  .fc-flip__inner,
+  .fc-meter__fill {
+    transition: none;
+  }
+}
+
+/* ---------- diff highlighting ---------- */
+.fc-diff-add {
+  font-weight: 700;
+  color: var(--rt-teal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.fc-diff-rem {
+  color: var(--rt-rust);
+  text-decoration: line-through;
+}
+
+/* ---------- special characters keyboard ---------- */
+.fc-keyboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.fc-key {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 8px;
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  /* Prevent iOS double-tap zoom and scroll interference. */
+  touch-action: manipulation;
+  transition: background-color 0.1s ease;
+}
+.fc-key:hover {
+  background: var(--rt-panel-2);
+}
+.fc-key:active {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+/* The number key that types this character, while the shortcut is on. */
+.fc-key__digit {
+  margin-left: 6px;
+  font-family: var(--fc-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fc-accent);
+  opacity: 0.9;
+}
+/* The shortcut switch: last in the row */
+.fc-key--setting {
+  margin-left: auto;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 8px;
+  background: var(--rt-panel);
+  color: var(--rt-ink-soft);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.fc-key--setting:hover {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+}
+.fc-key--setting.is-on {
+  border-style: solid;
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  font-weight: 600;
+}
+
+/* checkpoint (in-betweens like Quizlet) */
+.fc-checkpoint {
+  animation: fc-in 0.15s ease-out;
+}
+.fc-checkpoint__badge {
+  display: inline-block;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+.fc-stats__ok {
+  color: var(--rt-teal);
+}
+.fc-stats__learning {
+  color: var(--fc-accent);
+}
+.fc-checkpoint .fc-stats {
+  margin-top: 14px;
+}
+
+
+/* ---------- sets screen: tabs, folders, tiles ---------- */
+.fc-tabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  margin-top: 14px;
+  border-radius: 12px;
+  background: var(--rt-panel-2);
+  border: 1px solid var(--fc-line);
+}
+.fc-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.fc-tab:hover {
+  color: var(--rt-ink);
+}
+.fc-tab.is-active {
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  font-weight: 600;
+  box-shadow: 0 1px 3px var(--rt-shadow);
+}
+.fc-tab__count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--fc-track);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.fc-tab.is-active .fc-tab__count {
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+}
+
+/* Sets and folders are rows: a badge on the left (the term count, or a
+   folder), the name with room to wrap, a chevron. One column on a phone, two
+   side by side once there is room for both titles. */
+.fc-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .fc-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.fc-list + .fc-quota {
+  margin-top: 16px;
+}
+.fc-page .rt-label.fc-label-gap {
+  margin-top: 22px;
+}
+
+.rt-page.fc-page .fc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px 10px 10px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.rt-page.fc-page .fc-row:hover {
+  border-color: var(--fc-accent);
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+}
+.rt-page.fc-page .fc-row:active {
+  background: var(--rt-panel-2);
+}
+.fc-row > svg {
+  color: var(--rt-ink-faint);
+}
+.fc-row:hover > svg {
+  color: var(--fc-accent);
+}
+
+/* The count, stacked over its unit, in a soft accent square. */
+.fc-row__badge {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  line-height: 1;
+}
+.fc-row__count {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fc-row__unit {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+/* A folder reads as a different kind of thing: outlined, not filled. */
+.fc-row--folder .fc-row__badge {
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--fc-accent) 45%, transparent);
+}
+.rt-page.fc-page .fc-row--folder {
+  background: color-mix(in srgb, var(--fc-accent-soft) 45%, var(--rt-panel));
+}
+
+.fc-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.fc-row__name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fc-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--rt-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.fc-row__meta > .fc-shared {
+  flex: none;
+}
+.fc-row__desc {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.fc-row__desc svg {
+  flex: none;
+}
+.fc-shared,
+.fc-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  color: var(--fc-accent);
+  font-weight: 500;
+}
+.fc-author {
+  color: var(--rt-ink-soft);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.fc-author__dot {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.fc-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+.fc-crumbs__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.fc-crumbs__back:hover {
+  color: var(--rt-ink);
+}
+.fc-crumbs__here {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--rt-ink);
+}
+.fc-crumbs__here svg {
+  color: var(--fc-accent);
+}
+.fc-crumbs__spacer {
+  flex: 1;
+}
+
+.fc-quota {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--rt-ink-soft);
+}
+.fc-quota__text {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.fc-quota__bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--fc-track);
+  overflow: hidden;
+}
+.fc-quota__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--fc-accent);
+}
+.fc-quota__bar span.is-full {
+  background: var(--rt-rust);
+}
+
+.fc-libintro {
+  max-width: 62ch;
+  color: var(--rt-ink-soft);
+  font-size: 14px;
+}
+.fc-search {
+  display: flex;
+  margin-bottom: 14px;
+  align-items: center;
+  gap: 8px;
+  max-width: 360px;
+  padding: 0 12px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: var(--fc-radius-sm);
+  background: var(--rt-panel);
+  color: var(--rt-ink-faint);
+}
+.fc-search:focus-within {
+  border-color: var(--fc-accent);
+}
+.fc-search input {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.fc-emptystate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 34px 16px;
+  border: 1px dashed var(--fc-line-strong);
+  border-radius: var(--fc-radius);
+  text-align: center;
+  color: var(--rt-ink-soft);
+}
+.fc-emptystate__art {
+  position: relative;
+  width: 64px;
+  height: 46px;
+  margin-bottom: 10px;
+}
+.fc-emptystate__art span {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 8px;
+  background: var(--rt-panel);
+}
+.fc-emptystate__art span:nth-child(1) {
+  transform: rotate(-8deg) translate(-6px, 2px);
+}
+.fc-emptystate__art span:nth-child(2) {
+  transform: rotate(5deg) translate(5px, 0);
+}
+.fc-emptystate__art span:nth-child(3) {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+}
+
+/* ---------- set page: folder & sharing ---------- */
+.fc-organize {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.fc-organize__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--fc-line);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+}
+.fc-organize__card.is-public {
+  border-color: var(--fc-accent);
+  background: linear-gradient(var(--fc-accent-soft), var(--rt-panel) 75%);
+}
+.fc-organize__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fc-organize__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+}
+.fc-organize__title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.fc-organize__sub {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--rt-ink-soft);
+}
+.fc-organize__form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fc-organize__form .rt-input {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.fc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  font-size: 12.5px;
+  font-weight: 600;
+}

@@ -1,0 +1,723 @@
+/* ---------------------------------------------------------------------------
+   Retro theme, part two — shared UI: forms, buttons, notices, tables, steps.
+   Used by the project, auth, dashboard, admin and setup pages. Tokens come
+   from `.rt-page` in retro.css.
+   --------------------------------------------------------------------------- */
+
+.rt-wrap--wide {
+  max-width: 820px;
+}
+
+.rt-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ---------- back link / page head ---------- */
+.rt-page a.rt-backlink {
+  font-size: 12px;
+  color: var(--rt-ink-soft);
+  border-bottom: none;
+  letter-spacing: 0.02em;
+}
+.rt-page a.rt-backlink:hover {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+}
+
+.rt-pagehead {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 22px 0 12px;
+}
+.rt-pagehead h1 {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: clamp(17px, 4vw, 21px);
+  font-weight: 400;
+  line-height: 1.4;
+}
+.rt-metarow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--rt-ink);
+  font-size: 11.5px;
+  color: var(--rt-ink-faint);
+  letter-spacing: 0.02em;
+}
+.rt-metarow__status {
+  margin-left: auto;
+}
+
+/* ---------- section ---------- */
+.rt-section {
+  margin-top: 34px;
+}
+.rt-section > p {
+  max-width: 62ch;
+}
+
+/* ---------- plain list ---------- */
+.rt-list {
+  list-style: none;
+  margin-top: 4px;
+}
+.rt-list > li {
+  display: flex;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dotted rgba(var(--rt-ink-rgb), 0.28);
+  max-width: 62ch;
+}
+.rt-list > li:last-child {
+  border-bottom: none;
+}
+.rt-list__key {
+  flex: none;
+  width: 15px;
+  color: var(--rt-rust);
+}
+
+/* ---------- numbered steps ---------- */
+.rt-steps {
+  list-style: none;
+  counter-reset: rt-step;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rt-steps > li {
+  counter-increment: rt-step;
+  display: flex;
+  gap: 14px;
+}
+.rt-steps > li::before {
+  content: counter(rt-step);
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-gold);
+  color: var(--rt-on-gold);
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 11px;
+  box-shadow: 2px 2px 0 var(--rt-shadow-soft);
+}
+.rt-steps h3 {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 13px;
+  font-weight: 400;
+  margin-bottom: 4px;
+}
+.rt-steps p {
+  max-width: 58ch;
+}
+.rt-steps p + p {
+  margin-top: 8px;
+}
+
+/* ---------- code ---------- */
+.rt-code {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-hl);
+  box-shadow: inset -3px -3px 0 var(--rt-inset);
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+.rt-mono {
+  background: var(--rt-panel-2);
+  border: 1px solid rgba(var(--rt-ink-rgb), 0.25);
+  padding: 0 4px;
+  font-size: 12.5px;
+}
+
+/* ---------- keycaps ---------- */
+.rt-kbd {
+  display: inline-block;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 2px 2px 0 var(--rt-shadow-soft);
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rt-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ---------- buttons ---------- */
+.rt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  box-shadow: 3px 3px 0 var(--rt-shadow);
+  padding: 6px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+}
+/* `.rt-page a` (0,1,1) out-ranks `.rt-btn` (0,1,0), so a button rendered as a
+   link would take the link colour and vanish into its own background. These
+   selectors carry the same weight and put the button colours back. */
+.rt-page a.rt-btn {
+  border-bottom: 2px solid var(--rt-ink);
+  color: var(--rt-ink);
+}
+.rt-page a.rt-btn--primary {
+  color: var(--rt-hl);
+}
+.rt-btn:hover:not(:disabled),
+.rt-page a.rt-btn:hover {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 var(--rt-shadow);
+}
+.rt-btn:active:not(:disabled) {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--rt-shadow);
+}
+.rt-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: 3px 3px 0 var(--rt-shadow-soft);
+}
+.rt-btn--primary {
+  background: var(--rt-rust);
+  color: var(--rt-hl);
+}
+.rt-btn--primary:hover:not(:disabled) {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+}
+.rt-btn--danger {
+  color: var(--rt-rust);
+}
+.rt-btn--sm {
+  font-size: 11.5px;
+  padding: 3px 9px;
+  box-shadow: 2px 2px 0 var(--rt-shadow);
+}
+/* A pressed button slides 3px into its shadow (the theme chip 2px). A click
+   only counts when the press and the release land on the same element, so a
+   press near an edge would end beside the moved button and be dropped — the
+   "had to click twice" button. This invisible margin travels with it and
+   keeps the release inside. */
+.rt-btn,
+.rt-theme {
+  position: relative;
+}
+.rt-btn::after,
+.rt-theme::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+.rt-btnrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ---------- forms ---------- */
+.rt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+}
+.rt-field {
+  display: block;
+}
+.rt-field__label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: var(--rt-ink-soft);
+}
+.rt-input {
+  width: 100%;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-hl);
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 13.5px;
+  padding: 7px 10px;
+  box-shadow: inset -3px -3px 0 var(--rt-inset);
+}
+.rt-input:focus {
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 1px;
+}
+.rt-input::placeholder {
+  color: var(--rt-ink-faint);
+}
+.rt-linkbtn {
+  font: inherit;
+  font-size: 11.5px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--rt-rust);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.rt-linkbtn:hover {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+}
+
+/* ---------- notices ---------- */
+.rt-note {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel-2);
+  box-shadow: 3px 3px 0 var(--rt-shadow-soft);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  max-width: 62ch;
+}
+.rt-note__title {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 10.5px;
+  margin-bottom: 4px;
+}
+.rt-note--ok {
+  border-color: var(--rt-teal);
+  background: var(--rt-note-ok-bg);
+}
+.rt-note--ok .rt-note__title {
+  color: var(--rt-teal);
+}
+.rt-note--warn {
+  border-color: var(--rt-note-warn-line);
+  background: var(--rt-note-warn-bg);
+}
+.rt-note--warn .rt-note__title {
+  color: var(--rt-note-warn-ink);
+}
+.rt-note--err {
+  border-color: var(--rt-rust);
+  background: var(--rt-note-err-bg);
+}
+.rt-note--err .rt-note__title {
+  color: var(--rt-rust);
+}
+
+/* ---------- chips ---------- */
+.rt-chip {
+  display: inline-block;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel-2);
+  padding: 0 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.rt-chip--ok {
+  background: var(--rt-teal);
+  color: var(--rt-hl);
+}
+.rt-chip--warn {
+  background: var(--rt-gold);
+  color: var(--rt-on-gold);
+}
+.rt-chip--admin {
+  background: var(--rt-rust);
+  color: var(--rt-hl);
+}
+
+/* ---------- key/value table ---------- */
+.rt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.rt-table th,
+.rt-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px dotted rgba(var(--rt-ink-rgb), 0.3);
+  vertical-align: top;
+}
+.rt-table th {
+  width: 108px;
+  font-weight: 400;
+  color: var(--rt-ink-faint);
+}
+.rt-table tr:last-child th,
+.rt-table tr:last-child td {
+  border-bottom: none;
+}
+.rt-tablewrap {
+  overflow-x: auto;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 3px 3px 0 var(--rt-shadow);
+  padding: 4px 6px;
+}
+
+/* ---------- rows (accounts, requests) ---------- */
+.rt-row {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 3px 3px 0 var(--rt-shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.rt-row__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.rt-row__sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--rt-ink-faint);
+}
+.rt-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.rt-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rt-empty {
+  border: 2px dotted rgba(var(--rt-ink-rgb), 0.4);
+  padding: 20px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--rt-ink-faint);
+}
+
+/* ---------- download / platform picker ---------- */
+.rt-platforms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 4px;
+}
+.rt-platform {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 3px 3px 0 var(--rt-shadow);
+  padding: 12px;
+  font-size: 12.5px;
+  color: var(--rt-ink);
+  display: block;
+}
+.rt-page a.rt-platform {
+  border-bottom: 2px solid var(--rt-ink);
+  color: var(--rt-ink);
+}
+/* Cards lighten on hover rather than flipping colour — their sub-labels are
+   deliberately low-contrast and would be unreadable on a gold ground. */
+.rt-page a.rt-platform:hover {
+  background: var(--rt-hl);
+  color: var(--rt-ink);
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 2px;
+}
+.rt-platform__name {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 12px;
+}
+.rt-platform__arch {
+  color: var(--rt-ink-faint);
+  font-size: 11.5px;
+}
+.rt-platform--rec {
+  background: var(--rt-hl);
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 2px;
+}
+.rt-platform--rec .rt-platform__arch {
+  color: var(--rt-rust);
+}
+.rt-platform--off {
+  opacity: 0.45;
+  box-shadow: 3px 3px 0 var(--rt-shadow-soft);
+}
+
+/* ---------- prev / next ---------- */
+.rt-pager {
+  display: grid;
+  gap: 12px;
+  margin-top: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.rt-pager__item {
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  box-shadow: 3px 3px 0 var(--rt-shadow);
+  padding: 14px;
+  display: block;
+}
+.rt-page a.rt-pager__item {
+  border-bottom: 2px solid var(--rt-ink);
+  color: var(--rt-ink);
+}
+.rt-page a.rt-pager__item:hover {
+  background: var(--rt-hl);
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 2px;
+}
+.rt-pager__dir {
+  font-size: 11px;
+  color: var(--rt-ink-faint);
+}
+.rt-pager__title {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 12.5px;
+  margin: 5px 0 3px;
+}
+.rt-pager__sub {
+  font-size: 12px;
+  color: var(--rt-ink-soft);
+}
+
+/* ---------- centered auth column ---------- */
+.rt-auth {
+  max-width: 380px;
+  margin: 40px auto 0;
+}
+.rt-auth__head {
+  margin-bottom: 20px;
+}
+.rt-auth__head h1 {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 6px;
+}
+.rt-auth__head p {
+  font-size: 12.5px;
+  color: var(--rt-ink-soft);
+}
+.rt-auth .rt-form {
+  max-width: none;
+}
+.rt-auth__foot {
+  margin-top: 18px;
+  font-size: 12.5px;
+  color: var(--rt-ink-soft);
+}
+
+/* ---------- misc ---------- */
+.rt-secret {
+  font-size: 14px;
+  word-break: break-all;
+  background: var(--rt-hl);
+  border: 2px solid var(--rt-ink);
+  padding: 6px 8px;
+  margin: 6px 0;
+}
+.rt-muted {
+  color: var(--rt-ink-soft);
+}
+.rt-small {
+  font-size: 11.5px;
+  color: var(--rt-ink-faint);
+}
+
+/* ---------- theme switch ---------- */
+/* A bordered chip rather than a bare glyph: the switch has three states, not
+   two, so it has to say which one it is in. */
+.rt-nav .rt-theme,
+.rt-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  box-shadow: 2px 2px 0 var(--rt-shadow);
+  padding: 1px 7px;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.6;
+  cursor: pointer;
+}
+/* Until it has read the stored choice it would show a guess (a sun on a
+   dark page); the chip keeps its size but shows nothing for that frame. */
+.rt-theme.is-pending > * {
+  visibility: hidden;
+}
+.rt-theme__text {
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.rt-theme svg {
+  display: block;
+  flex: none;
+}
+.rt-nav .rt-theme:hover,
+.rt-theme:hover {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--rt-shadow);
+}
+.rt-theme:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 var(--rt-shadow);
+}
+
+/* In the food log's title bar the switch sits beside the goals link, on a
+   phone, next to a screen title — the word does not fit and the glyph is
+   unambiguous enough on its own. */
+.rt-theme--bar .rt-theme__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.rt-theme--bar {
+  padding: 2px 6px;
+}
+
+/* ---------- account page: display settings ---------- */
+.rt-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rt-display__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.rt-display__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 260px;
+}
+/* The form label spreads label and helper link apart; here the glyph and
+   the words belong together. */
+.rt-display .rt-field__label {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+/* Three-way theme picker: the header chip's states laid out side by side. */
+.rt-seg {
+  display: inline-flex;
+  border: 2px solid var(--rt-ink);
+  box-shadow: 2px 2px 0 var(--rt-shadow);
+}
+.rt-seg__opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.rt-seg__opt + .rt-seg__opt {
+  border-left: 2px solid var(--rt-ink);
+}
+.rt-seg__opt:hover {
+  background: var(--rt-panel-2);
+}
+.rt-seg__opt.is-on {
+  background: var(--rt-ink);
+  color: var(--rt-hl);
+}
+.rt-seg__opt:focus-visible,
+.rt-switch:focus-visible {
+  outline: 2px solid var(--rt-rust);
+  outline-offset: 2px;
+}
+
+/* On/off switch: a pixel track with a square knob. */
+.rt-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.rt-switch::before {
+  content: '';
+  order: 0;
+  width: 36px;
+  height: 18px;
+  border: 2px solid var(--rt-ink);
+  background: var(--rt-panel-2);
+  box-shadow: 2px 2px 0 var(--rt-shadow);
+}
+.rt-switch.is-on::before {
+  background: var(--rt-teal);
+}
+.rt-switch {
+  position: relative;
+}
+.rt-switch__knob {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  background: var(--rt-ink);
+}
+.rt-switch.is-on .rt-switch__knob {
+  left: 22px;
+  background: var(--rt-hl);
+}
+.rt-switch__text {
+  order: 1;
+  min-width: 2ch;
+  font-family: var(--font-pixel), var(--font-mono), monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
