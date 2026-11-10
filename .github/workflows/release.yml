@@ -90,6 +90,10 @@ jobs:
             label: x64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    # Windows runners default to PowerShell, where "$TARGET" is an empty string.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
