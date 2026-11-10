@@ -27,6 +27,7 @@ import {
   type Settings,
   type UpdateInfo,
 } from '@/lib/app/native';
+import { usePref } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
 import { asApiError } from '@/lib/store/errors';
 import { exportAll, importAll, parseExport } from '@/lib/store/transfer';
@@ -176,6 +177,7 @@ function HotkeyRecorder({ value, onSave }: { value: string; onSave: (accelerator
 
 export function SettingsScreen() {
   const { settings, save } = useSettings();
+  const [frontPref, setFrontPref] = usePref('front');
   const location = useLocation();
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [autostart, setAutostart] = useState<boolean | null>(null);
@@ -300,17 +302,20 @@ export function SettingsScreen() {
         <Row label="Hotkey" hint="Opens the study overlay from any app. Pressing it again hides it.">
           <HotkeyRecorder value={s.hotkey} onSave={async (hotkey) => void (await save({ ...s, hotkey }))} />
         </Row>
-        <Row label="Cards per round" hint="How many cards one overlay round shows.">
+        <Row label="Cards per round" hint="Cards in one overlay round. Each card you miss comes back once at the end, so a round can run up to twice this long.">
           <NumberField label="Cards per round" value={s.overlayRound} min={1} max={50} onChange={(n) => patch({ overlayRound: n })} />
         </Row>
         <Row label="New cards per round" hint="Never-studied cards in a round, after the ones you are still learning. 0 = none.">
           <NumberField label="New cards per round" value={s.overlayNewCards} min={0} max={50} onChange={(n) => patch({ overlayNewCards: n })} />
         </Row>
-        <Row label="Show first">
+        <Row label="Show first" hint="The overlay's ⇄ button (or S) changes this too.">
           <Choice
             label="Show first"
-            value={s.overlayFront}
-            onChange={(v) => patch({ overlayFront: v })}
+            value={frontPref ?? s.overlayFront}
+            onChange={(v) => {
+              setFrontPref(v);
+              patch({ overlayFront: v });
+            }}
             options={[
               ['term', 'term'],
               ['definition', 'definition'],

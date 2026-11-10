@@ -31,8 +31,8 @@ html.overlay body {
 .ov__head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 8px 7px 8px;
+  gap: 6px;
+  padding: 10px 12px 8px 14px;
   user-select: none;
   cursor: grab;
 }
@@ -114,8 +114,57 @@ html.overlay body {
 .ov__icon:active {
   transform: scale(0.9);
 }
-.ov__icon.is-on {
+.ov__plus.is-on {
   transform: rotate(45deg);
+}
+
+/* Set picker and numbers, under the tabs. */
+.ov__bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 18px 8px;
+  min-width: 0;
+}
+.ov__setpick {
+  min-width: 0;
+  max-width: 55%;
+  padding: 4px 26px 4px 10px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 8px;
+  background: var(--rt-panel)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E")
+    no-repeat right 9px center;
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.ov__setpick:hover,
+.ov__setpick:focus-visible {
+  border-color: var(--fc-accent);
+  outline: none;
+}
+.ov__setpick option {
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+}
+.ov__bar .ov__stats {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+.ov__swap {
+  font-size: 16px;
+}
+.ov__swap:active {
+  transform: rotate(180deg) scale(0.9);
 }
 
 /* Round progress: a thin line that fills as the round goes. */
@@ -132,7 +181,7 @@ html.overlay body {
 }
 
 .ov__error {
-  margin: 8px 14px 0;
+  margin: 8px 18px 0;
   font-size: 12.5px;
   color: var(--rt-rust);
 }
@@ -155,7 +204,7 @@ html.overlay body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px 0;
+  padding: 12px 18px 0;
   font-size: 12px;
   color: var(--rt-ink-faint);
   font-variant-numeric: tabular-nums;
@@ -196,7 +245,7 @@ html.overlay body {
   position: relative;
   flex: 1;
   min-height: 0;
-  margin: 10px 14px;
+  margin: 10px 18px;
   padding: 0;
   border: none;
   background: none;
@@ -236,6 +285,56 @@ html.overlay body {
 .ov__flip:hover .ov__face {
   box-shadow: 0 10px 26px -16px rgba(0, 0, 0, 0.5);
 }
+/* Swiping (or 1 / 2): the card takes on green or red as it goes. */
+.ov__flip .ov__face {
+  box-shadow:
+    inset 0 0 0 calc(var(--swipe-ok, 0) * 3px) var(--rt-teal),
+    inset 0 0 0 calc(var(--swipe-miss, 0) * 3px) var(--rt-rust);
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--rt-teal) calc(var(--swipe-ok, 0) * 18%), transparent),
+      color-mix(in srgb, var(--rt-teal) calc(var(--swipe-ok, 0) * 18%), transparent)
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--rt-rust) calc(var(--swipe-miss, 0) * 18%), transparent),
+      color-mix(in srgb, var(--rt-rust) calc(var(--swipe-miss, 0) * 18%), transparent)
+    ),
+    var(--rt-panel);
+}
+.ov__flip {
+  touch-action: pan-y;
+  will-change: transform;
+}
+.ov__stamp {
+  position: absolute;
+  top: 12px;
+  z-index: 2;
+  padding: 3px 10px;
+  border: 2px solid currentColor;
+  border-radius: 8px;
+  background: var(--rt-panel);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.ov__stamp--ok {
+  left: 14px;
+  color: var(--rt-teal);
+  opacity: var(--swipe-ok, 0);
+  rotate: -8deg;
+}
+.ov__stamp--miss {
+  right: 14px;
+  color: var(--rt-rust);
+  opacity: var(--swipe-miss, 0);
+  rotate: 8deg;
+}
+.ov__hint--center {
+  justify-content: center;
+  padding-top: 0;
+}
 .ov__back-prompt {
   font-size: 12.5px;
   color: var(--rt-ink-faint);
@@ -246,8 +345,9 @@ html.overlay body {
 /* Write and Learn: the prompt, then the answer area. */
 .ov__card {
   flex: 1;
-  min-height: 0;
-  margin: 10px 14px 8px;
+  min-height: 72px;
+  scrollbar-width: thin;
+  margin: 10px 18px 10px;
   padding: 12px 18px;
   display: flex;
   align-items: center;
@@ -300,7 +400,32 @@ html.overlay body {
 }
 
 .ov__typed {
-  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 18px;
+}
+.ov__typed .ov__hint {
+  padding: 0 0 12px;
+}
+.ov__typed .fc-keyboard {
+  margin: 0;
+  gap: 5px;
+}
+.ov__typed .fc-key {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 7px;
+  font-size: 14px;
+}
+.ov__typed .fc-key--setting {
+  font-size: 11.5px;
+}
+.ov__input--retype {
+  border-color: var(--rt-rust);
+}
+.ov__input.is-shaking {
+  animation: ov-shake 0.36s ease-in-out;
 }
 .ov__input {
   width: 100%;
@@ -315,7 +440,7 @@ html.overlay body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 0 14px;
+  margin: 0;
   padding: 8px 12px;
   border-radius: 10px;
   background: var(--rt-panel-2);
@@ -343,9 +468,9 @@ html.overlay body {
 .ov__choices {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
-  padding: 0 14px;
+  padding: 0 18px;
   list-style: none;
 }
 .ov__choices li {
@@ -411,7 +536,7 @@ html.overlay body {
   align-items: center;
   gap: 4px 6px;
   min-height: 22px;
-  padding: 8px 14px 12px;
+  padding: 8px 18px 14px;
   font-size: 12px;
   color: var(--rt-ink-faint);
 }
@@ -443,7 +568,7 @@ html.overlay body {
   display: flex;
   justify-content: center;
   gap: 8px;
-  padding: 0 14px 12px;
+  padding: 4px 18px 8px;
 }
 .ov__grade {
   flex: 1;
@@ -465,6 +590,7 @@ html.overlay body {
 }
 .ov__key {
   display: inline-block;
+  flex: none;
   min-width: 1.4em;
   padding: 0 4px;
   border-radius: 4px;
@@ -480,7 +606,7 @@ html.overlay body {
 .ov__body {
   flex: 1;
   min-height: 0;
-  padding: 12px 14px;
+  padding: 14px 18px;
 }
 .ov__center {
   display: flex;

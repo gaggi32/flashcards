@@ -476,22 +476,27 @@ export type OverlayCard = LearnCardDTO & { setId: number; setTitle: string };
 
 type OverlayRow = CardWithProgress & { set_id: number; set_title: string };
 
-const OVERLAY_FROM = `FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id
-  WHERE s.in_overlay = 1`;
+/** One set, or (null) every set in the overlay mix. */
+function overlayScope(setId: number | null): { from: string; params: Param[] } {
+  const from = `FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id`;
+  if (setId === null) return { from: `${from} WHERE s.in_overlay = 1`, params: [] };
+  return { from: `${from} WHERE s.id = ?`, params: [parse(idField, setId)] };
+}
 
 /**
- * The overlay's round, from sets that are in the overlay, with no dates
+ * The overlay's round, from one set or the sets in the overlay mix, with no dates
  * involved: cards still being learned (shortest streak, longest unseen
  * first), then up to `newCards` never-studied ones, then learned cards that
  * have gone longest without an answer, until the round is full.
  */
-export async function overlayRound(size: number, newCards: number): Promise<OverlayCard[]> {
+export async function overlayRound(size: number, newCards: number, setId: number | null = null): Promise<OverlayCard[]> {
+  const scope = overlayScope(setId);
   const pick = (where: string, order: string, limit: number) =>
     limit > 0
       ? db().select<OverlayRow>(
           `SELECT ${CARD_WITH_PROGRESS}, s.id AS set_id, s.title AS set_title
-           ${OVERLAY_FROM} AND ${where} ORDER BY ${order} LIMIT ?`,
-          [limit],
+           ${scope.from} AND ${where} ORDER BY ${order} LIMIT ?`,
+          [...scope.params, limit],
         )
       : Promise.resolve([] as OverlayRow[]);
   const learning = await pick(
@@ -512,17 +517,18 @@ export async function overlayRound(size: number, newCards: number): Promise<Over
   }));
 }
 
-/** Every card in overlay sets, for multiple-choice options from the same set. */
-export async function overlayPool(): Promise<{ id: number; term: string; definition: string; setId: number }[]> {
+/** Every card the overlay may ask, for multiple-choice options and special keys. */
+export async function overlayPool(setId: number | null = null): Promise<{ id: number; term: string; definition: string; setId: number }[]> {
+  const scope = overlayScope(setId);
   const rows = await db().select<{ id: number; term: string; definition: string; set_id: number }>(
-    `SELECT c.id, c.term, c.definition, c.set_id FROM cards c JOIN sets s ON s.id = c.set_id
-     WHERE s.in_overlay = 1 LIMIT 20000`,
+    `SELECT c.id, c.term, c.definition, c.set_id ${scope.from} LIMIT 20000`,
+    scope.params,
   );
   return rows.map((r) => ({ id: r.id, term: r.term, definition: r.definition, setId: r.set_id }));
 }
 
 export type Overview = {
-  /** Cards in overlay sets, by learn status. */
+  /** Cards in the chosen set (or the overlay mix), by learn status. */
   fresh: number;
   learning: number;
   learned: number;
@@ -532,13 +538,15 @@ export type Overview = {
   answeredToday: boolean;
 };
 
-export async function overview(today: string): Promise<Overview> {
+export async function overview(today: string, setId: number | null = null): Promise<Overview> {
   parse(dayField, today);
+  const scope = overlayScope(setId);
   const [row] = await db().select<{ fresh: number; learning: number; learned: number }>(
     `SELECT COALESCE(SUM(p.card_id IS NULL), 0) AS fresh,
             COALESCE(SUM(p.repetition_number < ${LEARNED_REPETITIONS}), 0) AS learning,
             COALESCE(SUM(p.repetition_number >= ${LEARNED_REPETITIONS}), 0) AS learned
-     ${OVERLAY_FROM}`,
+     ${scope.from}`,
+    scope.params,
   );
   const days = await db().select<{ day: string }>(
     'SELECT DISTINCT day FROM reviews WHERE day <= ? ORDER BY day DESC LIMIT 400',

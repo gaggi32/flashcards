@@ -281,14 +281,19 @@ function Deck({ set }: { set: SetDTO }) {
       paint(0, true);
       return;
     }
-    const value: Mark = d.dx > 0 ? 'known' : 'missed';
+    fling(d.dx > 0 ? 'known' : 'missed');
+  }
+
+  /** Sends the card off to its pile, green or red, then records it. Swipes and the 1 / 2 keys both land here. */
+  function fling(value: Mark) {
+    if (flying.current) return;
     if (prefersReducedMotion()) {
       paint(0, false);
       markCard(value);
       return;
     }
     flying.current = true;
-    paint(Math.sign(d.dx) * window.innerWidth, true);
+    paint((value === 'known' ? 1 : -1) * window.innerWidth, true);
     window.setTimeout(() => {
       flying.current = false;
       // The next card mounts fresh (the button is keyed by card), so there is
@@ -298,6 +303,8 @@ function Deck({ set }: { set: SetDTO }) {
       markCard(value);
     }, FLY_MS);
   }
+  const flingRef = useRef(fling);
+  flingRef.current = fling;
 
   function onPointerCancel() {
     if (drag.current?.active) paint(0, true);
@@ -343,7 +350,7 @@ function Deck({ set }: { set: SetDTO }) {
         case '2':
           // Held down, a mark key would run through the rest of the pile.
           e.preventDefault();
-          if (!e.repeat) markCard(e.key === '1' ? 'missed' : 'known');
+          if (!e.repeat) flingRef.current(e.key === '1' ? 'missed' : 'known');
           break;
       }
     }

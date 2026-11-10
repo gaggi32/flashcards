@@ -229,3 +229,43 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- spacing ----------
+   Buttons holding a key badge and a label (or several parts) lay out as a
+   row with a real gap, rather than relying on a space between inline parts. */
+.rt-page.fc-page .rt-btn:has(> span) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ---------- swipe colour (Flashcards mode) ----------
+   --swipe-ok / --swipe-miss (0–1) are written while a card is dragged or
+   flown off by a key; the faces take on the matching colour. */
+.fc-flip .fc-flip__face {
+  transition: box-shadow 0.15s ease;
+  box-shadow:
+    inset 0 0 0 calc(var(--swipe-ok, 0) * 3px) var(--rt-teal),
+    inset 0 0 0 calc(var(--swipe-miss, 0) * 3px) var(--rt-rust),
+    0 1px 2px var(--rt-shadow-soft),
+    0 10px 28px var(--rt-shadow-soft);
+}
+.fc-flip .fc-flip__face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--rt-teal);
+  opacity: calc(var(--swipe-ok, 0) * 0.16);
+}
+.fc-flip .fc-flip__face::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--rt-rust);
+  opacity: calc(var(--swipe-miss, 0) * 0.16);
+}

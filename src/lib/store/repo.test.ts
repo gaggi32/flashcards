@@ -114,6 +114,17 @@ describe('learning', () => {
     expect(await repo.overview(TODAY)).toEqual({ fresh: 3, learning: 1, learned: 1, streak: 1, answeredToday: true });
   });
 
+  it('studies one chosen set, even one out of the mix', async () => {
+    const a = await setWith(2);
+    const b = await setWith(3);
+    await repo.updateSet(b.set.id, { inOverlay: false });
+    const round = await repo.overlayRound(10, 10, b.set.id);
+    expect(round.map((c) => c.setId)).toEqual([b.set.id, b.set.id, b.set.id]);
+    expect((await repo.overlayRound(10, 10)).every((c) => c.setId === a.set.id)).toBe(true);
+    expect((await repo.overview(TODAY, b.set.id)).fresh).toBe(3);
+    expect((await repo.overlayPool(b.set.id)).length).toBe(3);
+  });
+
   it('leaves sets switched out of the overlay alone', async () => {
     const { set } = await setWith(2);
     await repo.updateSet(set.id, { inOverlay: false });

@@ -1,13 +1,15 @@
 
 import { useState } from 'react';
 
+import { showOverlay } from '@/lib/app/native';
+import { usePref } from '@/lib/app/prefs';
 import { errorMessage, fetchFolders, updateSet } from '@/lib/flashcards/client';
 import { LIMITS, type SetDTO } from '@/lib/flashcards/types';
 import { IconCards, IconFolder } from './FlashcardIcons';
 
 /**
- * A set's two filing controls: which folder it sits in, and whether the
- * hotkey overlay draws cards from it. Both are one update on the set.
+ * A set's two filing controls: which folder it sits in, and the overlay —
+ * study only this set there, or whether it belongs to the overlay's mix.
  */
 export function OrganizeSet({ set }: { set: SetDTO }) {
   const [folder, setFolder] = useState(set.folder);
@@ -17,6 +19,8 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
   const [known, setKnown] = useState<string[] | null>(null);
   const [busy, setBusy] = useState<'folder' | 'share' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [overlaySet, setOverlaySet] = usePref('overlaySet');
+  const studyingThis = overlaySet === set.id;
 
   function startMove() {
     setDraft(folder ?? '');
@@ -120,28 +124,43 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
           )}
         </div>
 
-        <div className={`fc-organize__card${inOverlay ? ' is-public' : ''}`}>
+        <div className={`fc-organize__card${studyingThis ? ' is-public' : ''}`}>
           <div className="fc-organize__head">
             <span className="fc-organize__icon">
               <IconCards size={18} />
             </span>
             <div>
-              <div className="fc-organize__title">{inOverlay ? 'In the study overlay' : 'Not in the overlay'}</div>
+              <div className="fc-organize__title">
+                {studyingThis ? 'The overlay studies this set' : 'Hotkey overlay'}
+              </div>
               <div className="fc-organize__sub">
-                {inOverlay
-                  ? 'Its due and new cards come up when you press the overlay hotkey.'
-                  : 'The hotkey overlay skips it. Learn, Write and Cards still work as usual.'}
+                {studyingThis
+                  ? 'Only this set comes up when you press the overlay hotkey.'
+                  : inOverlay
+                    ? 'Part of the overlay’s mix of sets. Study only this one there, or leave it out of the mix.'
+                    : 'Left out of the overlay’s mix. You can still study only this set there.'}
               </div>
             </div>
           </div>
           <div className="rt-btnrow">
-            <button
-              type="button"
-              className={`rt-btn rt-btn--sm${inOverlay ? '' : ' rt-btn--primary'}`}
-              disabled={busy !== null}
-              onClick={toggleOverlay}
-            >
-              {busy === 'share' ? 'saving…' : inOverlay ? 'leave out of overlay' : 'add to overlay'}
+            {studyingThis ? (
+              <button type="button" className="rt-btn rt-btn--sm" onClick={() => setOverlaySet('all')}>
+                back to the mix
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="rt-btn rt-btn--sm rt-btn--primary"
+                onClick={() => {
+                  setOverlaySet(set.id);
+                  void showOverlay();
+                }}
+              >
+                study only this set
+              </button>
+            )}
+            <button type="button" className="rt-btn rt-btn--sm" disabled={busy !== null} onClick={toggleOverlay}>
+              {busy === 'share' ? 'saving…' : inOverlay ? 'leave out of the mix' : 'add to the mix'}
             </button>
           </div>
         </div>
