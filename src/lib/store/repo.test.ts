@@ -103,21 +103,21 @@ describe('learning', () => {
     expect(queue.map((c) => c.status)).toEqual(['new', 'new', 'learned']);
   });
 
-  it('builds an overlay round from due cards first, then new ones', async () => {
+  it('builds an overlay round without dates: learning, then new, then learned', async () => {
     const { cards } = await setWith(5);
-    await repo.reviewCard(cards[3].id, 1, '2026-11-08', null); // failed → due 11-09
-    await repo.reviewCard(cards[4].id, 5, TODAY, null); // due tomorrow
-    const round = await repo.overlayRound(TODAY, 3, 2);
-    expect(round.map((c) => c.id)).toEqual([cards[3].id, cards[0].id, cards[1].id]);
-    expect(round[0].due).toBe(true);
-    const n = await repo.todayNumbers(TODAY);
-    expect(n).toMatchObject({ due: 1, fresh: 3, reviewed: 1 });
+    await repo.reviewCard(cards[3].id, 1, '2026-11-08', null); // missed: still learning
+    await repo.reviewCard(cards[4].id, 5, TODAY, null);
+    await repo.reviewCard(cards[4].id, 5, TODAY, 1); // two right: learned
+    const round = await repo.overlayRound(4, 2);
+    expect(round.map((c) => c.id)).toEqual([cards[3].id, cards[0].id, cards[1].id, cards[4].id]);
+    expect(round.map((c) => c.status)).toEqual(['learning', 'new', 'new', 'learned']);
+    expect(await repo.overview(TODAY)).toEqual({ fresh: 3, learning: 1, learned: 1, streak: 1, answeredToday: true });
   });
 
   it('leaves sets switched out of the overlay alone', async () => {
     const { set } = await setWith(2);
     await repo.updateSet(set.id, { inOverlay: false });
-    expect(await repo.overlayRound(TODAY, 10, 10)).toEqual([]);
+    expect(await repo.overlayRound(10, 10)).toEqual([]);
   });
 
   it('counts a streak that ends today or yesterday', () => {

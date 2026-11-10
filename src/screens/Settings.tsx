@@ -303,7 +303,7 @@ export function SettingsScreen() {
         <Row label="Cards per round" hint="How many cards one overlay round shows.">
           <NumberField label="Cards per round" value={s.overlayRound} min={1} max={50} onChange={(n) => patch({ overlayRound: n })} />
         </Row>
-        <Row label="New cards per round" hint="Never-studied cards added once the due ones run out. 0 = reviews only.">
+        <Row label="New cards per round" hint="Never-studied cards in a round, after the ones you are still learning. 0 = none.">
           <NumberField label="New cards per round" value={s.overlayNewCards} min={0} max={50} onChange={(n) => patch({ overlayNewCards: n })} />
         </Row>
         <Row label="Show first">
@@ -329,14 +329,8 @@ export function SettingsScreen() {
         </p>
       </Section>
 
-      <Section title="study">
-        <Row label="Daily goal" hint="Answers per day, in any mode. Shown above your sets.">
-          <NumberField label="Daily goal" value={s.dailyGoal} min={1} max={1000} onChange={(n) => patch({ dailyGoal: n })} />
-        </Row>
-      </Section>
-
       <Section title="reminders">
-        <Row label="Remind me" hint="One notification a day if cards are waiting and the goal is not met yet.">
+        <Row label="Remind me" hint="One notification, if you have not studied yet that day and cards are still to learn.">
           <Switch label="Remind me" on={s.reminders} onChange={(v) => patch({ reminders: v })} />
         </Row>
         <Row label="At">

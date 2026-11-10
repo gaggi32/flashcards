@@ -23,7 +23,6 @@ export type Settings = {
   overlayFront: OverlayFront;
   overlayHideOnBlur: boolean;
   overlayTopmostWatch: boolean;
-  dailyGoal: number;
   reminders: boolean;
   reminderTime: string;
   theme: ThemeChoice;

@@ -29,8 +29,6 @@ pub struct Settings {
     pub overlay_front: String,
     pub overlay_hide_on_blur: bool,
     pub overlay_topmost_watch: bool,
-    // --- study ---
-    pub daily_goal: u32,
     // --- reminders ---
     pub reminders: bool,
     /// "HH:MM", local time.
@@ -57,7 +55,6 @@ impl Default for Settings {
             overlay_front: "term".into(),
             overlay_hide_on_blur: true,
             overlay_topmost_watch: false,
-            daily_goal: 20,
             reminders: false,
             reminder_time: "18:00".into(),
             theme: "system".into(),
@@ -115,7 +112,6 @@ impl Settings {
         self.overlay_round = self.overlay_round.clamp(1, 50);
         self.overlay_new_cards = self.overlay_new_cards.min(50);
         self.overlay_front = one_of(&self.overlay_front, &["term", "definition", "mixed"], "term");
-        self.daily_goal = self.daily_goal.clamp(1, 1000);
         if !valid_time(&self.reminder_time) {
             self.reminder_time = d.reminder_time;
         }
@@ -183,9 +179,12 @@ mod tests {
 
     #[test]
     fn an_old_file_with_missing_fields_still_loads() {
+        // and one with fields since removed (dailyGoal) too
+        let old: Settings = serde_json::from_str(r#"{"dailyGoal":20,"theme":"dark"}"#).unwrap();
+        assert_eq!(old.theme, "dark");
         let s: Settings = serde_json::from_str(r#"{"hotkey":"Alt+K"}"#).unwrap();
         assert_eq!(s.hotkey, "Alt+K");
-        assert_eq!(s.daily_goal, 20);
+        assert_eq!(s.overlay_round, 10);
     }
 
     #[test]

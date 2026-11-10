@@ -78,7 +78,7 @@ fn build_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
 fn build_overlay(app: &AppHandle) -> tauri::Result<WebviewWindow> {
     WebviewWindowBuilder::new(app, OVERLAY, WebviewUrl::App("overlay.html".into()))
         .title("Flashcards overlay")
-        .inner_size(560.0, 340.0)
+        .inner_size(600.0, 400.0)
         .resizable(false)
         .decorations(false)
         .transparent(true)

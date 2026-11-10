@@ -12,8 +12,10 @@ html.overlay body {
   min-height: 0;
   height: 100vh;
   box-sizing: border-box;
+  font-family: var(--fc-font);
 }
 .ov__panel {
+  position: relative;
   height: 100%;
   box-sizing: border-box;
   display: flex;
@@ -24,28 +26,67 @@ html.overlay body {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
+
+/* ---------- header ---------- */
 .ov__head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 8px 8px 14px;
-  border-bottom: 1px solid var(--fc-line, rgba(0, 0, 0, 0.08));
+  padding: 7px 8px 7px 8px;
   user-select: none;
   cursor: grab;
 }
-.ov__title {
-  font-family: var(--font-mono), monospace;
-  font-size: 11.5px;
+.ov__modes {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--rt-panel-2);
+  cursor: default;
+}
+.ov__modes-pill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 6px) / 3);
+  border-radius: 7px;
+  background: var(--rt-panel);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.18),
+    inset 0 0 0 1px var(--fc-line);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform 0.3s var(--ease-spring);
+}
+.ov__mode {
+  position: relative;
+  min-width: 58px;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.ov__mode:hover,
+.ov__mode.is-on {
+  color: var(--rt-ink);
+}
+.ov__mode.is-on {
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fc-accent);
 }
 .ov__stats {
   font-size: 12px;
   color: var(--rt-ink-soft);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.ov__streak.is-lit {
+  color: var(--rt-rust);
 }
 .ov__spacer {
   flex: 1;
@@ -60,21 +101,60 @@ html.overlay body {
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.2s var(--ease-spring);
 }
 .ov__icon:hover,
 .ov__icon.is-on {
   background: var(--rt-panel-2);
   color: var(--rt-ink);
 }
+.ov__icon:active {
+  transform: scale(0.9);
+}
+.ov__icon.is-on {
+  transform: rotate(45deg);
+}
+
+/* Round progress: a thin line that fills as the round goes. */
+.ov__progress {
+  height: 2px;
+  background: var(--fc-line);
+}
+.ov__progress span {
+  display: block;
+  height: 100%;
+  background: var(--fc-accent);
+  transform-origin: left;
+  transition: transform 0.45s var(--ease-out);
+}
+
 .ov__error {
   margin: 8px 14px 0;
   font-size: 12.5px;
   color: var(--rt-rust);
 }
+
+/* ---------- a card being studied ---------- */
+.ov__study {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: ov-card-in 0.3s var(--ease-out) both;
+}
+@keyframes ov-card-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
 .ov__meta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 10px 14px 0;
   font-size: 12px;
   color: var(--rt-ink-faint);
@@ -96,28 +176,13 @@ html.overlay body {
 .ov__tag.is-new {
   color: var(--fc-accent);
 }
-.ov__card {
-  flex: 1;
-  min-height: 0;
-  margin: 10px 14px;
-  padding: 14px 18px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  overflow-y: auto;
-  border: 1px solid var(--fc-line, rgba(0, 0, 0, 0.1));
-  border-radius: 12px;
-  background: var(--rt-panel);
-  color: var(--rt-ink);
-  font: inherit;
-  text-align: center;
-  cursor: pointer;
+.ov__tag.is-learned {
+  color: var(--rt-teal);
 }
-.ov__card.is-flipped {
-  cursor: default;
+.ov__tag.is-retry {
+  color: var(--rt-rust);
 }
+
 .ov__front {
   font-size: 20px;
   font-weight: 600;
@@ -125,16 +190,255 @@ html.overlay body {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.ov__back {
-  width: 100%;
-  padding-top: 10px;
-  border-top: 1px dashed var(--fc-line-strong, rgba(0, 0, 0, 0.2));
-  font-size: 16px;
-  line-height: 1.4;
-  color: var(--rt-ink-soft);
+
+/* Cards mode: a real flip. */
+.ov__flip {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin: 10px 14px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--rt-ink);
+  cursor: pointer;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+}
+.ov__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 18px;
+  overflow-y: auto;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 14px;
+  background: var(--rt-panel);
+  text-align: center;
+  backface-visibility: hidden;
+  transition: transform 0.5s var(--ease-spring);
+}
+.ov__face--back {
+  transform: rotateY(-180deg);
+  border-color: var(--fc-accent);
+}
+.ov__flip.is-flipped .ov__face--front {
+  transform: rotateY(180deg);
+}
+.ov__flip.is-flipped .ov__face--back {
+  transform: rotateY(0deg);
+}
+.ov__flip:hover .ov__face {
+  box-shadow: 0 10px 26px -16px rgba(0, 0, 0, 0.5);
+}
+.ov__back-prompt {
+  font-size: 12.5px;
+  color: var(--rt-ink-faint);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Write and Learn: the prompt, then the answer area. */
+.ov__card {
+  flex: 1;
+  min-height: 0;
+  margin: 10px 14px 8px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 14px;
+  background: var(--rt-panel);
+  text-align: center;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+.ov__card--right {
+  border-color: var(--rt-teal);
+  background: color-mix(in srgb, var(--rt-teal) 10%, var(--rt-panel));
+  animation: ov-glow 0.65s var(--ease-out);
+}
+.ov__card--wrong {
+  border-color: var(--rt-rust);
+  animation: ov-shake 0.36s ease-in-out;
+}
+@keyframes ov-glow {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--rt-teal) 55%, transparent);
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.015);
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+    transform: scale(1);
+  }
+}
+@keyframes ov-shake {
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+
+.ov__typed {
+  padding: 0 14px;
+}
+.ov__input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 15px;
+}
+.ov__input.is-right {
+  border-color: var(--rt-teal);
+}
+
+.ov__verdict {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--rt-panel-2);
+  font-size: 14px;
+  animation: fx-rise 0.25s var(--ease-out) both;
+}
+.ov__verdict-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.ov__verdict-key {
+  flex: none;
+  width: 52px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rt-ink-faint);
+}
+.ov__verdict-answer {
+  font-weight: 600;
+}
+
+/* Learn: four options in a 2 × 2 grid. */
+.ov__choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 0;
+  padding: 0 14px;
+  list-style: none;
+}
+.ov__choices li {
+  animation: fx-rise 0.3s var(--ease-out) both;
+  animation-delay: var(--d, 0ms);
+}
+.ov__choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 10px;
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.2s ease,
+    transform 0.15s var(--ease-out),
+    opacity 0.2s ease;
+}
+.ov__choice:hover:not(:disabled) {
+  border-color: var(--fc-accent);
+  transform: translateY(-1px);
+}
+.ov__choice:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.ov__choice:disabled {
+  cursor: default;
+}
+.ov__choice-text {
+  min-width: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+.ov__choice.is-right {
+  border-color: var(--rt-teal);
+  background: color-mix(in srgb, var(--rt-teal) 16%, var(--rt-panel));
+  animation: ov-glow 0.65s var(--ease-out);
+}
+.ov__choice.is-wrong {
+  border-color: var(--rt-rust);
+  background: color-mix(in srgb, var(--rt-rust) 12%, var(--rt-panel));
+  animation: ov-shake 0.36s ease-in-out;
+}
+.ov__choice.is-dim {
+  opacity: 0.45;
+}
+
+.ov__hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  min-height: 22px;
+  padding: 8px 14px 12px;
+  font-size: 12px;
+  color: var(--rt-ink-faint);
+}
+.ov__good {
+  color: var(--rt-teal);
+  font-weight: 600;
+}
+.ov__bad {
+  color: var(--rt-rust);
+  font-weight: 600;
+}
+.ov__link {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ov__link:hover {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+}
+
 .ov__actions {
   display: flex;
   justify-content: center;
@@ -144,9 +448,16 @@ html.overlay body {
 .ov__grade {
   flex: 1;
   justify-content: center;
+  animation: fx-rise 0.25s var(--ease-out) both;
 }
-.ov__grade--again {
+.ov__grade + .ov__grade {
+  animation-delay: 50ms;
+}
+.ov__grade--miss {
   color: var(--rt-rust);
+}
+.ov__grade--knew {
+  color: var(--rt-teal);
 }
 .ov__show {
   min-width: 60%;
@@ -164,6 +475,8 @@ html.overlay body {
   line-height: 1.6;
   text-align: center;
 }
+
+/* ---------- round end, quick add ---------- */
 .ov__body {
   flex: 1;
   min-height: 0;
@@ -176,6 +489,31 @@ html.overlay body {
   justify-content: center;
   gap: 6px;
   text-align: center;
+}
+.ov__end {
+  animation: fx-pop 0.35s var(--ease-spring) both;
+}
+.ov__ring {
+  transform: rotate(-90deg);
+  margin-bottom: 4px;
+}
+.ov__ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+.ov__ring-track {
+  stroke: var(--rt-panel-2);
+}
+.ov__ring-fill {
+  stroke: var(--rt-teal);
+  stroke-linecap: round;
+  stroke-dashoffset: var(--to);
+  animation: ov-ring 0.9s var(--ease-out) both 0.15s;
+}
+@keyframes ov-ring {
+  from {
+    stroke-dashoffset: var(--from);
+  }
 }
 .ov__big {
   margin: 0;
@@ -199,4 +537,9 @@ html.overlay body {
   align-items: center;
   gap: 8px;
   margin-top: auto;
+}
+.ov__saved {
+  display: inline-block;
+  color: var(--rt-teal);
+  animation: fx-pop 0.3s var(--ease-spring) both;
 }

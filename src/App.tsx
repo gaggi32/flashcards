@@ -3,7 +3,7 @@
 
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState, type ReactNode } from 'react';
-import { HashRouter, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router';
+import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import Link from '@/components/Link';
 import { DialogHost } from '@/components/Dialogs';
@@ -82,6 +82,16 @@ function AppBar() {
   );
 }
 
+/** Each screen fades up as it arrives. */
+function PageMotion({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <div key={pathname} className="fx-page">
+      {children}
+    </div>
+  );
+}
+
 export function App() {
   return (
     <SettingsProvider>
@@ -90,6 +100,7 @@ export function App() {
         <div className="rt-page fc-page">
           <div className="fc-app">
             <AppBar />
+            <PageMotion>
             <Routes>
               <Route path="/" element={<Navigate to="/flashcards" replace />} />
               <Route path="/flashcards" element={<SetsClient />} />
@@ -105,6 +116,7 @@ export function App() {
               <Route path="/settings" element={<SettingsScreen />} />
               <Route path="*" element={<Navigate to="/flashcards" replace />} />
             </Routes>
+            </PageMotion>
           </div>
           <DialogHost />
         </div>

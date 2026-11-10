@@ -66,19 +66,40 @@
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
 }
-.today__of {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--rt-ink-faint);
-}
 .today__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--rt-ink-soft);
+}
+.today__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fc-track, rgba(127, 127, 127, 0.3));
+  box-shadow: inset 0 0 0 1px var(--fc-line-strong);
+}
+.today__dot.is-learning {
+  background: var(--fc-accent);
+  box-shadow: none;
+}
+.today__dot.is-learned {
+  background: var(--rt-teal, #2f7d6d);
+  box-shadow: none;
+}
+.today__streak .today__num {
+  color: var(--rt-ink-soft);
+}
+.today__streak.is-lit .today__num {
+  color: var(--rt-rust);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--rt-rust) 45%, transparent);
 }
 .today__go {
   margin-left: auto;
 }
 .today__bar {
+  display: flex;
   height: 6px;
   margin-top: 12px;
   border-radius: 999px;
@@ -88,12 +109,12 @@
 .today__bar span {
   display: block;
   height: 100%;
-  background: var(--fc-accent);
-  border-radius: inherit;
-  transition: width 0.3s ease;
 }
-.today__bar span.is-full {
+.today__bar span.is-learned {
   background: var(--rt-teal, #2f7d6d);
+}
+.today__bar span.is-learning {
+  background: var(--fc-accent);
 }
 .today__hint {
   margin-top: 8px;

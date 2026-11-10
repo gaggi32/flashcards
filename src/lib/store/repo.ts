@@ -470,73 +470,87 @@ export async function reviewBatch(
   return results;
 }
 
-// --- overlay and daily numbers ------------------------------------------------------
+// --- overlay and overview -------------------------------------------------------
 
-export type OverlayCard = LearnCardDTO & { setId: number; setTitle: string; due: boolean };
+export type OverlayCard = LearnCardDTO & { setId: number; setTitle: string };
+
+type OverlayRow = CardWithProgress & { set_id: number; set_title: string };
+
+const OVERLAY_FROM = `FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id
+  WHERE s.in_overlay = 1`;
 
 /**
- * The overlay's round: cards whose review date has come (oldest first), then
- * up to `newCards` never-studied ones, from sets that are in the overlay.
+ * The overlay's round, from sets that are in the overlay, with no dates
+ * involved: cards still being learned (shortest streak, longest unseen
+ * first), then up to `newCards` never-studied ones, then learned cards that
+ * have gone longest without an answer, until the round is full.
  */
-export async function overlayRound(today: string, size: number, newCards: number): Promise<OverlayCard[]> {
-  parse(dayField, today);
-  const due = await db().select<CardWithProgress & { set_id: number; set_title: string }>(
-    `SELECT ${CARD_WITH_PROGRESS}, s.id AS set_id, s.title AS set_title
-     FROM progress p JOIN cards c ON c.id = p.card_id JOIN sets s ON s.id = c.set_id
-     WHERE s.in_overlay = 1 AND p.next_review_date <= ?
-     ORDER BY p.next_review_date, p.last_reviewed_at LIMIT ?`,
-    [today, size],
-  );
-  const room = Math.min(newCards, size - due.length);
-  const fresh =
-    room > 0
-      ? await db().select<CardWithProgress & { set_id: number; set_title: string }>(
+export async function overlayRound(size: number, newCards: number): Promise<OverlayCard[]> {
+  const pick = (where: string, order: string, limit: number) =>
+    limit > 0
+      ? db().select<OverlayRow>(
           `SELECT ${CARD_WITH_PROGRESS}, s.id AS set_id, s.title AS set_title
-           FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id
-           WHERE s.in_overlay = 1 AND p.card_id IS NULL
-           ORDER BY s.created_at, c.position, c.id LIMIT ?`,
-          [room],
+           ${OVERLAY_FROM} AND ${where} ORDER BY ${order} LIMIT ?`,
+          [limit],
         )
-      : [];
-  return [...due, ...fresh].map((r) => ({
+      : Promise.resolve([] as OverlayRow[]);
+  const learning = await pick(
+    `p.card_id IS NOT NULL AND p.repetition_number < ${LEARNED_REPETITIONS}`,
+    'p.repetition_number, p.last_reviewed_at, c.id',
+    size,
+  );
+  const fresh = await pick('p.card_id IS NULL', 's.created_at, s.id, c.position, c.id', Math.min(newCards, size - learning.length));
+  const learned = await pick(
+    `p.repetition_number >= ${LEARNED_REPETITIONS}`,
+    'p.last_reviewed_at, c.id',
+    size - learning.length - fresh.length,
+  );
+  return [...learning, ...fresh, ...learned].map((r) => ({
     ...toLearnCard(r),
     setId: r.set_id,
     setTitle: r.set_title,
-    due: Boolean(r.has_progress),
   }));
 }
 
-export type Today = {
-  /** Cards whose review date has come, in overlay sets. */
-  due: number;
-  /** Never-studied cards in overlay sets. */
+/** Every card in overlay sets, for multiple-choice options from the same set. */
+export async function overlayPool(): Promise<{ id: number; term: string; definition: string; setId: number }[]> {
+  const rows = await db().select<{ id: number; term: string; definition: string; set_id: number }>(
+    `SELECT c.id, c.term, c.definition, c.set_id FROM cards c JOIN sets s ON s.id = c.set_id
+     WHERE s.in_overlay = 1 LIMIT 20000`,
+  );
+  return rows.map((r) => ({ id: r.id, term: r.term, definition: r.definition, setId: r.set_id }));
+}
+
+export type Overview = {
+  /** Cards in overlay sets, by learn status. */
   fresh: number;
-  /** Answers given today. */
-  reviewed: number;
+  learning: number;
+  learned: number;
   /** Days in a row, ending today or yesterday, with at least one answer. */
   streak: number;
+  /** Whether anything was answered today (only for the streak reminder). */
+  answeredToday: boolean;
 };
 
-export async function todayNumbers(today: string): Promise<Today> {
+export async function overview(today: string): Promise<Overview> {
   parse(dayField, today);
-  const [row] = await db().select<{ due: number; fresh: number; reviewed: number }>(
-    `SELECT
-       (SELECT COUNT(*) FROM progress p JOIN cards c ON c.id = p.card_id JOIN sets s ON s.id = c.set_id
-          WHERE s.in_overlay = 1 AND p.next_review_date <= ?) AS due,
-       (SELECT COUNT(*) FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id
-          WHERE s.in_overlay = 1 AND p.card_id IS NULL) AS fresh,
-       (SELECT COUNT(*) FROM reviews WHERE day = ?) AS reviewed`,
-    [today, today],
+  const [row] = await db().select<{ fresh: number; learning: number; learned: number }>(
+    `SELECT COALESCE(SUM(p.card_id IS NULL), 0) AS fresh,
+            COALESCE(SUM(p.repetition_number < ${LEARNED_REPETITIONS}), 0) AS learning,
+            COALESCE(SUM(p.repetition_number >= ${LEARNED_REPETITIONS}), 0) AS learned
+     ${OVERLAY_FROM}`,
   );
   const days = await db().select<{ day: string }>(
     'SELECT DISTINCT day FROM reviews WHERE day <= ? ORDER BY day DESC LIMIT 400',
     [today],
   );
+  const list = days.map((d) => d.day);
   return {
-    due: Number(row.due),
     fresh: Number(row.fresh),
-    reviewed: Number(row.reviewed),
-    streak: streakFrom(days.map((d) => d.day), today),
+    learning: Number(row.learning),
+    learned: Number(row.learned),
+    streak: streakFrom(list, today),
+    answeredToday: list[0] === today,
   };
 }
 

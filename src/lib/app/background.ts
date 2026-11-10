@@ -5,7 +5,7 @@
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 
 import { todayKey } from '@/lib/nutrition/day';
-import { todayNumbers } from '@/lib/store/repo';
+import { overview } from '@/lib/store/repo';
 import { onDataChanged } from './events';
 import { backupNow, checkUpdate, getSettings, setTrayStatus, stampNow, type UpdateInfo } from './native';
 
@@ -41,8 +41,8 @@ export function onUpdate(cb: (u: UpdateInfo) => void): () => void {
 
 async function refreshTray() {
   try {
-    const n = await todayNumbers(todayKey());
-    const parts = [n.due ? `${n.due} due` : 'nothing due', `${n.reviewed} studied today`];
+    const n = await overview(todayKey());
+    const parts = [`${n.learning} learning`, `${n.fresh} new`, `${n.learned} learned`];
     if (n.streak > 1) parts.push(`${n.streak}-day streak`);
     await setTrayStatus(`Flashcards — ${parts.join(' · ')}`);
   } catch {
@@ -57,19 +57,17 @@ async function maybeRemind() {
   const now = new Date();
   const [h, m] = s.reminderTime.split(':').map(Number);
   if (now.getHours() * 60 + now.getMinutes() < h * 60 + m) return;
-  const n = await todayNumbers(today);
+  const n = await overview(today);
   store(REMINDED, today);
-  if (n.reviewed >= s.dailyGoal || n.due + n.fresh === 0) return;
+  if (n.answeredToday || n.learning + n.fresh === 0) return;
   let granted = await isPermissionGranted();
   if (!granted) granted = (await requestPermission()) === 'granted';
   if (!granted) return;
-  const left = s.dailyGoal - n.reviewed;
+  const toLearn = n.learning + n.fresh;
+  const cards = `${toLearn} card${toLearn === 1 ? '' : 's'} still to learn.`;
   sendNotification({
     title: 'Flashcards',
-    body:
-      n.due > 0
-        ? `${n.due} card${n.due === 1 ? '' : 's'} due. ${left} more answers reach today's goal.`
-        : `${left} more answers reach today's goal.`,
+    body: n.streak > 0 ? `Keep your ${n.streak}-day streak going: ${cards}` : cards,
   });
 }
 

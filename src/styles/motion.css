@@ -1,0 +1,231 @@
+/* Motion for the whole app: page and list entrances, hover lifts, pressed
+   buttons, dialogs, the switch. Everything here is decoration and turns off
+   for people who ask their system for less motion. */
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.55, 1);
+}
+
+@keyframes fx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes fx-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fx-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+}
+@keyframes fx-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* ---------- pages ---------- */
+.fx-page {
+  animation: fx-rise 0.32s var(--ease-out) both;
+}
+.fx-rise {
+  animation: fx-rise 0.36s var(--ease-out) both;
+}
+
+/* Lists come in one after another. */
+.fc-list > *,
+.fc-terms > *,
+.fc-modes > *,
+.set-section {
+  animation: fx-rise 0.38s var(--ease-out) both;
+}
+.fc-list > *:nth-child(2),
+.fc-terms > *:nth-child(2),
+.fc-modes > *:nth-child(2),
+.set-section:nth-of-type(2) {
+  animation-delay: 40ms;
+}
+.fc-list > *:nth-child(3),
+.fc-terms > *:nth-child(3),
+.fc-modes > *:nth-child(3),
+.set-section:nth-of-type(3) {
+  animation-delay: 80ms;
+}
+.fc-list > *:nth-child(4),
+.fc-terms > *:nth-child(4),
+.fc-modes > *:nth-child(4),
+.set-section:nth-of-type(4) {
+  animation-delay: 120ms;
+}
+.fc-list > *:nth-child(5),
+.fc-terms > *:nth-child(5),
+.set-section:nth-of-type(5) {
+  animation-delay: 160ms;
+}
+.fc-list > *:nth-child(6),
+.fc-terms > *:nth-child(6),
+.set-section:nth-of-type(6) {
+  animation-delay: 200ms;
+}
+.fc-list > *:nth-child(n + 7),
+.fc-terms > *:nth-child(n + 7),
+.set-section:nth-of-type(n + 7) {
+  animation-delay: 240ms;
+}
+
+/* ---------- rows, tiles, buttons ---------- */
+.rt-page.fc-page .fc-row,
+.rt-page.fc-page .fc-mode {
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    transform 0.22s var(--ease-out),
+    box-shadow 0.22s var(--ease-out);
+}
+.rt-page.fc-page .fc-row:hover,
+.rt-page.fc-page .fc-mode:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px -12px rgba(0, 0, 0, 0.45);
+}
+.rt-page.fc-page .fc-row:active,
+.rt-page.fc-page .fc-mode:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: none;
+}
+.fc-row > svg {
+  transition: transform 0.22s var(--ease-out), color 0.18s ease;
+}
+.fc-row:hover > svg {
+  transform: translateX(3px);
+}
+
+.rt-page.fc-page .rt-btn {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.14s var(--ease-out);
+}
+.rt-page.fc-page .rt-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.rt-page.fc-page .rt-input {
+  transition: border-color 0.15s ease, box-shadow 0.2s ease;
+}
+.rt-page.fc-page .rt-input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fc-accent) 22%, transparent);
+}
+
+/* ---------- today panel ---------- */
+.today__bar span {
+  transition: width 0.8s var(--ease-out);
+  transform-origin: left;
+  animation: fx-grow-x 0.9s var(--ease-out) both 0.1s;
+}
+
+/* ---------- dialogs ---------- */
+.dlg-backdrop {
+  animation: fx-fade 0.18s ease both;
+  backdrop-filter: blur(3px);
+}
+.dlg {
+  animation: fx-pop 0.24s var(--ease-spring) both;
+}
+
+/* ---------- on/off switch ----------
+   A rounded track with a knob that slides across; replaces the pixel switch. */
+.rt-page.fc-page .rt-switch {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: var(--fc-track, rgba(127, 127, 127, 0.25));
+  box-shadow: inset 0 0 0 1px var(--fc-line-strong);
+  cursor: pointer;
+  transition:
+    background-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+.rt-page.fc-page .rt-switch::before {
+  content: none;
+}
+.rt-page.fc-page .rt-switch:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px var(--fc-accent);
+}
+.rt-page.fc-page .rt-switch.is-on {
+  background: var(--fc-accent);
+  box-shadow: inset 0 0 0 1px var(--fc-accent);
+}
+.rt-page.fc-page .rt-switch:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.rt-page.fc-page .rt-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.26s var(--ease-spring),
+    width 0.16s ease;
+}
+.rt-page.fc-page .rt-switch.is-on .rt-switch__knob {
+  left: 3px;
+  transform: translateX(18px);
+  background: #fff;
+}
+/* A held knob stretches toward where it is going, like iOS. */
+.rt-page.fc-page .rt-switch:active:not(:disabled) .rt-switch__knob {
+  width: 22px;
+}
+.rt-page.fc-page .rt-switch.is-on:active:not(:disabled) .rt-switch__knob {
+  transform: translateX(14px);
+}
+.rt-page.fc-page .rt-switch__text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.rt-page.fc-page .rt-switch:focus-visible {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 3px;
+}
+
+/* ---------- choice pills (Term / Definition / Mixed and the like) ---------- */
+.set-choice .rt-btn {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.14s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
