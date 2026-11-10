@@ -82,6 +82,21 @@ fn valid_time(t: &str) -> bool {
         && t[3..].parse::<u8>().map_or(false, |m| m < 60)
 }
 
+/// A global hotkey without a modifier would fire on every press of that key in
+/// every app, so one is required.
+pub fn has_modifier(accelerator: &str) -> bool {
+    let parts: Vec<&str> = accelerator.split('+').map(str::trim).collect();
+    parts.len() >= 2
+        && parts[..parts.len() - 1].iter().all(|p| {
+            matches!(
+                p.to_ascii_lowercase().as_str(),
+                "commandorcontrol" | "cmdorctrl" | "command" | "cmd" | "control" | "ctrl" | "alt"
+                    | "option" | "shift" | "super" | "meta"
+            )
+        })
+        && !parts[parts.len() - 1].is_empty()
+}
+
 /// OpenRouter model slugs: "vendor/model", optionally with ":variant".
 pub fn valid_model(m: &str) -> bool {
     !m.is_empty()
@@ -94,7 +109,7 @@ impl Settings {
     pub fn sanitized(mut self) -> Self {
         let d = Settings::default();
         self.hotkey = self.hotkey.trim().chars().take(64).collect();
-        if self.hotkey.is_empty() {
+        if !has_modifier(&self.hotkey) {
             self.hotkey = d.hotkey;
         }
         self.overlay_round = self.overlay_round.clamp(1, 50);
@@ -171,6 +186,17 @@ mod tests {
         let s: Settings = serde_json::from_str(r#"{"hotkey":"Alt+K"}"#).unwrap();
         assert_eq!(s.hotkey, "Alt+K");
         assert_eq!(s.daily_goal, 20);
+    }
+
+    #[test]
+    fn a_hotkey_needs_a_modifier() {
+        assert!(has_modifier("CommandOrControl+Alt+F"));
+        assert!(has_modifier("Shift+F9"));
+        assert!(!has_modifier("A"));
+        assert!(!has_modifier("Space"));
+        assert!(!has_modifier("Foo+A"));
+        let s = Settings { hotkey: "Space".into(), ..Settings::default() }.sanitized();
+        assert_eq!(s.hotkey, DEFAULT_HOTKEY);
     }
 
     #[test]

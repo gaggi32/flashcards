@@ -106,8 +106,8 @@ export function App() {
               <Route path="*" element={<Navigate to="/flashcards" replace />} />
             </Routes>
           </div>
+          <DialogHost />
         </div>
-        <DialogHost />
       </HashRouter>
     </SettingsProvider>
   );

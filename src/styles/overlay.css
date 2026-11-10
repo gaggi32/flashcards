@@ -34,10 +34,11 @@ html.overlay body {
   cursor: grab;
 }
 .ov__title {
-  font-family: var(--font-pixel), monospace;
-  font-size: 11px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--fc-accent);
 }
 .ov__stats {

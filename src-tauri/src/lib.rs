@@ -70,6 +70,8 @@ fn build_main(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         .visible(false)
         .disable_drag_drop_handler()
         .on_navigation(|url| is_app_url(url))
+        // No popups: window.open and target=_blank open nothing.
+        .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
         .build()
 }
 
@@ -88,6 +90,8 @@ fn build_overlay(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         .visible(false)
         .disable_drag_drop_handler()
         .on_navigation(|url| is_app_url(url))
+        // No popups: window.open and target=_blank open nothing.
+        .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
         .build()
 }
 
@@ -196,6 +200,17 @@ fn register_hotkey(app: &AppHandle, accelerator: &str) -> Result<(), String> {
         .map_err(|e| format!("Could not use {accelerator}: {e}"))
 }
 
+/// Commands that touch files, settings or the API key answer the main window
+/// only. The overlay needs none of them, so a page in it could not use them
+/// even if it were somehow running someone else's script.
+fn main_only(window: &WebviewWindow) -> Result<(), String> {
+    if window.label() == MAIN {
+        Ok(())
+    } else {
+        Err("Not available in this window.".into())
+    }
+}
+
 // ---- commands: database -------------------------------------------------------
 
 fn db_conn(app: &AppHandle) -> Arc<Mutex<rusqlite::Connection>> {
@@ -231,7 +246,8 @@ fn backups_dir(app: &AppHandle) -> Result<PathBuf, String> {
 /// Snapshot the database into the backups folder and keep the newest `keep`.
 /// `stamp` is YYYYMMDD-HHMMSS in the user's local time, from the UI.
 #[tauri::command]
-async fn backup_now(app: AppHandle, stamp: String) -> Result<String, String> {
+async fn backup_now(app: AppHandle, window: WebviewWindow, stamp: String) -> Result<String, String> {
+    main_only(&window)?;
     let ok = stamp.len() == 15
         && stamp.as_bytes()[8] == b'-'
         && stamp.chars().enumerate().all(|(i, c)| i == 8 || c.is_ascii_digit());
@@ -273,7 +289,13 @@ async fn backup_now(app: AppHandle, stamp: String) -> Result<String, String> {
 /// Save `contents` where the user picks in a native dialog. The UI never names
 /// a path, so it cannot write anywhere the user did not choose.
 #[tauri::command]
-async fn export_file(app: AppHandle, contents: String, suggested_name: String) -> Result<Option<String>, String> {
+async fn export_file(
+    app: AppHandle,
+    window: WebviewWindow,
+    contents: String,
+    suggested_name: String,
+) -> Result<Option<String>, String> {
+    main_only(&window)?;
     let name: String = suggested_name
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || "-_. ".contains(*c))
@@ -294,7 +316,8 @@ async fn export_file(app: AppHandle, contents: String, suggested_name: String) -
 
 /// Read a file the user picks in a native dialog (JSON or plain text).
 #[tauri::command]
-async fn import_file(app: AppHandle, kind: String) -> Result<Option<String>, String> {
+async fn import_file(app: AppHandle, window: WebviewWindow, kind: String) -> Result<Option<String>, String> {
+    main_only(&window)?;
     let (label, exts): (&str, &[&str]) = match kind.as_str() {
         "json" => ("Flashcards export", &["json"]),
         _ => ("Text", &["txt", "csv", "tsv", "md"]),
@@ -311,7 +334,8 @@ async fn import_file(app: AppHandle, kind: String) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
-fn open_data_folder(app: AppHandle) -> Result<(), String> {
+fn open_data_folder(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    main_only(&window)?;
     let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
     app.opener()
         .open_path(dir.display().to_string(), None::<&str>)
@@ -326,7 +350,13 @@ fn get_settings(state: State<'_, AppState>) -> Settings {
 }
 
 #[tauri::command]
-fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings) -> Result<Settings, String> {
+fn save_settings(
+    app: AppHandle,
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    settings: Settings,
+) -> Result<Settings, String> {
+    main_only(&window)?;
     let next = settings.sanitized();
     let prev = state.settings.lock().unwrap().clone();
     if next.hotkey != prev.hotkey {
@@ -346,7 +376,8 @@ fn save_settings(app: AppHandle, state: State<'_, AppState>, settings: Settings)
 
 /// Release the hotkey while the Settings recorder listens for a new one.
 #[tauri::command]
-fn suspend_hotkey(app: AppHandle) -> Result<(), String> {
+fn suspend_hotkey(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    main_only(&window)?;
     app.global_shortcut().unregister_all().map_err(|e| e.to_string())
 }
 
@@ -473,17 +504,25 @@ fn ai_key_status(cache: State<'_, ai::KeyCache>) -> ai::KeyStatus {
 }
 
 #[tauri::command]
-fn ai_set_key(cache: State<'_, ai::KeyCache>, key: String) -> Result<ai::KeyStatus, String> {
+fn ai_set_key(window: WebviewWindow, cache: State<'_, ai::KeyCache>, key: String) -> Result<ai::KeyStatus, String> {
+    main_only(&window)?;
     ai::save_key(&cache, &key)
 }
 
 #[tauri::command]
-fn ai_clear_key(cache: State<'_, ai::KeyCache>) -> Result<ai::KeyStatus, String> {
+fn ai_clear_key(window: WebviewWindow, cache: State<'_, ai::KeyCache>) -> Result<ai::KeyStatus, String> {
+    main_only(&window)?;
     ai::clear_key(&cache)
 }
 
 #[tauri::command]
-async fn ai_request(app: AppHandle, endpoint: String, body: Option<Json>) -> Result<ai::Reply, String> {
+async fn ai_request(
+    app: AppHandle,
+    window: WebviewWindow,
+    endpoint: String,
+    body: Option<Json>,
+) -> Result<ai::Reply, String> {
+    main_only(&window)?;
     let endpoint = ai::Endpoint::parse(&endpoint).ok_or("Unknown endpoint")?;
     let key = ai::read_key(&app.state::<ai::KeyCache>())
         .ok_or("No OpenRouter key yet. Add one in Settings.")?;

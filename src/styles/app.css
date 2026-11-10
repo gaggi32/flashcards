@@ -11,6 +11,7 @@
 .rt-page.fc-page {
   padding-bottom: 40px;
   min-height: 100vh;
+  box-sizing: border-box;
 }
 .fc-app {
   max-width: 860px;
@@ -20,6 +21,9 @@
 /* ---------- app bar ---------- */
 .rt-page.fc-page a.app-bar__home {
   text-decoration: none;
+  border: none;
+  box-shadow: none;
+  background: none;
   color: var(--rt-ink-soft);
   border-radius: 8px;
   padding: 4px 6px;
