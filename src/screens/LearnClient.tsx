@@ -31,6 +31,7 @@ import {
 import type { Quality } from '@/lib/flashcards/sm2';
 import { specialCharsOf } from '@/lib/flashcards/specialChars';
 import type { LearnCardDTO, LearnStatsDTO, ProgressDTO, SetDTO } from '@/lib/flashcards/types';
+import { promptSizeClass } from '@/lib/flashcards/format';
 import { answerOf, isMatch, promptOf, type AnswerWith } from '@/lib/flashcards/write';
 import { todayKey } from '@/lib/nutrition/day';
 import { IconCheck, IconClose, IconEnter } from '@/components/flashcards/FlashcardIcons';
@@ -630,7 +631,7 @@ function Play({
 
       <div className="fc-prompt">
         <span className="fc-flip__side">{sides.prompt}</span>
-        <div className="fc-prompt__text">{promptOf(card, answerWith)}</div>
+        <div className={`fc-prompt__text${promptSizeClass(promptOf(card, answerWith))}`}>{promptOf(card, answerWith)}</div>
       </div>
 
       {question.kind === 'choice' && (

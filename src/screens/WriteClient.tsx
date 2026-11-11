@@ -2,7 +2,7 @@
 import Link from '@/components/Link';
 import { useEffect, useId, useRef, useState, useMemo } from 'react';
 
-import { plural } from '@/lib/flashcards/format';
+import { plural, promptSizeClass } from '@/lib/flashcards/format';
 import { computeDiff } from '@/lib/flashcards/diff';
 import type { SetDTO } from '@/lib/flashcards/types';
 import {
@@ -391,7 +391,9 @@ function Play({
 
       <div className="fc-prompt">
         <span className="fc-flip__side">{sides.prompt}</span>
-        <div className="fc-prompt__text">{promptOf(card, session.answerWith)}</div>
+        <div className={`fc-prompt__text${promptSizeClass(promptOf(card, session.answerWith))}`}>
+          {promptOf(card, session.answerWith)}
+        </div>
       </div>
 
       {step.kind === 'correct' && (

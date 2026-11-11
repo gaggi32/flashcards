@@ -395,3 +395,54 @@ html.overlay body {
   padding: 2px 8px;
   font-size: 11.5px;
 }
+
+/* Long card text: smaller steps, and past that the card scrolls inside
+   itself, so the buttons below never move off the window. */
+.ov__embed .fc-flip__text.fc-flip__text--sm,
+.ov__embed .fc-prompt__text.fc-prompt__text--sm {
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.ov__embed .fc-flip__text.fc-flip__text--xs,
+.ov__embed .fc-prompt__text.fc-prompt__text--xs {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.ov__embed .fc-flip__inner {
+  max-height: 150px;
+}
+.ov__embed .fc-flip__face {
+  padding-top: 26px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.ov__embed .fc-prompt {
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* While a correction shows: the prompt is only a reminder (two lines, then
+   it scrolls), the score line and the field label give way, so the box for
+   typing the answer out always stays in the window. */
+.ov__embed .fc-prompt:has(~ .fc-verdict),
+.ov__embed *:has(> .fc-verdict) > .fc-prompt {
+  max-height: 52px;
+}
+.ov__embed .fc-prompt:has(~ .fc-verdict) .fc-prompt__text--sm,
+.ov__embed .fc-prompt:has(~ .fc-verdict) .fc-prompt__text--xs,
+.ov__embed *:has(> .fc-verdict) > .fc-prompt .fc-prompt__text--sm,
+.ov__embed *:has(> .fc-verdict) > .fc-prompt .fc-prompt__text--xs {
+  font-size: 12.5px;
+}
+.ov__embed .fc-verdict .fc-learn__grade {
+  display: none;
+}
+.ov__embed .rt-field__label {
+  margin-bottom: 4px;
+  font-size: 11.5px;
+}
+.ov__embed .fc-verdict ~ .rt-field .rt-field__label,
+.ov__embed .fc-verdict ~ * .rt-field__label {
+  display: none;
+}
