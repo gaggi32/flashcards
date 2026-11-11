@@ -21,7 +21,7 @@ pub const DEFAULT_MODEL: &str = "google/gemini-3.8-flash";
 pub struct Settings {
     // --- overlay ---
     pub hotkey: String,
-    /// Cards per overlay round.
+    /// Cards per overlay round; 0 means every card in the set.
     pub overlay_round: u32,
     /// New (never studied) cards mixed into a round once due cards run out.
     pub overlay_new_cards: u32,
@@ -109,8 +109,10 @@ impl Settings {
         if !has_modifier(&self.hotkey) {
             self.hotkey = d.hotkey;
         }
-        self.overlay_round = self.overlay_round.clamp(1, 50);
-        self.overlay_new_cards = self.overlay_new_cards.min(50);
+        if self.overlay_round != 0 {
+            self.overlay_round = self.overlay_round.min(1000);
+        }
+        self.overlay_new_cards = self.overlay_new_cards.min(1000);
         self.overlay_front = one_of(&self.overlay_front, &["term", "definition", "mixed"], "term");
         if !valid_time(&self.reminder_time) {
             self.reminder_time = d.reminder_time;
@@ -160,7 +162,7 @@ mod tests {
     #[test]
     fn out_of_range_values_are_pulled_back() {
         let s = Settings {
-            overlay_round: 0,
+            overlay_round: 5000,
             overlay_front: "upside-down".into(),
             reminder_time: "25:99".into(),
             theme: "neon".into(),
@@ -169,7 +171,9 @@ mod tests {
             ..Settings::default()
         }
         .sanitized();
-        assert_eq!(s.overlay_round, 1);
+        assert_eq!(s.overlay_round, 1000);
+        // 0 is "every card in the set", and stays.
+        assert_eq!(Settings { overlay_round: 0, ..Settings::default() }.sanitized().overlay_round, 0);
         assert_eq!(s.overlay_front, "term");
         assert_eq!(s.reminder_time, "18:00");
         assert_eq!(s.theme, "system");

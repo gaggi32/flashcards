@@ -1,12 +1,13 @@
-// The hotkey overlay: a short round of cards from one chosen set (or the mix
-// of sets switched into the overlay), studied in one of three modes:
+// The hotkey overlay: a short round of cards from the set you pick, studied in
+// one of three modes:
 //   Cards — flip, then swipe or press 1 / 2 for missed it / knew it;
 //   Write — type the answer; a wrong one has to be typed out correctly;
 //   Learn — like the full Learn mode: multiple choice until you have got a
 //           card right once (with the odd typed one), typed after that.
 // No dates: a round is the cards you are still learning, then a few new ones,
 // then learned ones you have not seen longest. A miss comes back once at the
-// end of the round. ⇄ swaps which side is shown. It lives in its own
+// end of the round. Sides are the website's: Cards shows the term, Write and
+// Learn show the definition and you type the term; ⇄ swaps them. It lives in its own
 // borderless, always-on-top window; Esc or a click elsewhere hides it.
 
 import { listen } from '@tauri-apps/api/event';
@@ -17,7 +18,7 @@ import { CountUp } from '@/components/TodayPanel';
 import { announceDataChange, useDataVersion } from '@/lib/app/events';
 import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { hideOverlay, openMain } from '@/lib/app/native';
-import { usePref, type OverlayMode } from '@/lib/app/prefs';
+import { studySetFrom, usePref, type OverlayMode } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { pickDistractors } from '@/lib/flashcards/distractors';
@@ -65,7 +66,6 @@ type Item = {
   card: OverlayCard;
   retry: boolean;
   /** Fixed per item, so a re-render never changes the question. */
-  coinSide: boolean;
   coinTyped: boolean;
 };
 type Phase =
@@ -90,7 +90,7 @@ export function Overlay() {
   const [view, setView] = useState<'study' | 'add'>('study');
   const [mode, setModePref] = usePref('overlayMode');
   const [chosenSet, setChosenSet] = usePref('overlaySet');
-  const [frontPref, setFrontPref] = usePref('front');
+  const [swapped, setSwapped] = usePref('swapped');
   const [sets, setSets] = useState<SetSummaryDTO[]>([]);
   const [round, setRound] = useState<Item[] | null>(null);
   const [pool, setPool] = useState<PoolCard[]>([]);
@@ -108,10 +108,7 @@ export function Overlay() {
   const panel = useRef<HTMLDivElement>(null);
   const version = useDataVersion();
 
-  const front = frontPref ?? settings?.overlayFront ?? 'term';
-  // A set that has since been deleted falls back to the mix.
-  const studying = chosenSet !== 'all' && sets.length > 0 && !sets.some((s) => s.id === chosenSet) ? 'all' : chosenSet;
-  const setId = studying === 'all' ? null : studying;
+  const setId = studySetFrom(chosenSet, sets);
 
   const resetCard = useCallback(() => {
     setFlipped(false);
@@ -129,6 +126,7 @@ export function Overlay() {
   );
 
   const refreshStats = useCallback(() => {
+    if (setId === null) return;
     overview(todayKey(), setId)
       .then(setStats)
       .catch(() => {});
@@ -136,14 +134,20 @@ export function Overlay() {
 
   const build = useCallback(async () => {
     if (!settings) return;
+    if (setId === null) {
+      setRound([]);
+      return;
+    }
     setError(null);
     try {
-      const [cards, all] = await Promise.all([
-        overlayRound(settings.overlayRound, settings.overlayNewCards, setId),
+      // 0 cards per round means the whole set.
+      const all = settings.overlayRound === 0;
+      const [cards, everyCard] = await Promise.all([
+        overlayRound(all ? 100_000 : settings.overlayRound, all ? 100_000 : settings.overlayNewCards, setId),
         overlayPool(setId),
       ]);
-      setRound(cards.map((card) => ({ card, retry: false, coinSide: Math.random() < 0.5, coinTyped: Math.random() < WRITTEN_MIX })));
-      setPool(all);
+      setRound(cards.map((card) => ({ card, retry: false, coinTyped: Math.random() < WRITTEN_MIX })));
+      setPool(everyCard);
       setIndex(0);
       setRight(0);
       setAnswered(0);
@@ -193,7 +197,9 @@ export function Overlay() {
 
   const item = round && index < round.length ? round[index] : null;
   const card = item?.card ?? null;
-  const termFirst = item ? (front === 'mixed' ? item.coinSide : front === 'term') : true;
+  // The website's way round: Cards shows the term; Write and Learn show the
+  // definition and you type the term.
+  const termFirst = (mode === 'cards') !== swapped;
   const prompt = card ? (termFirst ? card.term : card.definition) : '';
   const expected = card ? (termFirst ? card.definition : card.term) : '';
   const answerSide = termFirst ? 'definition' : 'term';
@@ -303,9 +309,9 @@ export function Overlay() {
   );
 
   const swapSides = useCallback(() => {
-    setFrontPref(front === 'term' ? 'definition' : front === 'definition' ? 'mixed' : 'term');
+    setSwapped(!swapped);
     resetCard();
-  }, [front, setFrontPref, resetCard]);
+  }, [swapped, setSwapped, resetCard]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -374,8 +380,7 @@ export function Overlay() {
   const hotkey = settings ? formatHotkey(settings.hotkey, isMacPlatform()) : '';
   const modeIndex = MODES.findIndex((m) => m.id === mode);
   const progress = round && round.length ? Math.min(1, index / round.length) : 0;
-  const inMix = sets.filter((s) => s.inOverlay !== false).length;
-  const frontLabel = front === 'mixed' ? 'mixed sides' : front === 'term' ? 'term first' : 'definition first';
+  const sideLabel = termFirst ? 'showing the term' : 'showing the definition';
 
   return (
     <div className="rt-page fc-page ov">
@@ -409,7 +414,7 @@ export function Overlay() {
             ))}
           </div>
           <span className="ov__spacer" data-tauri-drag-region />
-          <button type="button" className="ov__icon ov__swap" title={`Swap sides: now ${frontLabel} (S)`} onClick={swapSides}>
+          <button type="button" className="ov__icon ov__swap" title={`Swap sides — now ${sideLabel} (S)`} onClick={swapSides}>
             ⇄
           </button>
           <button
@@ -432,16 +437,13 @@ export function Overlay() {
           <select
             className="ov__setpick"
             aria-label="Set to study"
-            value={String(studying)}
+            value={setId === null ? '' : String(setId)}
             onChange={(e) => {
-              setChosenSet(e.target.value === 'all' ? 'all' : Number(e.target.value));
+              setChosenSet(Number(e.target.value));
               setView('study');
               e.currentTarget.blur();
             }}
           >
-            <option value="all">
-              Mix of {inMix} set{inMix === 1 ? '' : 's'}
-            </option>
             {[...sets]
               .sort((a, b) => a.title.localeCompare(b.title))
               .map((s) => (
@@ -479,7 +481,7 @@ export function Overlay() {
               <span>
                 {index + 1} / {round.length}
               </span>
-              <span className="ov__set">{studying === 'all' ? card.setTitle : ''}</span>
+              <span className="ov__set" />
               {item.retry && <span className="ov__tag is-retry">again</span>}
               <span className={`ov__tag is-${card.status}`}>{card.status}</span>
             </div>
@@ -546,7 +548,7 @@ export function Overlay() {
             done={answered}
             right={right}
             empty={round.length === 0}
-            mix={studying === 'all'}
+            noSets={sets.length === 0}
             onAgain={() => void build()}
             onAdd={() => setView('add')}
           />
@@ -823,14 +825,14 @@ function RoundEnd({
   done,
   right,
   empty,
-  mix,
+  noSets,
   onAgain,
   onAdd,
 }: {
   done: number;
   right: number;
   empty: boolean;
-  mix: boolean;
+  noSets: boolean;
   onAgain: () => void;
   onAdd: () => void;
 }) {
@@ -841,11 +843,9 @@ function RoundEnd({
     <div className="ov__body ov__center ov__end">
       {empty ? (
         <>
-          <p className="ov__big">No cards here yet.</p>
+          <p className="ov__big">{noSets ? 'No sets yet.' : 'No cards in this set yet.'}</p>
           <p className="rt-small rt-ink-faint">
-            {mix
-              ? 'Pick a set above, or switch sets into the mix on their pages.'
-              : 'Add some to this set, or pick another one above.'}
+            {noSets ? 'Make one in the main window, or add a card here.' : 'Add some, or pick another set above.'}
           </p>
         </>
       ) : (

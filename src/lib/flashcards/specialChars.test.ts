@@ -9,7 +9,8 @@ function cards(...pairs: [string, string][]) {
 describe('specialCharsOf', () => {
   it('lists each non-ASCII letter once, ordered by base letter', () => {
     const set = cards(['ñandu', 'rhea'], ['über', 'over'], ['ça', 'that'], ['été', 'summer']);
-    expect(specialCharsOf(set, 'term')).toEqual(['ç', 'é', 'ñ', 'ü']);
+    // ü is on the keyboard already, so it gets no button.
+    expect(specialCharsOf(set, 'term')).toEqual(['ç', 'é', 'ñ']);
 
     // Two accents on one base letter stay together.
     expect(specialCharsOf(cards(['ñ', 'x'], ['é', 'x'], ['è', 'x'], ['ç', 'x']), 'term')).toEqual([

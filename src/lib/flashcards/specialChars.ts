@@ -11,6 +11,9 @@ export const MAX_SPECIAL_CHARS = 40;
 
 const COLLATOR = new Intl.Collator('en');
 
+/** Letters on a Swiss/German keyboard already, so they never get a button. */
+export const ON_THE_KEYBOARD = new Set(['ä', 'ö', 'ü']);
+
 /**
  * Every non-ASCII letter the answers in `cards` use, one entry per letter
  * ("É" and "é" are the same to the grader, so the same button), ordered by base
@@ -30,6 +33,7 @@ export function specialCharsOf(cards: StudyCard[], answerWith: AnswerWith): stri
       const lower = char.toLowerCase();
       // "İ" lowercases to two characters; keep it as it is rather than
       // splitting off a stray combining dot.
+      if (ON_THE_KEYBOARD.has(lower)) continue;
       found.add([...lower].length === 1 ? lower : char);
     }
   }

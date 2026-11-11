@@ -1,12 +1,12 @@
-// The overlay's panel above the sets list: which set the overlay studies (one
-// set, or the mix of sets switched into it), where that stands by learn
-// status, the day streak, and the way in. No dates or daily quotas.
+// The overlay's panel above the sets list: which set the overlay studies,
+// where that set stands by learn status, the day streak, and the way in.
+// No dates or daily quotas.
 
 import { useEffect, useRef, useState } from 'react';
 
 import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { showOverlay } from '@/lib/app/native';
-import { usePref } from '@/lib/app/prefs';
+import { studySetFrom, usePref } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
 import type { SetSummaryDTO } from '@/lib/flashcards/types';
 import { todayKey } from '@/lib/nutrition/day';
@@ -46,8 +46,7 @@ export function TodayPanel({ version }: { version: number }) {
   const [sets, setSets] = useState<SetSummaryDTO[]>([]);
   const [chosen, setChosen] = usePref('overlaySet');
 
-  // A chosen set that has since been deleted falls back to the mix.
-  const studying = chosen !== 'all' && sets.length > 0 && !sets.some((s) => s.id === chosen) ? 'all' : chosen;
+  const studying = studySetFrom(chosen, sets);
 
   useEffect(() => {
     listSets()
@@ -56,13 +55,13 @@ export function TodayPanel({ version }: { version: number }) {
   }, [version]);
 
   useEffect(() => {
-    overview(todayKey(), studying === 'all' ? null : studying)
+    if (studying === null) return;
+    overview(todayKey(), studying)
       .then(setN)
       .catch(() => setN(null));
   }, [version, studying]);
 
-  if (!n || !settings) return null;
-  const inMix = sets.filter((s) => s.inOverlay !== false).length;
+  if (!n || !settings || studying === null) return null;
   const total = n.fresh + n.learning + n.learned;
   const pct = (x: number) => (total ? (x / total) * 100 : 0);
 
@@ -76,11 +75,8 @@ export function TodayPanel({ version }: { version: number }) {
           id="today-set"
           className="rt-input today__select"
           value={String(studying)}
-          onChange={(e) => setChosen(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+          onChange={(e) => setChosen(Number(e.target.value))}
         >
-          <option value="all">
-            Mix of {inMix} set{inMix === 1 ? '' : 's'}
-          </option>
           {[...sets]
             .sort((a, b) => a.title.localeCompare(b.title))
             .map((s) => (
@@ -136,10 +132,7 @@ export function TodayPanel({ version }: { version: number }) {
         <span className="is-learning" style={{ width: `${pct(n.learning)}%` }} />
       </div>
       <p className="rt-small rt-ink-faint today__hint">
-        {studying === 'all'
-          ? 'The mix is every set whose “in the overlay” switch is on (on each set’s page). '
-          : 'Only this set, until you pick another here or in the overlay. '}
-        Press <span className="rt-kbd">{formatHotkey(settings.hotkey, isMacPlatform())}</span> anywhere to
+        Pick another set here, in the overlay, or on a set’s page. Press <span className="rt-kbd">{formatHotkey(settings.hotkey, isMacPlatform())}</span> anywhere to
         open it.
       </p>
     </section>

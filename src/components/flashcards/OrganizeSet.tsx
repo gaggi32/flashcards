@@ -8,16 +8,15 @@ import { LIMITS, type SetDTO } from '@/lib/flashcards/types';
 import { IconCards, IconFolder } from './FlashcardIcons';
 
 /**
- * A set's two filing controls: which folder it sits in, and the overlay —
- * study only this set there, or whether it belongs to the overlay's mix.
+ * A set's two controls here: which folder it sits in, and whether the hotkey
+ * overlay studies it (it studies one set at a time).
  */
 export function OrganizeSet({ set }: { set: SetDTO }) {
   const [folder, setFolder] = useState(set.folder);
-  const [inOverlay, setInOverlay] = useState(set.inOverlay !== false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
   const [known, setKnown] = useState<string[] | null>(null);
-  const [busy, setBusy] = useState<'folder' | 'share' | null>(null);
+  const [busy, setBusy] = useState<'folder' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [overlaySet, setOverlaySet] = usePref('overlaySet');
   const studyingThis = overlaySet === set.id;
@@ -44,19 +43,6 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
       setEditing(false);
     } catch (err) {
       setError(errorMessage(err, 'Could not move the set.'));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function toggleOverlay() {
-    setBusy('share');
-    setError(null);
-    try {
-      const { set: saved } = await updateSet(set.id, { inOverlay: !inOverlay });
-      setInOverlay(saved.inOverlay !== false);
-    } catch (err) {
-      setError(errorMessage(err, 'Could not change the overlay setting.'));
     } finally {
       setBusy(null);
     }
@@ -135,19 +121,13 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
               </div>
               <div className="fc-organize__sub">
                 {studyingThis
-                  ? 'Only this set comes up when you press the overlay hotkey.'
-                  : inOverlay
-                    ? 'Part of the overlay’s mix of sets. Study only this one there, or leave it out of the mix.'
-                    : 'Left out of the overlay’s mix. You can still study only this set there.'}
+                  ? 'Its cards come up when you press the overlay hotkey.'
+                  : 'The overlay studies one set at a time. Switch it to this one?'}
               </div>
             </div>
           </div>
-          <div className="rt-btnrow">
-            {studyingThis ? (
-              <button type="button" className="rt-btn rt-btn--sm" onClick={() => setOverlaySet('all')}>
-                back to the mix
-              </button>
-            ) : (
+          {!studyingThis && (
+            <div className="rt-btnrow">
               <button
                 type="button"
                 className="rt-btn rt-btn--sm rt-btn--primary"
@@ -156,13 +136,10 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
                   void showOverlay();
                 }}
               >
-                study only this set
+                study in the overlay
               </button>
-            )}
-            <button type="button" className="rt-btn rt-btn--sm" disabled={busy !== null} onClick={toggleOverlay}>
-              {busy === 'share' ? 'saving…' : inOverlay ? 'leave out of the mix' : 'add to the mix'}
-            </button>
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

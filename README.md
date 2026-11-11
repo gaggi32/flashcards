@@ -9,16 +9,18 @@ Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
 ## What it does
 
 - **Hotkey overlay.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>
-  (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>F</kbd> on macOS) opens a short round from one
-  set you pick (in the overlay, on the sets page or a set's page) or from the mix
-  of sets switched into it: cards you are still learning, then a few new ones,
-  then learned ones you have not seen longest. Three modes, switched with
-  <kbd>Ctrl</kbd>+<kbd>1</kbd>–<kbd>3</kbd>: **Cards** (flip, then swipe or press
-  <kbd>1</kbd> missed / <kbd>2</kbd> knew it), **Write** (type the answer; a wrong
-  one has to be typed out) and **Learn** (multiple choice until you have got a
-  card right, then typed). Special-character keys with <kbd>1</kbd>–<kbd>9</kbd>
-  when typing, ⇄ (or <kbd>S</kbd>) swaps the side shown. A missed card comes back
-  once at the end of the round. <kbd>A</kbd> adds a card; <kbd>Esc</kbd> hides it.
+  (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>F</kbd> on macOS) opens a round from the set
+  you pick (in the overlay, on the sets page or a set's page): cards you are
+  still learning, then a few new ones, then learned ones you have not seen
+  longest — or every card, if Settings says "all cards". Three modes, switched
+  with <kbd>Ctrl</kbd>+<kbd>1</kbd>–<kbd>3</kbd>: **Cards** (flip, then swipe or
+  press <kbd>1</kbd> missed / <kbd>2</kbd> knew it), **Write** (type the answer; a
+  wrong one has to be typed out) and **Learn** (multiple choice until you have
+  got a card right, then typed). Sides as on the website: Cards shows the term,
+  Write and Learn show the definition and you type the term; ⇄ (or <kbd>S</kbd>)
+  swaps them. Special-character keys with <kbd>1</kbd>–<kbd>9</kbd> when typing
+  (ä ö ü left out — they are on the keyboard). A missed card comes back once at
+  the end of the round. <kbd>A</kbd> adds a card; <kbd>Esc</kbd> hides it.
 - **Every study mode from the site.** Flashcards, Write, Learn, the set editor,
   importing a pasted list, folders, and AI generation from screenshots or text.
 - **No day cycle.** Cards go new → learning → learned (two right in a row),

@@ -247,3 +247,23 @@
 .dlg__actions {
   justify-content: flex-end;
 }
+
+/* ---------- folder header and section spacing ---------- */
+.fc-page .fc-crumbs {
+  margin: 4px 0 14px;
+  min-height: 32px;
+}
+.fc-page .fc-crumbs__back {
+  font-size: 14px;
+}
+.fc-page .fc-crumbs__here {
+  font-size: 17px;
+}
+.fc-page .rt-section + .rt-section {
+  margin-top: 28px;
+}
+.set-round {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
