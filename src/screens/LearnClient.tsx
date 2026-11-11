@@ -174,7 +174,12 @@ function LearnMode({ set }: { set: SetDTO }) {
         setToday({ queue: queue.cards, stats: stats.stats });
         // Check for a saved in-progress session.
         const saved = loadSessionFromStorage(set.id);
-        if (saved && saved.step.kind !== 'summary') setSavedSession(saved);
+        if (saved && saved.step.kind !== 'summary') {
+          setSavedSession(saved);
+          // Carry straight on: the overlay and the main window share this
+          // session, so switching between them should not stop at a prompt.
+          setSession(saved);
+        }
       })
       .catch((err: unknown) => {
         if (live) setLoadError(errorMessage(err, 'Could not load the cards.'));

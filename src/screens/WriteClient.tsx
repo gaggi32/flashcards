@@ -118,6 +118,9 @@ function WriteMode({ set }: { set: SetDTO }) {
         setSavedSession(saved);
         setAnswerWith(saved.answerWith);
         setShuffled(saved.shuffled);
+        // Carry straight on: the overlay and the main window share this
+        // session, so switching between them should not stop at a prompt.
+        setSession(saved);
       } else {
         clearWriteSessionFromStorage(set.id);
       }

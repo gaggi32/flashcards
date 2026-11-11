@@ -300,34 +300,6 @@ export function SettingsScreen() {
         <Row label="Hotkey" hint="Opens the study overlay from any app. Pressing it again hides it.">
           <HotkeyRecorder value={s.hotkey} onSave={async (hotkey) => void (await save({ ...s, hotkey }))} />
         </Row>
-        <Row
-          label="Cards per round"
-          hint={
-            s.overlayRound === 0
-              ? 'Every card in the set, every round. Each card you miss comes back once at the end.'
-              : 'Cards in one overlay round. Each card you miss comes back once at the end, so a round can run up to twice this long.'
-          }
-        >
-          <div className="set-round">
-            {s.overlayRound !== 0 && (
-              <NumberField label="Cards per round" value={s.overlayRound} min={1} max={1000} onChange={(n) => patch({ overlayRound: n })} />
-            )}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={s.overlayRound === 0}
-              className={`rt-btn rt-btn--sm${s.overlayRound === 0 ? ' rt-btn--primary' : ''}`}
-              onClick={() => patch({ overlayRound: s.overlayRound === 0 ? 10 : 0 })}
-            >
-              all cards
-            </button>
-          </div>
-        </Row>
-        {s.overlayRound !== 0 && (
-          <Row label="New cards per round" hint="Never-studied cards in a round, after the ones you are still learning. 0 = none.">
-            <NumberField label="New cards per round" value={s.overlayNewCards} min={0} max={1000} onChange={(n) => patch({ overlayNewCards: n })} />
-          </Row>
-        )}
         <Row label="Hide when I click away">
           <Switch label="Hide when I click away" on={s.overlayHideOnBlur} onChange={(v) => patch({ overlayHideOnBlur: v })} />
         </Row>
@@ -335,7 +307,7 @@ export function SettingsScreen() {
           <Switch label="Stay on top of fullscreen apps" on={s.overlayTopmostWatch} onChange={(v) => patch({ overlayTopmostWatch: v })} />
         </Row>
         <p className="rt-small rt-ink-faint set-foot">
-          The overlay studies one set: pick it in the overlay, above your sets, or on a set&apos;s page. ⇄ in the overlay swaps the sides.
+          The overlay runs the same Flashcards, Write and Learn as this window, on the same session: what you do in one carries on in the other. Pick its set in the overlay, above your sets, or on a set&apos;s page.
         </p>
       </Section>
 

@@ -2,7 +2,7 @@
 // the app bar on top and Settings one click away.
 
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import Link from '@/components/Link';
@@ -10,6 +10,8 @@ import { DialogHost } from '@/components/Dialogs';
 import { SetEditor, type EditorPanel } from '@/components/flashcards/SetEditor';
 import { IconCards } from '@/components/flashcards/FlashcardIcons';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
+import { useDataVersion } from '@/lib/app/events';
+import { isPrefKey } from '@/lib/app/prefs';
 import { SettingsProvider, useSettings } from '@/lib/app/settings';
 import type { UpdateInfo } from '@/lib/app/native';
 import { DEFAULT_MODEL } from '@/screens/Settings';
@@ -82,11 +84,38 @@ function AppBar() {
   );
 }
 
-/** Each screen fades up as it arrives. */
+/**
+ * Each screen fades up as it arrives. A study screen is also started afresh
+ * from what is saved when the window comes back to the front after the
+ * overlay changed a session (both windows share the saved sessions).
+ */
 function PageMotion({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const [resync, setResync] = useState(0);
+  const stale = useRef(false);
+  const version = useDataVersion();
+  const syncedVersion = useRef(version);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && !isPrefKey(e.key)) stale.current = true;
+    };
+    const onFocus = () => {
+      const studying = /^\/flashcards\/\d+\/(cards|write|learn)$/.test(window.location.hash.slice(1));
+      if (studying && (stale.current || syncedVersion.current !== version)) setResync((n) => n + 1);
+      stale.current = false;
+      syncedVersion.current = version;
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [version]);
+
   return (
-    <div key={pathname} className="fx-page">
+    <div key={`${pathname}#${resync}`} className="fx-page">
       {children}
     </div>
   );

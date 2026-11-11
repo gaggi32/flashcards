@@ -472,59 +472,11 @@ export async function reviewBatch(
 
 // --- overlay and overview -------------------------------------------------------
 
-export type OverlayCard = LearnCardDTO & { setId: number; setTitle: string };
-
-type OverlayRow = CardWithProgress & { set_id: number; set_title: string };
-
-/** One set, or (null) every set in the overlay mix. */
+/** One set, or (null) every set switched into the overlay. */
 function overlayScope(setId: number | null): { from: string; params: Param[] } {
   const from = `FROM cards c JOIN sets s ON s.id = c.set_id LEFT JOIN progress p ON p.card_id = c.id`;
   if (setId === null) return { from: `${from} WHERE s.in_overlay = 1`, params: [] };
   return { from: `${from} WHERE s.id = ?`, params: [parse(idField, setId)] };
-}
-
-/**
- * The overlay's round, from one set or the sets in the overlay mix, with no dates
- * involved: cards still being learned (shortest streak, longest unseen
- * first), then up to `newCards` never-studied ones, then learned cards that
- * have gone longest without an answer, until the round is full.
- */
-export async function overlayRound(size: number, newCards: number, setId: number | null = null): Promise<OverlayCard[]> {
-  const scope = overlayScope(setId);
-  const pick = (where: string, order: string, limit: number) =>
-    limit > 0
-      ? db().select<OverlayRow>(
-          `SELECT ${CARD_WITH_PROGRESS}, s.id AS set_id, s.title AS set_title
-           ${scope.from} AND ${where} ORDER BY ${order} LIMIT ?`,
-          [...scope.params, limit],
-        )
-      : Promise.resolve([] as OverlayRow[]);
-  const learning = await pick(
-    `p.card_id IS NOT NULL AND p.repetition_number < ${LEARNED_REPETITIONS}`,
-    'p.repetition_number, p.last_reviewed_at, c.id',
-    size,
-  );
-  const fresh = await pick('p.card_id IS NULL', 's.created_at, s.id, c.position, c.id', Math.min(newCards, size - learning.length));
-  const learned = await pick(
-    `p.repetition_number >= ${LEARNED_REPETITIONS}`,
-    'p.last_reviewed_at, c.id',
-    size - learning.length - fresh.length,
-  );
-  return [...learning, ...fresh, ...learned].map((r) => ({
-    ...toLearnCard(r),
-    setId: r.set_id,
-    setTitle: r.set_title,
-  }));
-}
-
-/** Every card the overlay may ask, for multiple-choice options and special keys. */
-export async function overlayPool(setId: number | null = null): Promise<{ id: number; term: string; definition: string; setId: number }[]> {
-  const scope = overlayScope(setId);
-  const rows = await db().select<{ id: number; term: string; definition: string; set_id: number }>(
-    `SELECT c.id, c.term, c.definition, c.set_id ${scope.from} LIMIT 20000`,
-    scope.params,
-  );
-  return rows.map((r) => ({ id: r.id, term: r.term, definition: r.definition, setId: r.set_id }));
 }
 
 export type Overview = {

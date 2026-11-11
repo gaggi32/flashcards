@@ -1,5 +1,5 @@
 // Study choices the overlay and the main window share: which set the overlay
-// studies, whether the sides are swapped, and the overlay's mode. Both windows load
+// studies and the overlay's mode. Both windows load
 // from the same origin, so localStorage is shared and its `storage` event
 // tells the other window; a custom event tells this one. These are per-device
 // conveniences — losing them only resets the choice.
@@ -8,17 +8,11 @@ import { useEffect, useState } from 'react';
 
 export type OverlayMode = 'cards' | 'write' | 'learn';
 
-/**
- * overlaySet: the set the overlay studies (null until one is picked).
- * swapped: sides turned round from each mode's usual way, which is the
- * website's — Cards shows the term, Write and Learn show the definition and
- * you type the term.
- */
-type Prefs = { overlaySet: number | null; swapped: boolean; overlayMode: OverlayMode };
+/** overlaySet: the set the overlay studies (null until one is picked). */
+type Prefs = { overlaySet: number | null; overlayMode: OverlayMode };
 
 const KEYS: Record<keyof Prefs, string> = {
   overlaySet: 'flashcards.overlay-set',
-  swapped: 'flashcards.swapped',
   overlayMode: 'flashcards.overlay-mode',
 };
 const CHANGED = 'flashcards-prefs-changed';
@@ -29,8 +23,6 @@ function parse<K extends keyof Prefs>(key: K, raw: string | null): Prefs[K] {
       const n = Number(raw);
       return (raw && Number.isInteger(n) && n > 0 ? n : null) as Prefs[K];
     }
-    case 'swapped':
-      return (raw === 'true') as Prefs[K];
     default:
       return (raw === 'write' || raw === 'learn' ? raw : 'cards') as Prefs[K];
   }
@@ -82,4 +74,9 @@ export function usePref<K extends keyof Prefs>(key: K): [Prefs[K], (v: Prefs[K])
 export function studySetFrom<S extends { id: number }>(picked: number | null, sets: S[]): number | null {
   if (picked !== null && sets.some((s) => s.id === picked)) return picked;
   return sets[0]?.id ?? null;
+}
+
+/** Whether a localStorage key is one of these shared choices (not a study session). */
+export function isPrefKey(key: string): boolean {
+  return Object.values(KEYS).includes(key);
 }

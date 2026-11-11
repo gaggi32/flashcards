@@ -103,32 +103,14 @@ describe('learning', () => {
     expect(queue.map((c) => c.status)).toEqual(['new', 'new', 'learned']);
   });
 
-  it('builds an overlay round without dates: learning, then new, then learned', async () => {
-    const { cards } = await setWith(5);
+  it('counts a set by learn status, without dates', async () => {
+    const { set, cards } = await setWith(5);
+    const other = await setWith(2);
     await repo.reviewCard(cards[3].id, 1, '2026-11-08', null); // missed: still learning
     await repo.reviewCard(cards[4].id, 5, TODAY, null);
     await repo.reviewCard(cards[4].id, 5, TODAY, 1); // two right: learned
-    const round = await repo.overlayRound(4, 2);
-    expect(round.map((c) => c.id)).toEqual([cards[3].id, cards[0].id, cards[1].id, cards[4].id]);
-    expect(round.map((c) => c.status)).toEqual(['learning', 'new', 'new', 'learned']);
-    expect(await repo.overview(TODAY)).toEqual({ fresh: 3, learning: 1, learned: 1, streak: 1, answeredToday: true });
-  });
-
-  it('studies one chosen set, even one out of the mix', async () => {
-    const a = await setWith(2);
-    const b = await setWith(3);
-    await repo.updateSet(b.set.id, { inOverlay: false });
-    const round = await repo.overlayRound(10, 10, b.set.id);
-    expect(round.map((c) => c.setId)).toEqual([b.set.id, b.set.id, b.set.id]);
-    expect((await repo.overlayRound(10, 10)).every((c) => c.setId === a.set.id)).toBe(true);
-    expect((await repo.overview(TODAY, b.set.id)).fresh).toBe(3);
-    expect((await repo.overlayPool(b.set.id)).length).toBe(3);
-  });
-
-  it('leaves sets switched out of the overlay alone', async () => {
-    const { set } = await setWith(2);
-    await repo.updateSet(set.id, { inOverlay: false });
-    expect(await repo.overlayRound(10, 10)).toEqual([]);
+    expect(await repo.overview(TODAY, set.id)).toEqual({ fresh: 3, learning: 1, learned: 1, streak: 1, answeredToday: true });
+    expect((await repo.overview(TODAY, other.set.id)).fresh).toBe(2);
   });
 
   it('counts a streak that ends today or yesterday', () => {
