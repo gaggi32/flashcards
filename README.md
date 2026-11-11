@@ -11,7 +11,7 @@ Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
 - **Hotkey overlay.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>
   (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>F</kbd> on macOS) opens the same Flashcards,
   Write and Learn as the main window (switch with <kbd>Ctrl</kbd>+<kbd>1</kbd>–<kbd>3</kbd>)
-  for the set you pick, in a small window over any app. It is the same session,
+  for the set you pick, in a small, compact window (470×360) over any app. It is the same session,
   not a copy: answer a few cards in the overlay and the main window carries on
   from there, and the other way round. <kbd>+</kbd> adds a card; <kbd>Esc</kbd>
   hides it.

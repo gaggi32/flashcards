@@ -13,16 +13,14 @@ import { listen } from '@tauri-apps/api/event';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
-import { CountUp } from '@/components/TodayPanel';
 import { announceDataChange, useDataVersion } from '@/lib/app/events';
 import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { hideOverlay, openMain } from '@/lib/app/native';
 import { isPrefKey, studySetFrom, usePref, type OverlayMode } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
 import type { SetSummaryDTO } from '@/lib/flashcards/types';
-import { todayKey } from '@/lib/nutrition/day';
 import { asApiError } from '@/lib/store/errors';
-import { addCards, lastUsedSetId, listSets, overview, type Overview } from '@/lib/store/repo';
+import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
 import { WriteClient } from '@/screens/WriteClient';
@@ -57,7 +55,6 @@ function OverlayFrame() {
   const [mode, setMode] = usePref('overlayMode');
   const [chosenSet, setChosenSet] = usePref('overlaySet');
   const [sets, setSets] = useState<SetSummaryDTO[] | null>(null);
-  const [stats, setStats] = useState<Overview | null>(null);
   const [resync, setResync] = useState(0);
   const stale = useRef(false);
   const syncedVersion = useRef(0);
@@ -71,13 +68,6 @@ function OverlayFrame() {
       .then(setSets)
       .catch(() => setSets([]));
   }, [version]);
-
-  useEffect(() => {
-    if (setId === null) return;
-    overview(todayKey(), setId)
-      .then(setStats)
-      .catch(() => {});
-  }, [setId, version]);
 
   // Keep the router on the chosen set and mode.
   useEffect(() => {
@@ -201,17 +191,6 @@ function OverlayFrame() {
             ))}
           </select>
           <span className="ov__spacer" data-tauri-drag-region />
-          {stats && (
-            <span className="ov__stats" data-tauri-drag-region title="This set, all modes together">
-              <CountUp value={stats.learned} />/<CountUp value={stats.fresh + stats.learning + stats.learned} /> learned
-              {stats.streak > 0 && (
-                <span className={`ov__streak${stats.answeredToday ? ' is-lit' : ''}`}>
-                  {' · '}
-                  <CountUp value={stats.streak} />d
-                </span>
-              )}
-            </span>
-          )}
           <button
             type="button"
             className={`ov__icon ov__plus${view === 'add' ? ' is-on' : ''}`}

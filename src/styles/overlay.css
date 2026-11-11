@@ -9,7 +9,7 @@ html.overlay body {
 }
 .rt-page.fc-page.ov {
   background: transparent;
-  padding: 10px;
+  padding: 6px;
   min-height: 0;
   height: 100vh;
   box-sizing: border-box;
@@ -21,7 +21,7 @@ html.overlay body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--rt-paper);
   border: 1px solid var(--fc-line-strong, rgba(0, 0, 0, 0.18));
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -32,8 +32,8 @@ html.overlay body {
 .ov__head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px 10px 14px;
+  gap: 6px;
+  padding: 6px 6px 6px 8px;
   border-bottom: 1px solid var(--fc-line);
   user-select: none;
   cursor: grab;
@@ -64,13 +64,13 @@ html.overlay body {
 }
 .ov__mode {
   position: relative;
-  min-width: 58px;
-  padding: 4px 10px;
+  min-width: 0;
+  padding: 3px 8px;
   border: none;
   background: none;
   color: var(--rt-ink-soft);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -83,17 +83,18 @@ html.overlay body {
   font-weight: 600;
 }
 .ov__setpick {
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 230px;
-  padding: 5px 26px 5px 10px;
+  max-width: 170px;
+  padding: 3px 22px 3px 8px;
   border: 1px solid var(--fc-line-strong);
   border-radius: 8px;
   background: var(--rt-panel)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E")
-    no-repeat right 9px center;
+    no-repeat right 7px center;
   color: var(--rt-ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 11.5px;
   font-weight: 500;
   text-overflow: ellipsis;
   appearance: none;
@@ -123,13 +124,13 @@ html.overlay body {
 }
 .ov__icon {
   flex: none;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: none;
   border-radius: 8px;
   background: none;
   color: var(--rt-ink-soft);
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -149,36 +150,180 @@ html.overlay body {
   transform: rotate(45deg);
 }
 
-/* ---------- the embedded study screen ---------- */
+/* ---------- the embedded study screen, compact ----------
+   The overlay is meant to be small: the main window's screens at about two
+   thirds the size, without the controls that only matter on a big page
+   (the shortcut legend, Prev / Next, long explanations). Space, Enter, the
+   arrow keys and 1 / 2 still do all of that. */
 .rt-page.fc-page .ov__embed {
   flex: 1;
   min-height: 0;
   max-width: none;
   margin: 0;
-  padding: 12px 20px 18px;
+  padding: 8px 12px 10px;
   overflow-y: auto;
   scrollbar-width: thin;
+  font-size: 13px;
 }
-/* The overlay's own header already names the set and switches modes. */
 .ov__embed .rt-backlink,
-.ov__embed .fc-studyhead {
+.ov__embed .fc-studyhead,
+.ov__embed .fc-keys,
+.ov__embed .fc-controls,
+.ov__embed .fc-setup__rules,
+.ov__embed .fc-option__sub,
+.ov__embed .fc-endnote,
+.ov__embed .fc-answer__hint,
+.ov__embed .fc-swipehint {
   display: none !important;
 }
+/* buttons and inputs */
+.rt-page.fc-page .ov__embed .rt-btn {
+  padding: 5px 10px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+.rt-page.fc-page .ov__embed .rt-input {
+  padding: 7px 10px;
+  font-size: 14px;
+}
+.ov__embed .rt-btnrow {
+  gap: 6px;
+}
+/* progress lines */
+.ov__embed .fc-progress,
+.ov__embed .fc-writebar {
+  margin-bottom: 6px;
+  gap: 8px;
+  font-size: 11.5px;
+}
+/* Flashcards */
 .ov__embed .fc-flip__inner {
-  min-height: 180px;
+  min-height: 118px;
 }
 .ov__embed .fc-flip__face {
-  padding: 30px 22px 24px;
+  padding: 18px 14px 14px;
+  border-radius: 12px;
+}
+.ov__embed .fc-flip__side {
+  font-size: 10px;
+}
+.ov__embed .fc-flip__text {
+  font-size: 19px;
+}
+.ov__embed .fc-marks {
+  margin-top: 8px;
+  gap: 6px;
+}
+.ov__embed .fc-deckbar {
+  margin-top: 8px;
+  gap: 6px;
+}
+/* Write and Learn */
+.ov__embed .fc-prompt {
+  min-height: 84px;
+  padding: 16px 14px 12px;
+  border-radius: 12px;
+}
+.ov__embed .fc-prompt__text {
+  font-size: 18px;
+}
+.ov__embed .fc-answer {
+  margin-top: 8px;
+  gap: 6px;
+}
+.ov__embed .fc-answer__input,
+.ov__embed .fc-answer input {
+  padding: 7px 10px;
+  font-size: 14px;
+}
+.ov__embed .fc-keyboard {
+  margin: 0 0 4px;
+  gap: 4px;
+}
+.ov__embed .fc-key {
+  min-width: 26px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.ov__embed .fc-key__digit {
+  margin-left: 3px;
+  font-size: 9.5px;
+}
+.ov__embed .fc-key--setting {
+  font-size: 11px;
+}
+.ov__embed .fc-verdict {
+  margin-top: 8px;
+  padding: 8px 10px;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.ov__embed .fc-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+.ov__embed .fc-choice {
+  gap: 8px;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  border-radius: 8px;
+}
+.ov__embed .fc-learn__actions {
+  margin-top: 8px;
+  font-size: 12px;
+}
+/* setup screens and summaries */
+.ov__embed .fc-setup {
+  gap: 8px;
+}
+.ov__embed .fc-panel {
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+.ov__embed .fc-panel__title {
+  font-size: 12px;
+}
+.ov__embed .fc-options {
+  gap: 6px;
+}
+.ov__embed .fc-option {
+  padding: 7px 10px;
+}
+.ov__embed .fc-stats {
+  gap: 6px;
+}
+.ov__embed .fc-stats > div {
+  padding: 5px 9px;
+}
+.ov__embed .fc-stats dt {
+  font-size: 11px;
+}
+.ov__embed .fc-stats dd {
+  font-size: 17px;
+}
+/* The page's narrow-screen rule stacks these; the overlay has room for two. */
+.ov__embed .fc-options {
+  grid-template-columns: 1fr 1fr !important;
+}
+.ov__embed .fc-resume-banner {
+  padding: 6px 10px;
+  font-size: 12px;
 }
 .ov__embed .rt-section + .rt-section {
-  margin-top: 18px;
+  margin-top: 10px;
 }
 
 /* ---------- quick add, empty state ---------- */
 .ov__body {
   flex: 1;
   min-height: 0;
-  padding: 16px 20px;
+  padding: 10px 12px;
 }
 .ov__center {
   display: flex;
@@ -196,7 +341,7 @@ html.overlay body {
 .ov__add {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 .ov__add .rt-input {
   width: 100%;
@@ -212,4 +357,41 @@ html.overlay body {
   display: inline-block;
   color: var(--rt-teal);
   animation: fx-pop 0.3s var(--ease-spring) both;
+}
+
+/* A wrong answer: shrink the prompt and fold the correction into a few lines,
+   so the box for typing it out stays in view without scrolling. */
+.ov__embed .fc-prompt:has(~ .fc-verdict),
+.ov__embed *:has(> .fc-verdict) > .fc-prompt {
+  min-height: 0;
+  padding: 8px 12px;
+}
+.ov__embed .fc-prompt:has(~ .fc-verdict) .fc-prompt__text,
+.ov__embed *:has(> .fc-verdict) > .fc-prompt .fc-prompt__text {
+  font-size: 15px;
+}
+.ov__embed .fc-prompt:has(~ .fc-verdict) .fc-flip__side,
+.ov__embed *:has(> .fc-verdict) > .fc-prompt .fc-flip__side {
+  display: none;
+}
+.ov__embed .fc-verdict {
+  position: relative;
+}
+.ov__embed .fc-verdict__title {
+  margin: 0;
+  font-size: 12px;
+}
+.ov__embed .fc-verdict__line {
+  gap: 8px;
+  margin: 0;
+}
+.ov__embed .fc-verdict .rt-btnrow {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  margin: 0;
+}
+.rt-page.fc-page .ov__embed .fc-verdict .rt-btn {
+  padding: 2px 8px;
+  font-size: 11.5px;
 }
