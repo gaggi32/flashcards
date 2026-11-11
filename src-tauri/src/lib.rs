@@ -6,7 +6,7 @@ mod db;
 mod settings;
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -39,6 +39,11 @@ const MAX_IMPORT_BYTES: u64 = 50 * 1024 * 1024;
 
 struct AppState {
     settings: Mutex<Settings>,
+    /// Whether the overlay is meant to be up (it can still be visible while
+    /// it plays its exit), and a counter that tells one open or close from
+    /// the next.
+    overlay_open: AtomicBool,
+    overlay_gen: AtomicU64,
     hide_on_blur: AtomicBool,
     topmost_watch: Arc<AtomicBool>,
     http: reqwest::Client,
@@ -121,16 +126,60 @@ fn place_overlay(app: &AppHandle, win: &WebviewWindow) {
     let _ = win.set_position(PhysicalPosition::new(x, y));
 }
 
-fn toggle_overlay(app: &AppHandle) {
+// The overlay animates in and out in the page. Closing tells the page to
+// play its exit, and the window is hidden only once the panel is gone, so
+// the frame the next show starts from is empty: a window shown with its old
+// frame, then animated from nothing, is what flickered.
+
+/// Longest the page may take to answer "overlay-close" before the window is
+/// hidden anyway.
+const OVERLAY_CLOSE_GRACE: Duration = Duration::from_millis(600);
+
+fn open_overlay(app: &AppHandle) {
     let Some(win) = app.get_webview_window(OVERLAY) else { return };
-    if win.is_visible().unwrap_or(false) {
-        let _ = win.hide();
+    let state = app.state::<AppState>();
+    let gen = state.overlay_gen.fetch_add(1, Ordering::SeqCst) + 1;
+    state.overlay_open.store(true, Ordering::SeqCst);
+    // Still visible means it is mid-exit: turn it around where it stands.
+    if !win.is_visible().unwrap_or(false) {
+        place_overlay(app, &win);
+        let _ = win.show();
+    }
+    let _ = win.set_focus();
+    let _ = win.emit("overlay-open", gen);
+}
+
+fn close_overlay(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    if !state.overlay_open.swap(false, Ordering::SeqCst) {
         return;
     }
-    place_overlay(app, &win);
-    let _ = win.show();
-    let _ = win.set_focus();
-    let _ = win.emit("overlay-open", ());
+    let gen = state.overlay_gen.fetch_add(1, Ordering::SeqCst) + 1;
+    let Some(win) = app.get_webview_window(OVERLAY) else { return };
+    let _ = win.emit("overlay-close", gen);
+    let app = app.clone();
+    thread::spawn(move || {
+        thread::sleep(OVERLAY_CLOSE_GRACE);
+        finish_close(&app, gen);
+    });
+}
+
+/// Hide the window, unless the overlay was opened again since close `gen`.
+fn finish_close(app: &AppHandle, gen: u64) {
+    let state = app.state::<AppState>();
+    if state.overlay_gen.load(Ordering::SeqCst) == gen && !state.overlay_open.load(Ordering::SeqCst) {
+        if let Some(win) = app.get_webview_window(OVERLAY) {
+            let _ = win.hide();
+        }
+    }
+}
+
+fn toggle_overlay(app: &AppHandle) {
+    if app.state::<AppState>().overlay_open.load(Ordering::SeqCst) {
+        close_overlay(app);
+    } else {
+        open_overlay(app);
+    }
 }
 
 fn spawn_topmost_watch(app: AppHandle, flag: Arc<AtomicBool>) {
@@ -357,8 +406,10 @@ fn save_settings(
     settings: Settings,
 ) -> Result<Settings, String> {
     main_only(&window)?;
-    let next = settings.sanitized();
+    let mut next = settings.sanitized();
     let prev = state.settings.lock().unwrap().clone();
+    // Only set_autostart changes this, so a stale copy in the UI can't.
+    next.autostart = prev.autostart;
     if next.hotkey != prev.hotkey {
         if let Err(e) = register_hotkey(&app, &next.hotkey) {
             // Put the old one back so the overlay stays reachable.
@@ -372,6 +423,27 @@ fn save_settings(
     *state.settings.lock().unwrap() = next.clone();
     let _ = app.emit("settings-changed", &next);
     Ok(next)
+}
+
+/// Start with the computer: changes the login item and remembers the choice,
+/// so launch can put it back if an installer removes it. Returns the OS state.
+#[tauri::command]
+fn set_autostart(
+    app: AppHandle,
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    on: bool,
+) -> Result<bool, String> {
+    main_only(&window)?;
+    set_login_item(&app, on)?;
+    let next = {
+        let mut current = state.settings.lock().unwrap();
+        current.autostart = Some(on);
+        current.clone()
+    };
+    settings::store(&app, &next)?;
+    let _ = app.emit("settings-changed", &next);
+    Ok(app.autolaunch().is_enabled().unwrap_or(on))
 }
 
 /// Release the hotkey while the Settings recorder listens for a new one.
@@ -470,19 +542,29 @@ fn set_tray_status(app: AppHandle, text: String) {
 
 #[tauri::command]
 fn show_overlay(app: AppHandle) {
-    let visible = app
-        .get_webview_window(OVERLAY)
-        .map_or(false, |w| w.is_visible().unwrap_or(false));
-    if !visible {
-        toggle_overlay(&app);
+    if !app.state::<AppState>().overlay_open.load(Ordering::SeqCst) {
+        open_overlay(&app);
     }
 }
 
 #[tauri::command]
 fn hide_overlay(app: AppHandle) {
-    if let Some(win) = app.get_webview_window(OVERLAY) {
-        let _ = win.hide();
-    }
+    close_overlay(&app);
+}
+
+/// The page finished the exit of close `gen`.
+#[tauri::command]
+fn overlay_closed(app: AppHandle, gen: u64) {
+    finish_close(&app, gen);
+}
+
+/// For a page that loads after the hotkey: is the overlay up, and since when.
+#[tauri::command]
+fn overlay_state(state: State<'_, AppState>) -> (bool, u64) {
+    (
+        state.overlay_open.load(Ordering::SeqCst),
+        state.overlay_gen.load(Ordering::SeqCst),
+    )
 }
 
 #[tauri::command]
@@ -491,9 +573,7 @@ fn open_main(app: AppHandle, route: Option<String>) {
         Some(r) if r.starts_with('/') && r.len() < 200 => navigate_main(&app, &r),
         _ => show_main(&app),
     }
-    if let Some(win) = app.get_webview_window(OVERLAY) {
-        let _ = win.hide();
-    }
+    close_overlay(&app);
 }
 
 // ---- commands: AI -------------------------------------------------------------
@@ -530,6 +610,48 @@ async fn ai_request(
     ai::send(&http, &key, endpoint, body).await
 }
 
+// ---- start with the computer ----------------------------------------------
+
+/// Whether the app's login item exists at all, on or off. Windows keeps "off
+/// in Task Manager" apart from "not there"; elsewhere they are the same.
+#[cfg(windows)]
+fn login_item_registered(app: &AppHandle, _on: bool) -> bool {
+    windows_registry::CURRENT_USER
+        .open(r"Software\Microsoft\Windows\CurrentVersion\Run")
+        .and_then(|key| key.get_string(&app.package_info().name))
+        .is_ok()
+}
+
+#[cfg(not(windows))]
+fn login_item_registered(_app: &AppHandle, on: bool) -> bool {
+    on
+}
+
+fn set_login_item(app: &AppHandle, on: bool) -> Result<(), String> {
+    let launcher = app.autolaunch();
+    let done = if on { launcher.enable() } else { launcher.disable() };
+    done.map_err(|e| format!("Could not change the login item: {e}"))
+}
+
+/// At launch: put the login item back if an installer removed it, and point
+/// it at this executable. Returns what the stored choice should now be.
+fn sync_login_item(app: &AppHandle, stored: Option<bool>) -> bool {
+    let on = app.autolaunch().is_enabled().unwrap_or(false);
+    // The entry is named after the product, not the identifier, so a dev
+    // build would re-point the installed app's entry at itself.
+    if cfg!(debug_assertions) {
+        return stored.unwrap_or(on);
+    }
+    let want = settings::autostart_wanted(stored, on, login_item_registered(app, on));
+    if want {
+        // Also re-points an entry left at an older executable.
+        if let Err(e) = set_login_item(app, true) {
+            eprintln!("{e}");
+        }
+    }
+    want
+}
+
 // ---- run ----------------------------------------------------------------------
 
 pub fn run() {
@@ -562,6 +684,7 @@ pub fn run() {
             open_data_folder,
             get_settings,
             save_settings,
+            set_autostart,
             suspend_hotkey,
             resume_hotkey,
             app_info,
@@ -571,6 +694,8 @@ pub fn run() {
             set_tray_status,
             show_overlay,
             hide_overlay,
+            overlay_closed,
+            overlay_state,
             open_main,
             ai_key_status,
             ai_set_key,
@@ -581,7 +706,7 @@ pub fn run() {
             WindowEvent::Focused(false) if window.label() == OVERLAY => {
                 let state = window.state::<AppState>();
                 if state.hide_on_blur.load(Ordering::Relaxed) {
-                    let _ = window.hide();
+                    close_overlay(window.app_handle());
                 }
             }
             // Closing the main window keeps the app in the tray.
@@ -598,12 +723,19 @@ pub fn run() {
             let conn = db::open(&db::path_in(&data_dir)).map_err(|e| format!("database: {e}"))?;
             app.manage(db::Db(Arc::new(Mutex::new(conn))));
 
-            let prefs = settings::load(&handle);
+            let mut prefs = settings::load(&handle);
+            let want = sync_login_item(&handle, prefs.autostart);
+            if prefs.autostart != Some(want) {
+                prefs.autostart = Some(want);
+                let _ = settings::store(&handle, &prefs);
+            }
             let topmost = Arc::new(AtomicBool::new(prefs.overlay_topmost_watch));
             app.manage(AppState {
                 hide_on_blur: AtomicBool::new(prefs.overlay_hide_on_blur),
                 topmost_watch: topmost.clone(),
                 settings: Mutex::new(prefs.clone()),
+                overlay_open: AtomicBool::new(false),
+                overlay_gen: AtomicU64::new(0),
                 http: reqwest::Client::builder()
                     .user_agent(concat!("Flashcards/", env!("CARGO_PKG_VERSION")))
                     .https_only(true)
@@ -618,12 +750,6 @@ pub fn run() {
             if let Err(e) = register_hotkey(&handle, &prefs.hotkey) {
                 eprintln!("{e}; falling back to {}", settings::DEFAULT_HOTKEY);
                 let _ = register_hotkey(&handle, settings::DEFAULT_HOTKEY);
-            }
-
-            // Heal a login item left pointing at an older executable.
-            let autostart = app.autolaunch();
-            if autostart.is_enabled().unwrap_or(false) {
-                let _ = autostart.enable();
             }
 
             if !std::env::args().any(|a| a == AUTOSTART_FLAG) {

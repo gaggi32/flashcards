@@ -31,10 +31,14 @@ export type Settings = {
   backupsKept: number;
   aiModel: string;
   checkUpdates: boolean;
+  /** Start with the computer; null until the app has read it from the OS. */
+  autostart: boolean | null;
 };
 
 export const getSettings = () => call<Settings>('get_settings');
 export const saveSettings = (settings: Settings) => call<Settings>('save_settings', { settings });
+/** Turns the login item on or off and remembers it; resolves to whether the OS now has it on. */
+export const setAutostart = (on: boolean) => call<boolean>('set_autostart', { on });
 export const suspendHotkey = () => call<void>('suspend_hotkey');
 export const resumeHotkey = () => call<void>('resume_hotkey');
 
@@ -53,6 +57,10 @@ export const exportFile = (contents: string, suggestedName: string) =>
 export const importFile = (kind: 'json' | 'text') => call<string | null>('import_file', { kind });
 
 export const hideOverlay = () => call<void>('hide_overlay');
+/** The overlay page finished playing close number `gen`: the window may go. */
+export const overlayClosed = (gen: number) => call<void>('overlay_closed', { gen });
+/** [is the overlay up, the latest open/close number] */
+export const overlayState = () => call<[boolean, number]>('overlay_state');
 export const showOverlay = () => call<void>('show_overlay');
 export const openMain = (route?: string) => call<void>('open_main', { route: route ?? null });
 export const setTrayStatus = (text: string) => call<void>('set_tray_status', { text });

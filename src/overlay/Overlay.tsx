@@ -8,6 +8,11 @@
 // when it comes back (the overlay when the hotkey opens it, the main window
 // when it is focused). Links to the set page or the editor open the main
 // window. Esc or a click elsewhere hides the overlay.
+//
+// Showing and hiding are animated here, not by the OS: Rust shows the window
+// with the panel still invisible and sends "overlay-open"; on "overlay-close"
+// the panel plays its exit and, once a frame without it has been painted,
+// tells Rust the window can go. So every show starts from an empty frame.
 
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -15,7 +20,7 @@ import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from
 
 import { announceDataChange, useDataVersion } from '@/lib/app/events';
 import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
-import { hideOverlay, openMain } from '@/lib/app/native';
+import { hideOverlay, openMain, overlayClosed, overlayState } from '@/lib/app/native';
 import { isPrefKey, studySetFrom, usePref, type OverlayMode } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
 import type { SetSummaryDTO } from '@/lib/flashcards/types';
@@ -58,7 +63,9 @@ function OverlayFrame() {
   const [resync, setResync] = useState(0);
   const stale = useRef(false);
   const syncedVersion = useRef(0);
-  const panel = useRef<HTMLDivElement>(null);
+  const [phase, setPhase] = useState<'gone' | 'in' | 'out'>('gone');
+  /** The close being played, 0 when none. */
+  const closing = useRef(0);
   const version = useDataVersion();
 
   const setId = studySetFrom(chosenSet, sets ?? []);
@@ -111,15 +118,8 @@ function OverlayFrame() {
         syncedVersion.current = version;
         setResync((n) => n + 1);
       }
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        panel.current?.animate(
-          [
-            { opacity: 0, transform: 'translateY(8px) scale(0.97)' },
-            { opacity: 1, transform: 'none' },
-          ],
-          { duration: 220, easing: 'cubic-bezier(.2,.9,.3,1.2)' },
-        );
-      }
+      closing.current = 0;
+      setPhase('in');
       requestAnimationFrame(() => {
         if (view === 'add') document.getElementById('qa-term')?.focus();
         else (document.querySelector('.ov__embed input:not([readonly])') as HTMLInputElement | null)?.focus();
@@ -127,6 +127,34 @@ function OverlayFrame() {
     });
     return () => void off.then((f) => f());
   }, [version, view]);
+
+  useEffect(() => {
+    const off = listen<number>('overlay-close', (e) => {
+      closing.current = e.payload;
+      setPhase('out');
+    });
+    // Loaded after the hotkey already opened it: show without waiting.
+    overlayState()
+      .then(([open]) => {
+        if (open) setPhase((p) => (p === 'gone' ? 'in' : p));
+      })
+      .catch(() => {});
+    return () => void off.then((f) => f());
+  }, []);
+
+  function onPanelAnimationEnd(e: React.AnimationEvent<HTMLDivElement>) {
+    // ov-fade-out is the exit when the system asks for less motion.
+    if (e.target !== e.currentTarget || (e.animationName !== 'ov-out' && e.animationName !== 'ov-fade-out')) return;
+    const gen = closing.current;
+    if (!gen) return;
+    // Two frames: the empty one has to reach the screen before the window
+    // hides, or the next show would start from the panel.
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (closing.current === gen) void overlayClosed(gen).catch(() => {});
+      }),
+    );
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -151,8 +179,8 @@ function OverlayFrame() {
   const ordered = useMemo(() => [...(sets ?? [])].sort((a, b) => a.title.localeCompare(b.title)), [sets]);
 
   return (
-    <div className="rt-page fc-page ov">
-      <div className="ov__panel" ref={panel}>
+    <div className="rt-page fc-page ov" data-phase={phase}>
+      <div className="ov__panel" onAnimationEnd={onPanelAnimationEnd}>
         <header className="ov__head" data-tauri-drag-region>
           <div className="ov__modes" role="tablist" aria-label="Study mode" style={{ ['--i' as string]: modeIndex }}>
             <span className="ov__modes-pill" aria-hidden="true" />

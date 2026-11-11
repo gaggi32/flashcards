@@ -1,7 +1,7 @@
 // Settings, in the same sections Lingo and Dash use: overlay, study,
 // reminders, look, AI, data, system.
 
-import { disable as disableAutostart, enable as enableAutostart, isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart';
+import { isEnabled as autostartEnabled } from '@tauri-apps/plugin-autostart';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
 
@@ -21,6 +21,7 @@ import {
   openDataFolder,
   openDownloadPage,
   resumeHotkey,
+  setAutostart as setLoginItem,
   stampNow,
   suspendHotkey,
   type AppInfo,
@@ -273,11 +274,11 @@ export function SettingsScreen() {
     }
   }
 
+  // Rust remembers the choice too, so it can put the login item back after
+  // installing a new version removes it.
   async function toggleAutostart(on: boolean) {
     try {
-      if (on) await enableAutostart();
-      else await disableAutostart();
-      setAutostart(await autostartEnabled());
+      setAutostart(await setLoginItem(on));
     } catch (err) {
       say('system', 'err', asApiError(err, 'Could not change the login item.').message);
     }

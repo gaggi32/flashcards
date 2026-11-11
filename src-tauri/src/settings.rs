@@ -44,6 +44,11 @@ pub struct Settings {
     pub ai_model: String,
     // --- system ---
     pub check_updates: bool,
+    /// Start with the computer. Kept here as well as in the OS, because
+    /// installing a new version by hand runs the old uninstaller, and that
+    /// deletes the login item; at launch the app puts it back. None until the
+    /// app has first seen what the OS has (files from before this field).
+    pub autostart: Option<bool>,
 }
 
 impl Default for Settings {
@@ -63,6 +68,7 @@ impl Default for Settings {
             backups_kept: 14,
             ai_model: DEFAULT_MODEL.into(),
             check_updates: true,
+            autostart: None,
         }
     }
 }
@@ -124,6 +130,21 @@ impl Settings {
             self.ai_model = d.ai_model;
         }
         self
+    }
+}
+
+/// Whether the login item should be on at launch.
+///
+/// `on`: the OS will start the app. `registered`: the app's entry exists at
+/// all — on Windows it can exist and still be off, when it was turned off in
+/// Task Manager's Startup apps, and that choice is the user's to keep.
+pub fn autostart_wanted(stored: Option<bool>, on: bool, registered: bool) -> bool {
+    match stored {
+        // Missing entry, stored "on": an installer took it. Put it back.
+        Some(true) => on || !registered,
+        // First launch with this field, stored "off", or turned off in Task
+        // Manager: the OS has the last word.
+        _ => on,
     }
 }
 
@@ -200,6 +221,21 @@ mod tests {
         assert!(!has_modifier("Foo+A"));
         let s = Settings { hotkey: "Space".into(), ..Settings::default() }.sanitized();
         assert_eq!(s.hotkey, DEFAULT_HOTKEY);
+    }
+
+    #[test]
+    fn autostart_survives_a_reinstall_but_not_a_user_choice() {
+        // The installer deleted the entry: back on.
+        assert!(autostart_wanted(Some(true), false, false));
+        // Turned off in Task Manager (entry still there): stays off.
+        assert!(!autostart_wanted(Some(true), false, true));
+        // Turned off in Settings: stays off.
+        assert!(!autostart_wanted(Some(false), false, false));
+        // A settings file from before the field: take what the OS has.
+        assert!(autostart_wanted(None, true, true));
+        assert!(!autostart_wanted(None, false, false));
+        let old: Settings = serde_json::from_str(r#"{"theme":"dark"}"#).unwrap();
+        assert_eq!(old.autostart, None);
     }
 
     #[test]

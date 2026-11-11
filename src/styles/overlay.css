@@ -28,6 +28,99 @@ html.overlay body {
   overflow: hidden;
 }
 
+/* ---------- show and hide ----------
+   data-phase on .ov: "gone" (nothing drawn, the window may be hidden), "in",
+   "out". The panel flips in like a card turned over: from edge-on round its
+   vertical axis, slowing smoothly into place. Going, it keeps turning the
+   same way and is gone edge-on. It is scaled down while it is turned, so its
+   near edge never grows past the window. Overlay.tsx waits for ov-out to end
+   before the window hides, so it must end invisible. */
+.rt-page.fc-page.ov {
+  perspective: 1600px;
+}
+.ov[data-phase='gone'] .ov__panel {
+  opacity: 0;
+}
+.ov[data-phase='in'] .ov__panel {
+  /* One turn that eases out long, no swing past flat (that read as hectic). */
+  animation: ov-in 620ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.ov[data-phase='out'] .ov__panel {
+  animation: ov-out 200ms cubic-bezier(0.55, 0, 0.9, 0.5) both;
+}
+@keyframes ov-in {
+  0% {
+    opacity: 0;
+    transform: rotateY(-90deg) scale(0.86);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ov-out {
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: rotateY(90deg) scale(0.86);
+  }
+}
+
+/* The header's controls one after another, then the card. */
+.ov[data-phase='in'] .ov__head > * {
+  animation: ov-item 420ms var(--ease-out) backwards;
+  animation-delay: 110ms;
+}
+.ov[data-phase='in'] .ov__head > :nth-child(2) {
+  animation-delay: 145ms;
+}
+.ov[data-phase='in'] .ov__head > :nth-child(n + 3) {
+  animation-delay: 180ms;
+}
+.ov[data-phase='in'] .ov__head > :nth-child(n + 5) {
+  animation-delay: 215ms;
+}
+.ov[data-phase='in'] .ov__head > :nth-child(n + 6) {
+  animation-delay: 250ms;
+}
+@keyframes ov-item {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.94);
+  }
+}
+.ov[data-phase='in'] .ov__embed,
+.ov[data-phase='in'] .ov__body {
+  animation: ov-body 480ms 170ms var(--ease-out) backwards;
+}
+@keyframes ov-body {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(3px);
+  }
+}
+
+/* Less motion asked for: a plain fade both ways, still from an empty frame. */
+@media (prefers-reduced-motion: reduce) {
+  .ov[data-phase='in'] .ov__panel {
+    animation: fx-fade 140ms ease-out backwards !important;
+  }
+  .ov[data-phase='out'] .ov__panel {
+    animation: ov-fade-out 110ms ease-in both !important;
+  }
+}
+@keyframes ov-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
 /* ---------- header ---------- */
 .ov__head {
   display: flex;
