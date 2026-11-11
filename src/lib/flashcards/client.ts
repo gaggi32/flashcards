@@ -1,6 +1,5 @@
-// What the screens call. On the website these were fetch()es to /api/sets and
-// /api/cards; here they go to the local store (lib/store) with the same names
-// and return shapes, so the screens ported from the web app stay as they were.
+// What the screens call: sets, cards and study progress, read from and written
+// to the local store (lib/store).
 
 import { announceDataChange } from '@/lib/app/events';
 import { aiClearKey, aiKeyStatus, aiRequest, aiSetKey, getSettings } from '@/lib/app/native';

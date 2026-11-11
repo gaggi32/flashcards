@@ -209,9 +209,8 @@ export function SetsClient() {
                   <p>No sets yet.</p>
                   <p className="rt-small">
                     <Link href="/flashcards/new">Make one</Link>,{' '}
-                    <Link href="/flashcards/new?import=1">paste in a list</Link> of terms, or bring
-                    your sets over from 404canvas.ch under{' '}
-                    <Link href="/settings#data">Settings → Data</Link>.
+                    <Link href="/flashcards/new?import=1">paste in a list</Link> of terms, or import
+                    an export file under <Link href="/settings#data">Settings → Data</Link>.
                   </p>
                 </div>
               )

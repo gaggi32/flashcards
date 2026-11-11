@@ -1,9 +1,7 @@
 // Export and import: the whole collection as one JSON file.
 //
-// The same format comes out of the website's "export for the desktop app"
-// button, which is how sets move from 404canvas.ch into this app. An import
-// always adds: each set arrives as a new set, so importing twice gives two
-// copies rather than overwriting anything.
+// An import always adds: each set arrives as a new set, so importing twice
+// gives two copies rather than overwriting anything.
 
 import { z } from 'zod';
 
@@ -12,7 +10,9 @@ import { db, type Stmt } from './db';
 import { invalid } from './errors';
 import { isDayKey } from './validate';
 
-export const FORMAT = '404canvas-flashcards';
+export const FORMAT = 'flashcards';
+/** The format name in exports made before 0.1.7; still read. */
+const OLD_FORMAT = '404canvas-flashcards';
 export const FORMAT_VERSION = 1;
 
 const progressSchema = z.object({
@@ -40,7 +40,7 @@ const setSchema = z.object({
 });
 
 export const exportSchema = z.object({
-  format: z.literal(FORMAT),
+  format: z.union([z.literal(FORMAT), z.literal(OLD_FORMAT)]),
   version: z.literal(FORMAT_VERSION),
   exportedAt: z.string().optional(),
   sets: z.array(setSchema).max(LIMITS.setsPerUser),
@@ -115,7 +115,8 @@ export function parseExport(text: string): ExportFile {
   } catch {
     throw invalid('That file is not JSON.');
   }
-  if (!json || typeof json !== 'object' || (json as { format?: unknown }).format !== FORMAT) {
+  const format = json && typeof json === 'object' ? (json as { format?: unknown }).format : undefined;
+  if (format !== FORMAT && format !== OLD_FORMAT) {
     throw invalid('That is not a Flashcards export.');
   }
   const parsed = exportSchema.safeParse(json);

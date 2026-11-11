@@ -1,4 +1,4 @@
-// The main window: the website's flashcards screens under a hash router, with
+// The main window: the flashcards screens under a hash router, with
 // the app bar on top and Settings one click away.
 
 import { listen } from '@tauri-apps/api/event';

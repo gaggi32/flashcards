@@ -2,15 +2,13 @@ name: Release
 
 # Push a tag vX.Y.Z (matching package.json and tauri.conf.json) to build the
 # Windows and macOS installers, attach them and their SHA-256 sums to a GitHub
-# release, then tell 404canvas.ch about it (repository_dispatch → its
-# receive-flashcards-release workflow writes private/release-flashcards.json).
+# release, then publish it. The app's update check reads that release.
 #
 # Hardening: actions are pinned to commit SHAs; no job that runs npm or cargo
 # (third-party code) holds a write token or a persisted git credential, and no
 # release job uses a dependency cache; the release is written by jobs that run
-# no project code; the cross-repo token lives in the protected "release"
-# environment; tests run before anything is built; no event data is pasted
-# into a script.
+# no project code; publishing runs in the protected "release" environment;
+# tests run before anything is built; no event data is pasted into a script.
 
 on:
   push:
@@ -160,43 +158,14 @@ jobs:
   publish:
     needs: [check, upload]
     runs-on: ubuntu-latest
-    # CANVAS_DEPLOY_TOKEN is an environment secret here, not a repo secret:
-    # the environment only admits v* tags, so a branch or an edited workflow
-    # cannot read it.
+    # The protected environment only admits v* tags.
     environment: release
     permissions:
       contents: write
     steps:
-      - name: Publish the release and tell 404canvas.ch
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CANVAS_TOKEN: ${{ secrets.CANVAS_DEPLOY_TOKEN }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
-          VERSION: ${{ needs.check.outputs.version }}
-        run: |
-          set -euo pipefail
-          gh release edit "$TAG" --repo "$REPO" --draft=false
-          mkdir sums && gh release download "$TAG" --repo "$REPO" --pattern '*.sha256' --dir sums
-          BASE="https://github.com/$REPO/releases/download/$TAG"
-          url() { [ -f "sums/$1.sha256" ] && echo "$BASE/$1" || echo ""; }
-          sum() { [ -f "sums/$1.sha256" ] && tr -d '[:space:]' < "sums/$1.sha256" || echo ""; }
-          WIN="Flashcards-$VERSION-x64-setup.exe"
-          ARM="Flashcards-$VERSION-arm64.dmg"
-          INTEL="Flashcards-$VERSION-x64.dmg"
-          jq -n \
-            --arg v "$VERSION" \
-            --arg w "$(url "$WIN")" --arg ws "$(sum "$WIN")" \
-            --arg a "$(url "$ARM")" --arg as "$(sum "$ARM")" \
-            --arg i "$(url "$INTEL")" --arg is "$(sum "$INTEL")" \
-            '{event_type: "flashcards-release", client_payload: {
-               version: $v,
-               windows: $w, windowsSha256: $ws,
-               macAppleSilicon: $a, macAppleSiliconSha256: $as,
-               macIntel: $i, macIntelSha256: $is }}' > payload.json
-          cat payload.json
-          curl --fail-with-body -sS -X POST \
-            -H "Authorization: Bearer $CANVAS_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/gaggi32/404canvas/dispatches \
-            --data-binary @payload.json
+        run: gh release edit "$TAG" --repo "$REPO" --draft=false

@@ -1,8 +1,7 @@
 # Flashcards
 
-The flashcards from [404canvas.ch](https://404canvas.ch), as a desktop app for
-Windows and macOS. Your sets live on your own computer, and a hotkey brings up
-a small study card over whatever you are doing.
+A flashcards app for Windows and macOS. Your sets live on your own computer,
+and a hotkey brings up a small study card over whatever you are doing.
 
 Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
 
@@ -15,7 +14,7 @@ Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
   not a copy: answer a few cards in the overlay and the main window carries on
   from there, and the other way round. <kbd>+</kbd> adds a card; <kbd>Esc</kbd>
   hides it.
-- **Every study mode from the site.** Flashcards, Write, Learn, the set editor,
+- **Study modes.** Flashcards, Write, Learn, the set editor,
   importing a pasted list, folders, and AI generation from screenshots or text.
 - **No day cycle.** Cards go new → learning → learned (two right in a row),
   whenever you answer. The sets page shows those counts and your day streak.
@@ -23,8 +22,6 @@ Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
   hide when you click away, stay on top of fullscreen apps, a daily reminder,
   theme and eye comfort, the AI model, daily backups, export and import, start
   with the computer, and update checks.
-- **Moving from the website.** On 404canvas.ch, *export your sets*, then in the
-  app open Settings → Data → Import. Your study progress comes with them.
 
 ## Privacy and security
 
@@ -37,8 +34,9 @@ Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
   navigation away from the app is blocked, and links open in your browser only
   for an allow-list of hosts.
 - File access happens only through native open and save dialogs.
-- The update check asks `404canvas.ch` for a version number and nothing else.
-  Installing an update is always your own download from the site.
+- The update check asks GitHub for the version of the newest release and
+  nothing else. Installing an update is always your own download from the
+  [releases page](https://github.com/gaggi32/flashcards/releases).
 
 ## Development
 

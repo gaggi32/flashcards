@@ -372,12 +372,7 @@ export function SettingsScreen() {
       <Section id="data" title="data">
         <Row
           label="Import"
-          hint={
-            <>
-              A Flashcards export — from this app, or from <strong>404canvas.ch → Flashcards → export for the desktop app</strong>.
-              Adds the sets; nothing is overwritten.
-            </>
-          }
+          hint="A Flashcards export file. Adds the sets; nothing is overwritten."
         >
           <button type="button" className="rt-btn rt-btn--sm" disabled={busy !== null} onClick={doImport}>
             {busy === 'import' ? 'importing…' : 'import file…'}
@@ -411,7 +406,7 @@ export function SettingsScreen() {
         <Row label="Start with the computer" hint="Starts quietly in the tray, so the hotkey always works.">
           <Switch label="Start with the computer" on={autostart === true} disabled={autostart === null} onChange={toggleAutostart} />
         </Row>
-        <Row label="Check for updates" hint="Asks 404canvas.ch for the newest version number twice a day. Nothing is downloaded.">
+        <Row label="Check for updates" hint="Asks GitHub for the newest version number twice a day. Nothing is downloaded.">
           <Switch label="Check for updates" on={s.checkUpdates} onChange={(v) => patch({ checkUpdates: v })} />
         </Row>
         <Row

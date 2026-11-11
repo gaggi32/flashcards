@@ -1,4 +1,4 @@
-/* The website's stylesheets, then the desktop app's own additions. */
+/* The base stylesheets, then the app's own additions. */
 @import './preflight.css';
 @import './globals.css';
 @import './retro.css';

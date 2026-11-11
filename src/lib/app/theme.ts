@@ -1,4 +1,4 @@
-// Light / dark / system, plus eye comfort — the website's palettes, chosen in
+// Light / dark / system, plus eye comfort — the app's palettes, chosen in
 // Settings and shared by both windows. The CSS keys off data-theme and
 // data-eye on <html> (styles/retro.css).
 //

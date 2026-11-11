@@ -30,11 +30,15 @@ const MAIN: &str = "main";
 const OVERLAY: &str = "overlay";
 /// Passed to ourselves by the login item, so a login start stays in the tray.
 const AUTOSTART_FLAG: &str = "--hidden";
-const DOWNLOAD_PAGE: &str = "https://404canvas.ch/projects/flashcards";
-const VERSION_URL: &str = "https://404canvas.ch/api/flashcards-version";
+const DOWNLOAD_PAGE: &str = "https://github.com/gaggi32/flashcards/releases/latest";
+const LATEST_RELEASE: &str = "https://api.github.com/repos/gaggi32/flashcards/releases/latest";
 /// Hosts a link in the UI may open in the default browser. Everything else is
 /// refused, and the webviews themselves never navigate away from the app.
-const LINK_HOSTS: &[&str] = &["openrouter.ai", "404canvas.ch", "www.404canvas.ch"];
+const LINK_HOSTS: &[&str] = &["openrouter.ai", "github.com"];
+/// This app's identifier, and the one versions up to 0.1.6 had (their data
+/// folders are named after it).
+const IDENTIFIER: &str = "com.gaggi32.flashcards";
+const OLD_IDENTIFIER: &str = "ch.404canvas.flashcards";
 const MAX_IMPORT_BYTES: u64 = 50 * 1024 * 1024;
 
 struct AppState {
@@ -391,6 +395,55 @@ fn open_data_folder(app: AppHandle, window: WebviewWindow) -> Result<(), String>
         .map_err(|e| e.to_string())
 }
 
+// ---- the old data folders --------------------------------------------------
+
+/// The folder name an earlier version used for `identifier`, or None if this
+/// build has nothing to take over. A debug build only ever takes over a dev
+/// folder (com.gaggi32.flashcards.dev from ch.404canvas.flashcards.dev), never
+/// the installed app's real one.
+fn old_folder_name(identifier: &str) -> Option<String> {
+    let suffix = identifier.strip_prefix(IDENTIFIER)?;
+    if cfg!(debug_assertions) && suffix.is_empty() {
+        return None;
+    }
+    Some(format!("{OLD_IDENTIFIER}{suffix}"))
+}
+
+/// Move `old` to `new` unless `new` already holds something. The two sit side
+/// by side, so this is a rename, not a copy.
+fn take_over(old: &std::path::Path, new: &std::path::Path) -> std::io::Result<bool> {
+    if !old.is_dir() {
+        return Ok(false);
+    }
+    if new.exists() {
+        if std::fs::read_dir(new)?.next().is_some() {
+            return Ok(false);
+        }
+        std::fs::remove_dir(new)?;
+    }
+    std::fs::rename(old, new)?;
+    Ok(true)
+}
+
+/// Versions up to 0.1.6 kept the database, settings and backups, and the
+/// webview's storage (sessions in progress), in folders named after the old
+/// identifier. Runs before anything opens them.
+fn adopt_old_folders(app: &AppHandle) {
+    let identifier = app.config().identifier.clone();
+    let Some(old) = old_folder_name(&identifier) else { return };
+    let path = app.path();
+    #[allow(unused_mut)]
+    let mut dirs = vec![path.app_data_dir(), path.app_local_data_dir()];
+    #[cfg(target_os = "macos")]
+    dirs.push(path.home_dir().map(|h| h.join("Library/WebKit").join(&identifier)));
+    for new in dirs.into_iter().flatten() {
+        let Some(parent) = new.parent() else { continue };
+        if let Err(e) = take_over(&parent.join(&old), &new) {
+            eprintln!("could not move {old} to {}: {e}", new.display());
+        }
+    }
+}
+
 // ---- commands: settings & system -------------------------------------------------
 
 #[tauri::command]
@@ -504,27 +557,34 @@ fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
     Some((it.next()??, it.next()??, it.next()??))
 }
 
-/// Ask the website for the newest version. Only a version number comes back;
-/// installing is always the user's own download from the site.
+/// The version in a GitHub release answer ("tag_name": "v1.2.3" gives "1.2.3").
+fn release_version(body: &Json) -> Option<String> {
+    let tag = body.get("tag_name")?.as_str()?.trim();
+    let v = tag.strip_prefix('v').unwrap_or(tag);
+    (v.len() <= 20 && parse_version(v).is_some()).then(|| v.to_string())
+}
+
+/// Ask GitHub for the newest published release of this app. Only its version
+/// is read; installing is always the user's own download.
 #[tauri::command]
 async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
     let current = app.package_info().version.to_string();
     let http = app.state::<AppState>().http.clone();
     let res = http
-        .get(VERSION_URL)
+        .get(LATEST_RELEASE)
+        .header("Accept", "application/vnd.github+json")
         .timeout(Duration::from_secs(10))
         .send()
         .await
-        .map_err(|_| "Could not reach 404canvas.ch".to_string())?;
+        .map_err(|_| "Could not reach GitHub".to_string())?;
+    if res.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err("GitHub shows no public release yet".into());
+    }
     if !res.status().is_success() {
-        return Err(format!("404canvas.ch answered {}", res.status()));
+        return Err(format!("GitHub answered {}", res.status()));
     }
     let body: Json = res.json().await.map_err(|_| "Unexpected answer".to_string())?;
-    let latest = body
-        .get("version")
-        .and_then(Json::as_str)
-        .filter(|v| v.len() <= 20 && parse_version(v).is_some())
-        .map(str::to_string);
+    let latest = release_version(&body);
     let newer = match (&latest, parse_version(&current)) {
         (Some(l), Some(c)) => parse_version(l).map_or(false, |l| l > c),
         _ => false,
@@ -719,6 +779,7 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
 
+            adopt_old_folders(&handle);
             let data_dir = app.path().app_data_dir()?;
             let conn = db::open(&db::path_in(&data_dir)).map_err(|e| format!("database: {e}"))?;
             app.manage(db::Db(Arc::new(Mutex::new(conn))));
@@ -772,6 +833,41 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn old_folders_map_to_the_new_ones() {
+        assert_eq!(old_folder_name("com.gaggi32.flashcards.dev").as_deref(), Some("ch.404canvas.flashcards.dev"));
+        assert_eq!(old_folder_name("something.else"), None);
+        // Tests are debug builds: the real folder is left alone.
+        assert_eq!(old_folder_name("com.gaggi32.flashcards"), None);
+    }
+
+    #[test]
+    fn take_over_moves_once_and_never_overwrites() {
+        let root = std::env::temp_dir().join(format!("fc-takeover-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let (old, new) = (root.join("old"), root.join("new"));
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("flashcards.db"), b"cards").unwrap();
+        std::fs::create_dir_all(&new).unwrap(); // an empty folder may be replaced
+        assert!(take_over(&old, &new).unwrap());
+        assert_eq!(std::fs::read(new.join("flashcards.db")).unwrap(), b"cards");
+        assert!(!old.exists());
+        assert!(!take_over(&old, &new).unwrap());
+        std::fs::create_dir_all(&old).unwrap();
+        std::fs::write(old.join("flashcards.db"), b"stale").unwrap();
+        assert!(!take_over(&old, &new).unwrap());
+        assert_eq!(std::fs::read(new.join("flashcards.db")).unwrap(), b"cards");
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn release_version_reads_the_tag() {
+        assert_eq!(release_version(&serde_json::json!({"tag_name": "v0.2.0"})).as_deref(), Some("0.2.0"));
+        assert_eq!(release_version(&serde_json::json!({"tag_name": "0.2.0"})).as_deref(), Some("0.2.0"));
+        assert_eq!(release_version(&serde_json::json!({"tag_name": "nightly"})), None);
+        assert_eq!(release_version(&serde_json::json!({})), None);
+    }
 
     #[test]
     fn only_the_apps_own_pages_load() {

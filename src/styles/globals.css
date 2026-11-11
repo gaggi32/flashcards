@@ -1,5 +1,5 @@
 
-/* The site runs on one palette in two settings — the retro paper light theme
+/* The app runs on one palette in two settings — the retro paper light theme
    and its night counterpart. Both are defined as tokens in retro.css, which
    also owns `color-scheme`. This file only dresses the ground the pages sit on
    and the chrome around them. */
@@ -49,7 +49,7 @@ summary,
   touch-action: manipulation;
 }
 
-/* Nothing on the site is wider than a phone on purpose; a stray long word or
+/* Nothing is meant to scroll sideways; a stray long word or
    URL wraps instead of dragging the whole page sideways. */
 body {
   overflow-wrap: break-word;

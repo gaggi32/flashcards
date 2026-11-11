@@ -11,7 +11,9 @@ export function keepFocus(e: MouseEvent) {
   e.preventDefault();
 }
 
-const SHORTCUTS_STORAGE_KEY = '404canvas:flashcards:special-key-shortcuts';
+const SHORTCUTS_STORAGE_KEY = 'flashcards:special-key-shortcuts';
+/** The same choice under the name versions up to 0.1.6 used. */
+const OLD_SHORTCUTS_STORAGE_KEY = '404canvas:flashcards:special-key-shortcuts';
 
 /** The digit that types the button at each position: 1–9, then 0 for the tenth. */
 const SHORTCUT_DIGITS = '1234567890';
@@ -125,7 +127,7 @@ function useShortcutsSetting(): [boolean, (on: boolean) => void] {
   // Read after mount, so the server's markup and the first render agree.
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(SHORTCUTS_STORAGE_KEY);
+      const stored = localStorage.getItem(SHORTCUTS_STORAGE_KEY) ?? localStorage.getItem(OLD_SHORTCUTS_STORAGE_KEY);
       setOn(stored === null ? true : stored === 'on');
     } catch {
       // localStorage throws in Safari's private mode; the setting just stays on.

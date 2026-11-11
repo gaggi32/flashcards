@@ -145,4 +145,9 @@ describe('export and import', () => {
     const bad = JSON.stringify({ format: FORMAT, version: 1, sets: [{ title: 'x', cards: [{ term: '', definition: 'y' }] }] });
     expect(() => parseExport(bad)).toThrow('sets.0.cards.0.term');
   });
+
+  it('still reads exports made before the format was renamed', () => {
+    const old = JSON.stringify({ format: '404canvas-flashcards', version: 1, sets: [{ title: 'x', cards: [{ term: 'a', definition: 'b' }] }] });
+    expect(parseExport(old).sets[0].title).toBe('x');
+  });
 });

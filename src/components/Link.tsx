@@ -1,5 +1,4 @@
-// The web app's screens use next/link's `href`; this keeps that prop and
-// routes inside the app's hash router.
+// A link with an `href` that routes inside the app's hash router.
 
 import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router';

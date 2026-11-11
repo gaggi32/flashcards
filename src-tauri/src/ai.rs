@@ -11,7 +11,9 @@ use std::time::Duration;
 use serde::Serialize;
 use serde_json::Value as Json;
 
-const SERVICE: &str = "ch.404canvas.flashcards";
+const SERVICE: &str = "com.gaggi32.flashcards";
+/// Where versions up to 0.1.6 kept the key. Moved to SERVICE on first read.
+const OLD_SERVICE: &str = "ch.404canvas.flashcards";
 const ACCOUNT: &str = "openrouter";
 const ORIGIN: &str = "https://openrouter.ai/api/v1";
 /// Four screenshots of 4 MB, base64-encoded, plus text: well under this.
@@ -38,12 +40,33 @@ fn entry() -> Result<keyring::Entry, String> {
     keyring::Entry::new(SERVICE, ACCOUNT).map_err(|e| e.to_string())
 }
 
+fn old_entry() -> Option<keyring::Entry> {
+    keyring::Entry::new(OLD_SERVICE, ACCOUNT).ok()
+}
+
+/// The stored key, taking it over from the old service name if that is where
+/// it still is. The old item is only removed once the new one is written.
+fn load_key() -> Option<String> {
+    let current = entry().ok()?;
+    match current.get_password() {
+        Ok(k) => return Some(k).filter(|k| !k.is_empty()),
+        Err(keyring::Error::NoEntry) => {}
+        Err(_) => return None,
+    }
+    let old = old_entry()?;
+    let key = old.get_password().ok().filter(|k| !k.is_empty())?;
+    if current.set_password(&key).is_ok() {
+        let _ = old.delete_credential();
+    }
+    Some(key)
+}
+
 pub fn read_key(cache: &KeyCache) -> Option<String> {
     let mut guard = cache.0.lock().expect("key cache poisoned");
     if let Some(cached) = guard.as_ref() {
         return cached.clone();
     }
-    let key = entry().ok().and_then(|e| e.get_password().ok()).filter(|k| !k.is_empty());
+    let key = load_key();
     *guard = Some(key.clone());
     key
 }
@@ -78,6 +101,9 @@ pub fn clear_key(cache: &KeyCache) -> Result<KeyStatus, String> {
     match entry()?.delete_credential() {
         Ok(()) | Err(keyring::Error::NoEntry) => {}
         Err(e) => return Err(e.to_string()),
+    }
+    if let Some(old) = old_entry() {
+        let _ = old.delete_credential();
     }
     *cache.0.lock().expect("key cache poisoned") = Some(None);
     Ok(status(cache))
@@ -138,7 +164,7 @@ pub async fn send(http: &reqwest::Client, key: &str, endpoint: Endpoint, body: O
     };
     let res = req
         .bearer_auth(key)
-        .header("HTTP-Referer", "https://404canvas.ch/projects/flashcards")
+        .header("HTTP-Referer", "https://github.com/gaggi32/flashcards")
         .header("X-Title", "Flashcards desktop")
         .send()
         .await

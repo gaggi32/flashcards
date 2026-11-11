@@ -13,7 +13,7 @@
    The accent is deliberately not the green: "do this next" and "that was
    correct" sit side by side on every question and must not look alike.
 
-   It still runs on the site's token names (`--rt-*`), redefined below while a
+   It runs on the shared token names (`--rt-*`), redefined below while a
    flashcards page is on screen, so the theme toggle and the shared `rt-*`
    classes these screens are built from keep working. Those classes are
    restyled here rather than replaced; the selectors carry `.rt-page.fc-page`
@@ -222,7 +222,7 @@
 .fc-bar__spacer {
   flex: 1;
 }
-/* The site-wide theme switch, reduced to a plain icon button. */
+/* The theme switch, reduced to a plain icon button. */
 .fc-bar .rt-theme {
   border: none;
   border-radius: 8px;

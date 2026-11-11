@@ -1,5 +1,4 @@
-// Input checks for every write, moved over from the web app's route handlers
-// (lib/flashcards/http.ts there). Same limits, same messages.
+// Input checks for every write.
 
 import { z } from 'zod';
 

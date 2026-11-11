@@ -17,7 +17,7 @@ export type SetSummaryDTO = {
    * someone else's public set — their filing is theirs.
    */
   folder: string | null;
-  /** Always false on the desktop: kept so screens ported from the web app compile. */
+  /** Always false: sets are never shared. */
   isPublic: boolean;
   isOwner: boolean;
   /** The owner's name, sent only for someone else's public set. */

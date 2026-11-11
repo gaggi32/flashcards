@@ -1,7 +1,6 @@
 /**
- * The error every data call throws. It keeps the web app's shape (a message
- * and an HTTP-like status) so the screens that were ported from it read
- * `err.status === 404` and `errorMessage(err, …)` unchanged.
+ * The error every data call throws: a message and an HTTP-like status, so
+ * the screens can read `err.status === 404` and `errorMessage(err, …)`.
  */
 export class ApiError extends Error {
   constructor(

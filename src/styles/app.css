@@ -1,7 +1,7 @@
 /* Desktop-only pieces: fonts, the app bar, today's numbers, settings, dialogs. */
 
 :root {
-  /* next/font set these on the website; here the faces ship with the app. */
+  /* The faces ship with the app (@fontsource). */
   --font-mono: 'IBM Plex Mono';
   --font-sans: 'IBM Plex Sans';
   --font-pixel: 'Silkscreen';

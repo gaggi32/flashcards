@@ -1,6 +1,5 @@
-// Everything the screens read and write, against the local database. This is
-// what the web app's /api/sets, /api/cards and /api/folders routes did, minus
-// accounts: there is one owner, and nothing is public.
+// Everything the screens read and write, against the local database: sets,
+// cards and folders. There are no accounts: one owner, and nothing is public.
 
 import { z } from 'zod';
 
