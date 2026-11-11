@@ -72,23 +72,35 @@ export const MASTERY_CREDITS = 2;
 
 // --- answers ---
 
-const EDGE_PUNCTUATION = /^[\s.,;:!?¿¡'"“”‘’«»]+|[\s.,;:!?¿¡'"“”‘’«»]+$/g;
-
 /**
- * What counts as the same answer: case, runs of whitespace and punctuation at
- * either end are ignored, and curly quotes and typographic dashes are their
- * plain twins ("aujourd’hui" is "aujourd'hui") — nobody's keyboard types them.
- * Accents are not ignored — in a vocabulary set, "a" and "à" are different
- * words, and the override button covers a genuine slip.
+ * One spelling for what keyboards type differently: case, Unicode forms,
+ * every apostrophe and quote mark (Swiss keyboards type ´ and `), typographic
+ * dashes, ß as ss (Swiss keyboards have no ß), runs of whitespace.
+ * Accents are not folded — in a vocabulary set, "a" and "à" are different
+ * words, and the "I was correct" button covers a genuine slip.
  */
-export function normalizeAnswer(value: string): string {
+export function foldAnswer(value: string): string {
+  // The marks first: NFKC would turn ´ into a space and a combining accent.
   return value
+    .replace(/[‘’‚‛′´`ʼ]/g, "'")
+    .replace(/[“”„‟″«»]/g, '"')
+    .replace(/[‐‑‒–—―−]/g, '-')
     .normalize('NFKC')
     .toLowerCase()
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[‐–—−]/g, '-')
+    .replace(/ß/g, 'ss')
     .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const EDGE_PUNCTUATION = /^[\s.,;:!?¿¡'"]+|[\s.,;:!?¿¡'"]+$/g;
+
+/**
+ * What counts as the same answer: everything foldAnswer evens out, plus
+ * punctuation at either end. Kept for callers that want readable text; the
+ * check itself compares answerKey()s.
+ */
+export function normalizeAnswer(value: string): string {
+  return foldAnswer(value)
     .replace(/\s+([.,;:!?])/g, '$1')
     .replace(EDGE_PUNCTUATION, '');
 }
@@ -108,7 +120,7 @@ export function stripParens(value: string): string {
 }
 
 /**
- * Strips parenthesis characters: "(to) eat" -> " to  eat".
+ * Strips parenthesis characters: "(to) run" -> " to  run".
  */
 export function stripParenChars(value: string): string {
   return value.replace(/[()]/g, ' ');
@@ -121,73 +133,68 @@ export function stripSpaces(value: string): string {
   return value.replace(/\s+/g, '');
 }
 
+const isDigit = (c: string | undefined) => c !== undefined && c >= '0' && c <= '9';
+
+/**
+ * The form two answers are compared in. On top of normalizeAnswer: spaces,
+ * hyphens and sentence marks (. ! ? ¿ ¡ ") don't count anywhere ("e-mail" is
+ * "email", "Mr. Smith" is "Mr Smith"), and a list — items split by , ; or / —
+ * matches in any order. Inside a number nothing is dropped or split: "3.5" is
+ * not "35", and "1,5" is not "5,1".
+ */
+export function answerKey(value: string): string {
+  const s = normalizeAnswer(value);
+  const items: string[] = [];
+  let item = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    const inNumber = isDigit(s[i - 1]) && isDigit(s[i + 1]);
+    if ((c === ',' || c === ';' || c === '/') && !inNumber) {
+      items.push(item);
+      item = '';
+    } else if (c === '.' && inNumber) {
+      item += c;
+    } else if (!/[\s\-.!?¿¡"]/.test(c)) {
+      item += c;
+    }
+  }
+  items.push(item);
+  return items
+    .filter((x) => x !== '')
+    .sort()
+    .join(',');
+}
+
+/**
+ * The ways an answer may be written: as is, without the parenthesis marks
+ * ("(to) run" as "to run"), and without what is in parentheses ("Apfel (m)"
+ * as "Apfel") — that last one only when something is left, so "(noun)" still
+ * has to be typed.
+ */
+function answerForms(value: string): Set<string> {
+  const forms = new Set<string>();
+  for (const form of [value, stripParenChars(value), stripParens(value)]) {
+    const key = answerKey(form);
+    if (key !== '') forms.add(key);
+  }
+  return forms;
+}
+
 export function isMatch(given: string, expected: string): boolean {
-  const wantRaw = normalizeAnswer(expected);
-  const gotRaw = normalizeAnswer(given);
+  const want = answerForms(expected);
 
-  // An answer that is nothing but punctuation ("?", "...") would normalise to
-  // an empty string and accept anything; compare those as typed instead.
-  if (wantRaw === '') {
-    const wantTrim = expected.trim().toLowerCase();
-    const gotTrim = given.trim().toLowerCase();
-    return gotTrim === wantTrim || stripSpaces(gotTrim) === stripSpaces(wantTrim);
+  // An answer that is nothing but punctuation ("?", "...") has no key, and
+  // would otherwise accept anything; compare those as typed instead.
+  if (want.size === 0) {
+    const plain = (v: string) => stripSpaces(foldAnswer(v));
+    return plain(expected) !== '' && plain(given) === plain(expected);
   }
 
-  // Exact normalized match (ignoring spaces between words)
-  if (gotRaw === wantRaw || stripSpaces(gotRaw) === stripSpaces(wantRaw)) return true;
-
-  // Words with () are ignored if there is something else in the answer.
-  const wantWithoutParens = normalizeAnswer(stripParens(expected));
-  const wantWithoutParenChars = normalizeAnswer(stripParenChars(expected));
-  const hasExpectedCore = wantWithoutParens !== '';
-
-  const gotWithoutParens = normalizeAnswer(stripParens(given));
-  const gotWithoutParenChars = normalizeAnswer(stripParenChars(given));
-  const hasGivenCore = gotWithoutParens !== '';
-
-  const gotNoSpace = stripSpaces(gotRaw);
-  const wantNoSpaceWithoutParens = stripSpaces(wantWithoutParens);
-  const wantNoSpaceWithoutParenChars = stripSpaces(wantWithoutParenChars);
-  const gotNoSpaceWithoutParens = stripSpaces(gotWithoutParens);
-  const gotNoSpaceWithoutParenChars = stripSpaces(gotWithoutParenChars);
-
-  if (hasExpectedCore) {
-    // 1. User typed answer without parenthetical words (e.g. "Apfel" for "Apfel (m)")
-    if (gotRaw === wantWithoutParens || gotNoSpace === wantNoSpaceWithoutParens) return true;
-    // 2. User typed answer without literal parens (e.g. "to run" for "(to) run")
-    if (gotRaw === wantWithoutParenChars || gotNoSpace === wantNoSpaceWithoutParenChars) return true;
-    if (
-      gotWithoutParenChars === wantWithoutParenChars ||
-      gotNoSpaceWithoutParenChars === wantNoSpaceWithoutParenChars
-    ) {
-      return true;
-    }
-    // 3. User included parentheses and the core matches
-    if (
-      hasGivenCore &&
-      (gotWithoutParens === wantWithoutParens ||
-        gotNoSpaceWithoutParens === wantNoSpaceWithoutParens)
-    ) {
-      return true;
-    }
-  } else {
-    // If the () is the only thing in the answer, it cannot be ignored, but omitting literal parens is fine.
-    if (
-      wantWithoutParenChars !== '' &&
-      (gotRaw === wantWithoutParenChars || gotNoSpace === wantNoSpaceWithoutParenChars)
-    ) {
-      return true;
-    }
+  // Any way of writing the answer, typed any way it may be written: a typed
+  // "(f)" after the word is the same leeway the card itself gets.
+  for (const form of answerForms(given)) {
+    if (want.has(form)) return true;
   }
-
-  // If expected had no parens, but user added parenthetical clarification:
-  if (
-    hasGivenCore &&
-    (gotWithoutParens === wantRaw || gotNoSpaceWithoutParens === stripSpaces(wantRaw))
-  ) {
-    return true;
-  }
-
   return false;
 }
 

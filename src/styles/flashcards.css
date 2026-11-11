@@ -1917,6 +1917,11 @@
   color: var(--rt-rust);
   text-decoration: line-through;
 }
+/* A difference the check does not count (spaces, end punctuation, parentheses). */
+.fc-diff-soft {
+  opacity: 0.45;
+  font-weight: inherit;
+}
 
 /* ---------- special characters keyboard ---------- */
 .fc-keyboard {

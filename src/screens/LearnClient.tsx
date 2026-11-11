@@ -3,6 +3,7 @@ import Link from '@/components/Link';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { errorMessage, fetchLearnQueue, fetchLearnStats, reviewCard } from '@/lib/flashcards/client';
+import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { MIN_CARDS_FOR_CHOICE } from '@/lib/flashcards/distractors';
 import { plural } from '@/lib/flashcards/format';
@@ -703,9 +704,7 @@ function Play({
             <div className="fc-verdict__line">
               <span className="fc-verdict__key">you said</span>
               <span className="fc-verdict__given">
-                {diff.filter(p => !p.added).map((p, i) => (
-                  <span key={i} className={p.removed ? 'fc-diff-rem' : ''}>{p.value}</span>
-                ))}
+                <TypedLine parts={diff} />
               </span>
             </div>
           )}
@@ -719,9 +718,7 @@ function Play({
             <span className="fc-verdict__key">correct</span>
             <span className="fc-verdict__answer">
               {diff ? (
-                diff.filter(p => !p.removed).map((p, i) => (
-                  <span key={i} className={p.added ? 'fc-diff-add' : ''}>{p.value}</span>
-                ))
+                <AnswerLine parts={diff} />
               ) : expected}
             </span>
           </div>

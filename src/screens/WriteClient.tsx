@@ -3,6 +3,7 @@ import Link from '@/components/Link';
 import { useEffect, useId, useRef, useState, useMemo } from 'react';
 
 import { plural, promptSizeClass } from '@/lib/flashcards/format';
+import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { computeDiff } from '@/lib/flashcards/diff';
 import type { SetDTO } from '@/lib/flashcards/types';
 import {
@@ -425,9 +426,7 @@ function Play({
             <div className="fc-verdict__line">
               <span className="fc-verdict__key">you said</span>
               <span className="fc-verdict__given">
-                {diff.filter(p => !p.added).map((p, i) => (
-                  <span key={i} className={p.removed ? 'fc-diff-rem' : ''}>{p.value}</span>
-                ))}
+                <TypedLine parts={diff} />
               </span>
             </div>
           )}
@@ -435,9 +434,7 @@ function Play({
             <span className="fc-verdict__key">correct</span>
             <span className="fc-verdict__answer">
               {diff ? (
-                diff.filter(p => !p.removed).map((p, i) => (
-                  <span key={i} className={p.added ? 'fc-diff-add' : ''}>{p.value}</span>
-                ))
+                <AnswerLine parts={diff} />
               ) : expected}
             </span>
           </div>

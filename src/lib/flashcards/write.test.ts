@@ -10,7 +10,7 @@ import {
   submitAnswer,
   submitRetype,
 } from './write';
-import { computeDiff } from './diff';
+import { computeDiff, type DiffPart } from './diff';
 
 const CARDS = [
   { id: 1, term: 'chat', definition: 'cat' },
@@ -123,18 +123,122 @@ describe('isMatch', () => {
     expect(isMatch('derhund', 'Der Hund')).toBe(true);
     expect(isMatch('DerHund', 'der hund')).toBe(true);
   });
+
+  it('takes ss for ß (Swiss keyboards have no ß)', () => {
+    expect(isMatch('Strasse', 'Straße')).toBe(true);
+    expect(isMatch('Straße', 'Strasse')).toBe(true);
+    expect(isMatch('Strase', 'Straße')).toBe(false);
+  });
+
+  it('takes any apostrophe a keyboard types', () => {
+    expect(isMatch('aujourd´hui', "aujourd'hui")).toBe(true);
+    expect(isMatch('aujourd`hui', "aujourd'hui")).toBe(true);
+  });
+
+  it('does not count hyphens or sentence marks', () => {
+    expect(isMatch('email', 'e-mail')).toBe(true);
+    expect(isMatch('well known', 'well-known')).toBe(true);
+    expect(isMatch('Mr Smith', 'Mr. Smith')).toBe(true);
+    expect(isMatch('Ca va bien', 'Ça va? Bien!')).toBe(false); // the ç still counts
+    expect(isMatch('ça va bien', 'Ça va? Bien!')).toBe(true);
+    expect(isMatch('he said hi', 'he said "hi"')).toBe(true);
+  });
+
+  it('keeps numbers exact', () => {
+    expect(isMatch('35', '3.5')).toBe(false);
+    expect(isMatch('15', '1,5')).toBe(false);
+    expect(isMatch('5,1', '1,5')).toBe(false);
+    expect(isMatch('1,5', '1,5')).toBe(true);
+  });
+
+  it('takes the items of a list in any order, with any separator', () => {
+    expect(isMatch('festlegen, bestimmen', 'bestimmen, festlegen')).toBe(true);
+    expect(isMatch('festlegen; bestimmen', 'bestimmen, festlegen')).toBe(true);
+    expect(isMatch('festlegen / bestimmen', 'bestimmen, festlegen')).toBe(true);
+    expect(isMatch('banana, apple', 'apple (fruit), banana')).toBe(true);
+    // but every item, not one of them
+    expect(isMatch('bestimmen', 'bestimmen, festlegen')).toBe(false);
+    expect(isMatch('bestimmen, bestimmen', 'bestimmen, festlegen')).toBe(false);
+  });
+
+  it('is not fooled by an answer that is all punctuation', () => {
+    expect(isMatch('?', '?')).toBe(true);
+    expect(isMatch('!', '?')).toBe(false);
+    expect(isMatch('...', '…')).toBe(true);
+  });
 });
 
+/** The two lines the verdict shows: what was typed, and the answer. */
+function lines(given: string, expected: string) {
+  const parts = computeDiff(given, expected);
+  const mark = (p: DiffPart, text: string, sign: string) => (p.soft ? `{${text}}` : `${sign}${text}${sign}`);
+  return {
+    given: parts
+      .filter((p) => !p.added)
+      .map((p) => (p.removed ? mark(p, p.value, '-') : (p.typed ?? p.value)))
+      .join(''),
+    expected: parts
+      .filter((p) => !p.removed)
+      .map((p) => (p.added ? mark(p, p.value, '+') : p.value))
+      .join(''),
+  };
+}
+
 describe('computeDiff', () => {
-  it('does not mark case differences as added or removed', () => {
+  it('keeps a correct start together (de → determine)', () => {
+    expect(lines('de', 'determine')).toEqual({ given: 'de', expected: 'de+termine+' });
+  });
+
+  it('marks a missing end, a missing letter and an extra letter', () => {
+    expect(lines('determin', 'determine').expected).toBe('determin+e+');
+    expect(lines('detrmine', 'determine').expected).toBe('det+e+rmine');
+    expect(lines('deterrmine', 'determine').given).toBe('deter-r-mine');
+  });
+
+  it('shows swapped letters as one out, one in', () => {
+    expect(lines('recieve', 'receive')).toEqual({ given: 'rec-i-eve', expected: 'rece+i+ve' });
+  });
+
+  it('replaces an unrelated word whole instead of matching stray letters', () => {
+    expect(lines('house', 'maison')).toEqual({ given: '-house-', expected: '+maison+' });
+    expect(lines('cat', 'dog')).toEqual({ given: '-cat-', expected: '+dog+' });
+  });
+
+  it('keeps a shared start of a wrong word', () => {
+    expect(lines('chat', 'chien')).toEqual({ given: 'ch-at-', expected: 'ch+ien+' });
+  });
+
+  it('marks a wrong accent', () => {
+    expect(lines('cafe', 'café')).toEqual({ given: 'caf-e-', expected: 'caf+é+' });
+  });
+
+  it('works word by word in a phrase', () => {
+    expect(lines('the big dog', 'the small dog')).toEqual({
+      given: 'the -big- dog',
+      expected: 'the +small+ dog',
+    });
+    expect(lines('determine', 'to determine').expected).toBe('+to +determine');
+  });
+
+  it('shows what was typed, in its own case', () => {
+    expect(lines('DETERMIN', 'determine')).toEqual({ given: 'DETERMIN', expected: 'determin+e+' });
+  });
+
+  it('does not mark case differences', () => {
     const diff = computeDiff('apple', 'Apple');
     expect(diff.some((p) => p.added || p.removed)).toBe(false);
     expect(diff.map((p) => p.value).join('')).toBe('Apple');
   });
 
-  it('does not mark extra space runs as added or removed', () => {
-    const diff = computeDiff('high   school', 'high school');
-    expect(diff.some((p) => p.added || p.removed)).toBe(false);
+  it('softens what the check ignores: spaces, edge punctuation, parentheses', () => {
+    expect(lines('high   school', 'high school').given).toBe('high {  }school');
+    expect(lines('como estas', '¿Cómo estás?').expected).toBe('{¿}C+ó+mo est+á+s{?}');
+    expect(lines('Apfal', 'Apfel (m)').expected).toBe('Apf+e+l{ (m)}');
+  });
+
+  it('copes with long answers', () => {
+    const long = 'a'.repeat(900);
+    expect(lines(long, `${long}b`).expected).toBe(`${long}+b+`);
   });
 });
 
