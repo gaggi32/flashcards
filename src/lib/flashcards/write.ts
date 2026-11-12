@@ -136,10 +136,10 @@ export function stripSpaces(value: string): string {
 const isDigit = (c: string | undefined) => c !== undefined && c >= '0' && c <= '9';
 
 /**
- * The form two answers are compared in. On top of normalizeAnswer: spaces,
- * hyphens and sentence marks (. ! ? ¿ ¡ ") don't count anywhere ("e-mail" is
- * "email", "Mr. Smith" is "Mr Smith"), and a list — items split by , ; or / —
- * matches in any order. Inside a number nothing is dropped or split: "3.5" is
+ * The form two answers are compared in. On top of normalizeAnswer: spaces and
+ * sentence marks (. ! ? ¿ ¡ ") don't count anywhere ("Mr. Smith" is
+ * "Mr Smith"), but a hyphen does ("email" is not "e-mail"), and a list —
+ * items split by , ; or / — matches in any order. Inside a number nothing is dropped or split: "3.5" is
  * not "35", and "1,5" is not "5,1".
  */
 export function answerKey(value: string): string {
@@ -154,7 +154,7 @@ export function answerKey(value: string): string {
       item = '';
     } else if (c === '.' && inNumber) {
       item += c;
-    } else if (!/[\s\-.!?¿¡"]/.test(c)) {
+    } else if (!/[\s.!?¿¡"]/.test(c)) {
       item += c;
     }
   }

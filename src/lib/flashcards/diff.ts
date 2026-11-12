@@ -19,7 +19,7 @@ export type DiffPart = {
   /** Typed only: not in the answer. */
   removed?: boolean;
   /**
-   * A difference the check does not count — spaces, hyphens, sentence marks,
+   * A difference the check does not count — spaces, sentence marks,
    * punctuation at either end, anything in parentheses — so it is not
    * marked as an error.
    */
@@ -152,7 +152,7 @@ function softMask(s: string[]): boolean[] {
   return s.map((c, k) => {
     const f = fold(c);
     if (outside && inParens[k]) return true;
-    if (f === ' ' || f === '-' || /[!?¿¡"]/.test(f)) return true;
+    if (f === ' ' || /[!?¿¡"]/.test(f)) return true;
     if (f === '.' || f === ',') {
       if (isDigit(s[k - 1]) && isDigit(s[k + 1])) return false;
       if (f === '.') return true;

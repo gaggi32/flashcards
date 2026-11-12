@@ -135,9 +135,19 @@ describe('isMatch', () => {
     expect(isMatch('aujourd`hui', "aujourd'hui")).toBe(true);
   });
 
-  it('does not count hyphens or sentence marks', () => {
-    expect(isMatch('email', 'e-mail')).toBe(true);
-    expect(isMatch('well known', 'well-known')).toBe(true);
+  it('counts hyphens', () => {
+    expect(isMatch('email', 'e-mail')).toBe(false);
+    expect(isMatch('well known', 'well-known')).toBe(false);
+    expect(isMatch('e-mail', 'email')).toBe(false);
+    expect(isMatch('e-mail', 'e-mail')).toBe(true);
+    expect(isMatch('well - known', 'well-known')).toBe(true); // spaces still don't count
+  });
+
+  it('marks a missing hyphen in the correction', () => {
+    expect(lines('email', 'e-mail').expected).toBe('e+-+mail');
+  });
+
+  it('does not count sentence marks', () => {
     expect(isMatch('Mr Smith', 'Mr. Smith')).toBe(true);
     expect(isMatch('Ca va bien', 'Ça va? Bien!')).toBe(false); // the ç still counts
     expect(isMatch('ça va bien', 'Ça va? Bien!')).toBe(true);
