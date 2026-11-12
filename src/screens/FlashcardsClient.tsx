@@ -24,6 +24,7 @@ import {
 } from '@/components/flashcards/FlashcardIcons';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
+import { ResetButton } from '@/components/flashcards/ResetButton';
 
 export function FlashcardsClient({ setId }: { setId: number }) {
   const { set, error } = useSet(setId);
@@ -403,6 +404,11 @@ function Deck({ set }: { set: SetDTO }) {
             <IconClose size={14} />
             {missed}
           </span>
+          <ResetButton
+            question="reset round?"
+            title="Start the cards over from the first one, with no marks"
+            onReset={restart}
+          />
         </span>
       </div>
 

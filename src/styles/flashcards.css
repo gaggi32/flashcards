@@ -1058,6 +1058,29 @@
 .fc-writebar__stat--miss {
   color: var(--rt-rust);
 }
+/* The small per-mode reset (ResetButton): quiet until asked. */
+.fc-page .rt-linkbtn.fc-reset,
+.fc-page .fc-reset .rt-linkbtn {
+  padding: 0 2px;
+  font-size: 0.92em;
+  font-weight: 500;
+}
+.fc-page .rt-linkbtn.fc-reset {
+  color: var(--rt-ink-faint, var(--rt-ink-soft));
+}
+.fc-reset--ask,
+.fc-reset--failed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.92em;
+  font-weight: 500;
+  color: var(--rt-ink-soft);
+}
+.fc-page .fc-reset .rt-linkbtn.fc-reset__yes,
+.fc-reset--failed {
+  color: var(--rt-rust);
+}
 
 .fc-prompt {
   position: relative;

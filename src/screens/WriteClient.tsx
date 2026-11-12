@@ -30,6 +30,7 @@ import { IconCheck, IconClose, IconEnter } from '@/components/flashcards/Flashca
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
 import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
+import { ResetButton } from '@/components/flashcards/ResetButton';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -179,7 +180,16 @@ function WriteMode({ set }: { set: SetDTO }) {
     );
   }
 
-  return <Play session={session} setSession={setSession} />;
+  return (
+    <Play
+      session={session}
+      setSession={setSession}
+      onReset={() => {
+        clearWriteSessionFromStorage(set.id);
+        setSession(startSession(set.cards, { answerWith: session.answerWith, shuffled: session.shuffled }));
+      }}
+    />
+  );
 }
 
 // --- setup ---
@@ -280,9 +290,12 @@ function Setup(props: {
 function Play({
   session,
   setSession,
+  onReset,
 }: {
   session: WriteSession;
   setSession: React.Dispatch<React.SetStateAction<WriteSession | null>>;
+  /** Write over from round 1, same settings. */
+  onReset: () => void;
 }) {
   const [text, setText] = useState('');
   const [retypeWrong, setRetypeWrong] = useState(false);
@@ -381,6 +394,11 @@ function Play({
           {progress.missed}
         </span>
         <span className="fc-writebar__stat">{progress.remaining} left</span>
+        <ResetButton
+          question="reset write?"
+          title="Start Write over from round 1: every card asked again, scores cleared"
+          onReset={onReset}
+        />
       </div>
 
       <div className="fc-progress">

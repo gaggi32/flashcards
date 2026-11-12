@@ -2,7 +2,7 @@
 import Link from '@/components/Link';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { errorMessage, fetchLearnQueue, fetchLearnStats, reviewCard } from '@/lib/flashcards/client';
+import { errorMessage, fetchLearnQueue, fetchLearnStats, resetLearnProgress, reviewCard } from '@/lib/flashcards/client';
 import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { MIN_CARDS_FOR_CHOICE } from '@/lib/flashcards/distractors';
@@ -39,6 +39,7 @@ import { IconCheck, IconClose, IconEnter } from '@/components/flashcards/Flashca
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
 import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
+import { ResetButton } from '@/components/flashcards/ResetButton';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -195,6 +196,13 @@ function LearnMode({ set }: { set: SetDTO }) {
 
   useEffect(() => load(), [load]);
 
+  // Learn's progress is the set's learned / learning state in the store; the
+  // other modes keep their own rounds and are not touched.
+  async function resetLearn() {
+    await resetLearnProgress(set.id);
+    load();
+  }
+
   // Persist session to localStorage on every change.
   useEffect(() => {
     if (!session || !today) return;
@@ -252,6 +260,7 @@ function LearnMode({ set }: { set: SetDTO }) {
           clearSessionFromStorage(set.id);
           setSession(startLearn(sessionOrder(today.queue), set.cards, answerWith));
         }}
+        onReset={resetLearn}
       />
     );
   }
@@ -278,7 +287,7 @@ function LearnMode({ set }: { set: SetDTO }) {
   }
 
   return (
-    <Play session={session} setSession={setSession} streaks={streaks} key={session.index} />
+    <Play session={session} setSession={setSession} streaks={streaks} onReset={resetLearn} key={session.index} />
   );
 }
 
@@ -292,6 +301,7 @@ function Setup(props: {
   savedSession: LearnSession | null;
   onResumeSaved: () => void;
   onStart: () => void;
+  onReset: () => Promise<void>;
 }) {
   const uid = useId();
   const { set, today } = props;
@@ -380,6 +390,9 @@ function Setup(props: {
         <button type="submit" className="rt-btn rt-btn--primary" autoFocus={!saved}>
           start · {plural(count, 'card')}
         </button>
+        {(stats.new < stats.total || saved) && (
+          <ResetButton question="reset learn progress?" title={LEARN_RESET_TITLE} onReset={props.onReset} />
+        )}
       </div>
     </form>
   );
@@ -407,14 +420,18 @@ type SaveState =
   | { status: 'saved' }
   | { status: 'error'; message: string };
 
+const LEARN_RESET_TITLE = 'Make every card in this set new again in Learn. Flashcards and Write keep their rounds.';
+
 function Play({
   session,
   setSession,
   streaks,
+  onReset,
 }: {
   session: LearnSession;
   setSession: React.Dispatch<React.SetStateAction<LearnSession | null>>;
   streaks: React.RefObject<Streaks>;
+  onReset: () => Promise<void>;
 }) {
   const [text, setText] = useState('');
   const [retypeWrong, setRetypeWrong] = useState(false);
@@ -621,6 +638,7 @@ function Play({
             stop
           </button>
         )}
+        <ResetButton question="reset learn progress?" title={LEARN_RESET_TITLE} onReset={onReset} />
       </div>
 
       <div className="fc-progress">
