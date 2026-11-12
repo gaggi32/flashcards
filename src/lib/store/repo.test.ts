@@ -121,6 +121,27 @@ describe('learning', () => {
   });
 });
 
+describe('reset', () => {
+  it('makes every card of the set new again and leaves other sets and the review log alone', async () => {
+    const { set, cards } = await setWith(3);
+    const other = await setWith(1, 'French');
+    await repo.reviewCard(cards[0].id, 5, TODAY, null);
+    await repo.reviewCard(cards[1].id, 2, TODAY, null);
+    await repo.reviewCard(other.cards[0].id, 5, TODAY, null);
+    const logged = (raw.prepare('SELECT COUNT(*) AS n FROM reviews').get() as { n: number }).n;
+
+    expect(await repo.resetProgress(set.id)).toBe(2);
+    expect(await repo.learnStats(set.id)).toEqual({ total: 3, new: 3, learning: 0, learned: 0 });
+    expect((await repo.learnStats(other.set.id)).new).toBe(0);
+    expect((raw.prepare('SELECT COUNT(*) AS n FROM reviews').get() as { n: number }).n).toBe(logged);
+    expect((await repo.getSet(set.id)).cards).toHaveLength(3);
+  });
+
+  it('refuses a set that does not exist', async () => {
+    await expect(repo.resetProgress(999)).rejects.toBeInstanceOf(ApiError);
+  });
+});
+
 describe('export and import', () => {
   it('round-trips sets, cards and progress', async () => {
     const { cards } = await setWith(3);

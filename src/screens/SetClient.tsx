@@ -4,7 +4,7 @@ import Link from '@/components/Link';
 import { useRouter } from '@/lib/app/router';
 import { useState } from 'react';
 
-import { deleteSet, errorMessage } from '@/lib/flashcards/client';
+import { deleteSet, errorMessage, resetSet } from '@/lib/flashcards/client';
 import {
   IconCards,
   IconChevronLeft,
@@ -21,6 +21,8 @@ export function SetClient({ setId }: { setId: number }) {
   const { set, error } = useSet(setId);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [resetNote, setResetNote] = useState<string | null>(null);
 
   if (!set) {
     return (
@@ -52,6 +54,26 @@ export function SetClient({ setId }: { setId: number }) {
     }
   }
 
+  async function reset() {
+    if (!set) return;
+    const ok = await ask.confirm(
+      `Start "${set.title}" over? All ${plural(count, 'card')} become new again and any round in progress is dropped. The cards themselves stay.`,
+      { danger: true, ok: 'reset' },
+    );
+    if (!ok) return;
+    setResetting(true);
+    setDeleteError(null);
+    setResetNote(null);
+    try {
+      await resetSet(set.id);
+      setResetNote('Progress reset: every card is new again.');
+    } catch (err) {
+      setDeleteError(errorMessage(err, 'Could not reset this set.'));
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <main className="rt-boot">
       <Link href="/flashcards" className="rt-backlink">
@@ -78,6 +100,9 @@ export function SetClient({ setId }: { setId: number }) {
               <Link href={`/flashcards/${set.id}/edit`} className="rt-btn rt-btn--sm">
                 edit
               </Link>
+              <button type="button" className="rt-btn rt-btn--sm" onClick={reset} disabled={resetting || count === 0}>
+                {resetting ? 'resetting…' : 'reset progress'}
+              </button>
               <button
                 type="button"
                 className="rt-btn rt-btn--sm rt-btn--danger"
@@ -92,6 +117,11 @@ export function SetClient({ setId }: { setId: number }) {
       </div>
 
       {set.description && <p className="fc-desc">{set.description}</p>}
+      {resetNote && (
+        <div className="rt-note rt-note--ok" style={{ marginTop: 14 }}>
+          {resetNote}
+        </div>
+      )}
       {deleteError && (
         <div className="rt-note rt-note--err" style={{ marginTop: 14 }}>
           {deleteError}

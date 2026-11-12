@@ -164,6 +164,21 @@ export async function deleteSet(id: number): Promise<void> {
   if (res.rowsAffected === 0) throw notFound('set');
 }
 
+/**
+ * Forget what the set has learned: every card is new again. The review log
+ * stays, so the streak and "answered today" are untouched. Returns how many
+ * cards had progress.
+ */
+export async function resetProgress(id: number): Promise<number> {
+  const setId = parse(idField, id);
+  const found = await db().select<{ id: number }>('SELECT id FROM sets WHERE id = ?', [setId]);
+  if (found.length === 0) throw notFound('set');
+  const [res] = await db().batch([
+    { sql: 'DELETE FROM progress WHERE card_id IN (SELECT id FROM cards WHERE set_id = ?)', params: [setId] },
+  ]);
+  return res.rowsAffected;
+}
+
 // --- folders --------------------------------------------------------------------
 
 export async function listFolders(): Promise<string[]> {

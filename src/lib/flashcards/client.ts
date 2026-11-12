@@ -62,6 +62,27 @@ export function updateSet(id: number, meta: Partial<SetMeta>): Promise<{ set: Se
   return write(async () => ({ set: await repo.updateSet(id, meta) }));
 }
 
+/**
+ * Start the set over: no progress, and no half-done round in any mode. The
+ * keys are the ones FlashcardsClient, WriteClient and LearnClient save under
+ * (LearnClient's older ones had a date on the end).
+ */
+export function resetSet(id: number): Promise<{ ok: true; reset: number }> {
+  return write(async () => {
+    const reset = await repo.resetProgress(id);
+    try {
+      const keys = [`fc-deck-session-${id}`, `fc-write-session-${id}`, `fc-session-${id}`];
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (keys.includes(key) || key.startsWith(`fc-session-${id}-`))) localStorage.removeItem(key);
+      }
+    } catch {
+      /* no storage: nothing saved to forget */
+    }
+    return { ok: true as const, reset };
+  });
+}
+
 // --- folders ---
 
 export function fetchFolders(): Promise<{ folders: string[] }> {

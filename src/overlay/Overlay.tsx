@@ -29,6 +29,7 @@ import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
 import { WriteClient } from '@/screens/WriteClient';
+import { tabStops } from '@/components/flashcards/StudyHeader';
 
 const MODES: { id: OverlayMode; route: string; label: string; hint: string }[] = [
   { id: 'cards', route: 'cards', label: 'Cards', hint: 'Flashcards' },
@@ -66,6 +67,7 @@ function OverlayFrame() {
   const [phase, setPhase] = useState<'gone' | 'in' | 'out'>('gone');
   /** The close being played, 0 when none. */
   const closing = useRef(0);
+  const panelRef = useRef<HTMLDivElement>(null);
   const version = useDataVersion();
 
   const setId = studySetFrom(chosenSet, sets ?? []);
@@ -158,6 +160,22 @@ function OverlayFrame() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
+      // Tab goes round what is in the panel and never leaves the page: past
+      // the last button WebView2 hands focus to the window frame, the window
+      // loses focus, and the overlay hides. The header is not in the round
+      // (Ctrl+1/2/3 switch modes, Esc hides).
+      if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.defaultPrevented) {
+        e.preventDefault();
+        const panel = panelRef.current;
+        if (!panel) return;
+        const stops = tabStops(panel);
+        if (stops.length === 0) return;
+        const at = stops.indexOf(document.activeElement as HTMLElement);
+        const step = e.shiftKey ? -1 : 1;
+        const next = at === -1 ? (e.shiftKey ? stops.length - 1 : 0) : (at + step + stops.length) % stops.length;
+        stops[next].focus();
+        return;
+      }
       if (e.key === 'Escape') {
         if (view === 'add') setView('study');
         else void hideOverlay();
@@ -180,7 +198,7 @@ function OverlayFrame() {
 
   return (
     <div className="rt-page fc-page ov" data-phase={phase}>
-      <div className="ov__panel" onAnimationEnd={onPanelAnimationEnd}>
+      <div className="ov__panel" ref={panelRef} onAnimationEnd={onPanelAnimationEnd}>
         <header className="ov__head" data-tauri-drag-region>
           <div className="ov__modes" role="tablist" aria-label="Study mode" style={{ ['--i' as string]: modeIndex }}>
             <span className="ov__modes-pill" aria-hidden="true" />
@@ -188,6 +206,7 @@ function OverlayFrame() {
               <button
                 key={m.id}
                 type="button"
+                tabIndex={-1}
                 role="tab"
                 aria-selected={mode === m.id && view === 'study'}
                 className={`ov__mode${mode === m.id ? ' is-on' : ''}`}
@@ -204,6 +223,7 @@ function OverlayFrame() {
           </div>
           <select
             className="ov__setpick"
+            tabIndex={-1}
             aria-label="Set to study"
             value={setId === null ? '' : String(setId)}
             onChange={(e) => {
@@ -221,6 +241,7 @@ function OverlayFrame() {
           <span className="ov__spacer" data-tauri-drag-region />
           <button
             type="button"
+            tabIndex={-1}
             className={`ov__icon ov__plus${view === 'add' ? ' is-on' : ''}`}
             title="Add a card"
             onMouseDown={(e) => e.preventDefault()}
@@ -230,6 +251,7 @@ function OverlayFrame() {
           </button>
           <button
             type="button"
+            tabIndex={-1}
             className="ov__icon"
             title="Open this in the main window"
             onMouseDown={(e) => e.preventDefault()}
@@ -239,6 +261,7 @@ function OverlayFrame() {
           </button>
           <button
             type="button"
+            tabIndex={-1}
             className="ov__icon"
             title={`Hide (Esc or ${hotkey})`}
             onMouseDown={(e) => e.preventDefault()}

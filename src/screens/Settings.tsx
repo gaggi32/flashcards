@@ -189,7 +189,11 @@ export function SettingsScreen() {
   useEffect(() => {
     appInfo().then(setInfo).catch(() => {});
     autostartEnabled().then(setAutostart).catch(() => setAutostart(null));
-    return onUpdate(setUpdate);
+    // A check that got through (the 12-hourly one too) ends "could not reach GitHub".
+    return onUpdate((u) => {
+      setUpdate(u);
+      setNote((n) => (n?.at === 'update' ? null : n));
+    });
   }, []);
   useEffect(() => setModel(settings?.aiModel ?? ''), [settings?.aiModel]);
 
@@ -212,6 +216,10 @@ export function SettingsScreen() {
 
   function say(at: string, kind: 'ok' | 'err', text: string) {
     setNote({ at, kind, text });
+  }
+  /** A new try starts clean: an old error under that section goes. */
+  function clearNote(at: string) {
+    setNote((n) => (n?.at === at ? null : n));
   }
   const noteFor = (at: string) =>
     note?.at === at ? <div className={`rt-note rt-note--${note.kind} set-note`}>{note.text}</div> : null;
@@ -265,10 +273,11 @@ export function SettingsScreen() {
 
   async function doCheck() {
     setChecking(true);
+    clearNote('update');
     try {
       setUpdate(await checkUpdate());
     } catch (err) {
-      say('system', 'err', asApiError(err).message);
+      say('update', 'err', asApiError(err).message);
     } finally {
       setChecking(false);
     }
@@ -430,6 +439,7 @@ export function SettingsScreen() {
             )}
           </div>
         </Row>
+        {noteFor('update')}
         {noteFor('system')}
       </Section>
     </main>
