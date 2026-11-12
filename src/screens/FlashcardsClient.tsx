@@ -23,7 +23,7 @@ import {
   IconShuffle,
 } from '@/components/flashcards/FlashcardIcons';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
-import { StudyHeader } from '@/components/flashcards/StudyHeader';
+import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
 
 export function FlashcardsClient({ setId }: { setId: number }) {
   const { set, error } = useSet(setId);
@@ -44,7 +44,9 @@ export function FlashcardsClient({ setId }: { setId: number }) {
           No cards to study. <Link href={`/flashcards/${set.id}/edit`}>Add some</Link> first.
         </div>
       ) : (
-        <Deck set={set} />
+        <StudyArea>
+          <Deck set={set} />
+        </StudyArea>
       )}
     </main>
   );

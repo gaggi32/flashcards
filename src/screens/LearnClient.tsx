@@ -38,7 +38,7 @@ import { todayKey } from '@/lib/nutrition/day';
 import { IconCheck, IconClose, IconEnter } from '@/components/flashcards/FlashcardIcons';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
-import { StudyHeader } from '@/components/flashcards/StudyHeader';
+import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -73,7 +73,9 @@ export function LearnClient({ setId }: { setId: number }) {
           No cards to study. <Link href={`/flashcards/${set.id}/edit`}>Add some</Link> first.
         </div>
       ) : (
-        <LearnMode set={set} />
+        <StudyArea>
+          <LearnMode set={set} />
+        </StudyArea>
       )}
     </main>
   );

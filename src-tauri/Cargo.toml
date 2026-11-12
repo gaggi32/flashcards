@@ -1,6 +1,6 @@
 [package]
 name = "flashcards"
-version = "0.1.8"
+version = "0.1.9"
 description = "Flashcards — desktop study app with a hotkey overlay"
 authors = ["gaggi32"]
 edition = "2021"
