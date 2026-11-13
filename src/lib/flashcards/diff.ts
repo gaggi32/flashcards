@@ -19,9 +19,9 @@ export type DiffPart = {
   /** Typed only: not in the answer. */
   removed?: boolean;
   /**
-   * A difference the check does not count — spaces, sentence marks,
-   * punctuation at either end, anything in parentheses — so it is not
-   * marked as an error.
+   * A difference the check does not count — extra spaces or ones next to
+   * punctuation, sentence marks, punctuation at either end, anything in
+   * parentheses — so it is not marked as an error.
    */
   soft?: boolean;
 };
@@ -149,10 +149,28 @@ function softMask(s: string[]): boolean[] {
     if (!inParens[k] && isWord(s[k])) outside = true;
   }
 
+  // Sentence marks; a dot inside a number counts.
+  const isMark = (k: number) => {
+    const f = fold(s[k]);
+    if (/[!?¿¡"]/.test(f)) return true;
+    return f === '.' && !(isDigit(s[k - 1]) && isDigit(s[k + 1]));
+  };
+  // A space counts only as the first of its run, between two words (marks
+  // around it skipped), as in answerKey.
+  const hardSpace = (k: number) => {
+    if (k > 0 && fold(s[k - 1]) === ' ') return false;
+    let l = k - 1;
+    while (l >= 0 && isMark(l)) l--;
+    let r = k + 1;
+    while (r < s.length && (fold(s[r]) === ' ' || isMark(r))) r++;
+    return l >= 0 && r < s.length && isWord(s[l]) && isWord(s[r]);
+  };
+
   return s.map((c, k) => {
     const f = fold(c);
     if (outside && inParens[k]) return true;
-    if (f === ' ' || /[!?¿¡"]/.test(f)) return true;
+    if (f === ' ') return !hardSpace(k);
+    if (/[!?¿¡"]/.test(f)) return true;
     if (f === '.' || f === ',') {
       if (isDigit(s[k - 1]) && isDigit(s[k + 1])) return false;
       if (f === '.') return true;

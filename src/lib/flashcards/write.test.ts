@@ -101,18 +101,28 @@ describe('isMatch', () => {
     expect(isMatch('(f)', 'casa')).toBe(false);
   });
 
-  it('does not count spaces in between words as wrong', () => {
-    expect(isMatch('pommedeterre', 'pomme de terre')).toBe(true);
-    expect(isMatch('pomme de terre', 'pommedeterre')).toBe(true);
+  it('counts a missing or extra space between words', () => {
+    expect(isMatch('pommedeterre', 'pomme de terre')).toBe(false);
+    expect(isMatch('pomme de terre', 'pommedeterre')).toBe(false);
+    expect(isMatch('icecream', 'ice cream')).toBe(false);
+    expect(isMatch('ice cream', 'icecream')).toBe(false);
+    expect(isMatch('to giveup', 'to give up')).toBe(false);
+    expect(isMatch('alot', 'a lot')).toBe(false);
+    expect(isMatch('toleave', 'to leave (a place)')).toBe(false);
+    expect(isMatch('to leave', 'to leave (a place)')).toBe(true);
+    expect(isMatch('1000', '1 000')).toBe(false);
+  });
+
+  it('does not count extra spaces or spaces next to punctuation', () => {
     expect(isMatch('pomme  de   terre', 'pomme de terre')).toBe(true);
-    expect(isMatch('icecream', 'ice cream')).toBe(true);
-    expect(isMatch('ice cream', 'icecream')).toBe(true);
-    expect(isMatch('to giveup', 'to give up')).toBe(true);
-    expect(isMatch('togiveup', 'to give up')).toBe(true);
-    expect(isMatch('infrontof', 'in front of')).toBe(true);
-    expect(isMatch('alot', 'a lot')).toBe(true);
+    expect(isMatch('  ice cream ', 'ice cream')).toBe(true);
+    expect(isMatch('ice\tcream', 'ice cream')).toBe(true);
     expect(isMatch('l’ ami', "l'ami")).toBe(true);
-    expect(isMatch('toleave', 'to leave (a place)')).toBe(true);
+    expect(isMatch("l'ami", "l' ami")).toBe(true);
+    expect(isMatch('hund , katze', 'Hund, Katze')).toBe(true);
+    expect(isMatch('Mr Smith', 'Mr. Smith')).toBe(true);
+    expect(isMatch('¿ Cómo estás ?', '¿Cómo estás?')).toBe(true);
+    expect(isMatch('si ¿ y tu', 'si y tu')).toBe(true);
   });
 
   it('ignores first letter upper/lower case', () => {
@@ -120,8 +130,8 @@ describe('isMatch', () => {
     expect(isMatch('apple', 'Apple')).toBe(true);
     expect(isMatch('der hund', 'Der Hund')).toBe(true);
     expect(isMatch('Der Hund', 'der hund')).toBe(true);
-    expect(isMatch('derhund', 'Der Hund')).toBe(true);
-    expect(isMatch('DerHund', 'der hund')).toBe(true);
+    expect(isMatch('derhund', 'Der Hund')).toBe(false); // the space counts
+    expect(isMatch('DerHund', 'der hund')).toBe(false);
   });
 
   it('takes ss for ß (Swiss keyboards have no ß)', () => {
@@ -145,6 +155,11 @@ describe('isMatch', () => {
 
   it('marks a missing hyphen in the correction', () => {
     expect(lines('email', 'e-mail').expected).toBe('e+-+mail');
+  });
+
+  it('marks a missing space between words in the correction', () => {
+    expect(lines('icecream', 'ice cream').expected).toBe('ice+ +cream');
+    expect(lines('ice cream', 'icecream').given).toBe('ice- -cream');
   });
 
   it('does not count sentence marks', () => {
@@ -240,8 +255,9 @@ describe('computeDiff', () => {
     expect(diff.map((p) => p.value).join('')).toBe('Apple');
   });
 
-  it('softens what the check ignores: spaces, edge punctuation, parentheses', () => {
+  it('softens what the check ignores: extra spaces, edge punctuation, parentheses', () => {
     expect(lines('high   school', 'high school').given).toBe('high {  }school');
+    expect(lines('well - known', 'well-known').given).toBe('well{ }-{ }known');
     expect(lines('como estas', '¿Cómo estás?').expected).toBe('{¿}C+ó+mo est+á+s{?}');
     expect(lines('Apfal', 'Apfel (m)').expected).toBe('Apf+e+l{ (m)}');
   });

@@ -134,13 +134,19 @@ export function stripSpaces(value: string): string {
 }
 
 const isDigit = (c: string | undefined) => c !== undefined && c >= '0' && c <= '9';
+const isWordChar = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+/** Dropped from the key: sentence marks. (A space is decided on its own.) */
+const isMark = (c: string) => /[.!?¿¡"]/.test(c);
 
 /**
- * The form two answers are compared in. On top of normalizeAnswer: spaces and
- * sentence marks (. ! ? ¿ ¡ ") don't count anywhere ("Mr. Smith" is
- * "Mr Smith"), but a hyphen does ("email" is not "e-mail"), and a list —
- * items split by , ; or / — matches in any order. Inside a number nothing is dropped or split: "3.5" is
- * not "35", and "1,5" is not "5,1".
+ * The form two answers are compared in. On top of normalizeAnswer: sentence
+ * marks (. ! ? ¿ ¡ ") don't count anywhere ("Mr. Smith" is "Mr Smith"), but a
+ * hyphen does ("email" is not "e-mail"), and so does the space between two
+ * words ("icecream" is not "ice cream"). A space next to anything else — a
+ * hyphen, an apostrophe, a comma — does not ("well - known", "l' ami"), nor
+ * does a run of them. A list — items split by , ; or / — matches in any
+ * order. Inside a number nothing is dropped or split: "3.5" is not "35", and
+ * "1,5" is not "5,1".
  */
 export function answerKey(value: string): string {
   const s = normalizeAnswer(value);
@@ -154,7 +160,12 @@ export function answerKey(value: string): string {
       item = '';
     } else if (c === '.' && inNumber) {
       item += c;
-    } else if (!/[\s.!?¿¡"]/.test(c)) {
+    } else if (/\s/.test(c)) {
+      // Kept only between two words; the marks dropped around it don't count.
+      let next = i + 1;
+      while (next < s.length && (/\s/.test(s[next]) || isMark(s[next]))) next++;
+      if (isWordChar(item[item.length - 1]) && isWordChar(s[next])) item += ' ';
+    } else if (!isMark(c)) {
       item += c;
     }
   }
