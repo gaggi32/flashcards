@@ -23,7 +23,7 @@ import {
   IconShuffle,
 } from '@/components/flashcards/FlashcardIcons';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
-import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
+import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards/StudyHeader';
 import { ResetButton } from '@/components/flashcards/ResetButton';
 
 export function FlashcardsClient({ setId }: { setId: number }) {
@@ -569,7 +569,7 @@ function RoundSummary({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !enterIsForFocus()) {
         e.preventDefault();
         if (finished) onRestart();
         else onNextRound();

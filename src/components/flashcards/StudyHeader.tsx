@@ -51,6 +51,16 @@ export function tabStops(root: HTMLElement): HTMLElement[] {
 }
 
 /**
+ * Whether Enter is for the focused control rather than the screen's own Enter
+ * shortcut: a focused button or link does what it says ("I was correct",
+ * "skip", "back to set"), not whatever Enter means on that step.
+ */
+export function enterIsForFocus(): boolean {
+  const el = document.activeElement;
+  return el instanceof HTMLElement && el.matches('button, a[href], select, textarea, summary');
+}
+
+/**
  * The study screen below the header. Tab goes round its buttons and the
  * answer box: past the last one it comes back to the first (Shift+Tab the
  * other way) instead of leaving for the back link and the mode tabs, or in

@@ -29,7 +29,7 @@ import { specialCharsOf } from '@/lib/flashcards/specialChars';
 import { IconCheck, IconClose, IconEnter } from '@/components/flashcards/FlashcardIcons';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
-import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
+import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards/StudyHeader';
 import { ResetButton } from '@/components/flashcards/ResetButton';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
@@ -339,6 +339,7 @@ function Play({
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (enterIsForFocus()) return;
       if (step.kind === 'correct') {
         e.preventDefault();
         setSession((s) => (s ? advance(s) : s));
@@ -592,7 +593,7 @@ function Summary({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !enterIsForFocus()) {
         e.preventDefault();
         if (finished) onRestart();
         else onNextRound();
