@@ -35,7 +35,8 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - Version lives in three places: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. The release job refuses a tag that does not match all three.
 
 ## Releasing
-Bump the three versions, commit, tag `vX.Y.Z`, push the tag. `.github/workflows/release.yml` builds Windows x64 + macOS arm64/x64, uploads installers and `.sha256` files, and publishes. The app's update check reads that release.
+Add the version's section to `CHANGELOG.md` (newest first, Added / Changed / Fixed / Removed, written for users, one line per change, matching the commits since the last tag), bump the three versions, commit, tag `vX.Y.Z`, push the tag. `.github/workflows/release.yml` builds Windows x64 + macOS arm64/x64, uploads installers and `.sha256` files, and publishes. The app's update check reads that release.
+After it is published, point the 404canvas download at it: `C:\dev\404canvas\private\release-flashcards.json` (version, the three asset URLs, SHA-256 from the release's `.sha256` files), commit "release: Flashcards vX.Y.Z", push. Installs from before 0.1.7 ask that site for updates.
 
 ## Only Michele can do
 - Keep the repo public (the update check reads its releases without a token).

@@ -4,14 +4,15 @@ All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
 ## [0.1.19] — 2026-11-16
 ### Added
-- Share a single set as a file, and open a set someone sent you.
-### Fixed
-- Removed the Ctrl+S shortcut from study.
-- Resetting Write asks for the side again.
+- Share a single set as a file ("share…" on the set page), and open a set someone sent you ("Open shared set" on the sets page). Your study progress is not in the file.
+### Changed
+- Resetting Write goes back to its start screen and asks which side to answer with again.
+### Removed
+- The Ctrl+S shortcut for switching sides; the button stays.
 
 ## [0.1.18] — 2026-11-16
 ### Added
-- Switch between term and definition mid-round; each set remembers its side.
+- Switch between term and definition mid-round in Write and Learn; each set remembers its side for the next round.
 ### Fixed
 - A set's back link returns to the page before it, including folders.
 
@@ -28,8 +29,8 @@ All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
 ## [0.1.15] — 2026-11-16
 ### Fixed
-- Unfinished study rounds are stored in SQLite instead of localStorage.
-- Study preferences are stored in `settings.json` instead of localStorage.
+- Study preferences no longer reset themselves after a PC restart (kept in `settings.json`, not the webview's storage).
+- Unfinished rounds survive a restart (kept in the database); rounds from earlier versions are carried over once.
 
 ## [0.1.14] — 2026-11-15
 ### Added
@@ -73,16 +74,18 @@ All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 ### Fixed
 - Overlay flips in without flicker.
 - Autostart is kept across reinstalls.
-- Long text and corrections fit in the overlay without scrolling.
 
 ## [0.1.5] — 2026-11-11
 ### Changed
 - Compact overlay: a small window rather than a second main window.
-- Overlay runs the main window's modes on the same sessions.
+### Fixed
+- Long text and corrections fit in the overlay without scrolling.
 
 ## [0.1.4] — 2026-11-11
 ### Added
 - Overlay: one set at a time, sides as on the website, all-cards rounds.
+### Changed
+- Overlay runs the main window's modes on the same sessions.
 
 ## [0.1.3] — 2026-11-11
 ### Added
