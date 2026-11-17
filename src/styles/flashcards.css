@@ -2440,3 +2440,40 @@
   font-size: 12.5px;
   font-weight: 600;
 }
+
+/* "What's new": after an update, and an update's notes in Settings */
+.fc-page .fc-news {
+  margin: 12px 0 4px;
+}
+.fc-news__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.fc-news__version + .fc-news__version {
+  margin-top: 8px;
+}
+.fc-news__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
+}
+.fc-news__group {
+  margin-top: 6px;
+}
+.fc-news__heading {
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--rt-ink-soft);
+}
+.fc-news ul {
+  margin: 2px 0 0;
+  padding-left: 18px;
+}
+.fc-news li {
+  margin: 2px 0;
+}
+.fc-page .fc-news--update {
+  margin-top: 4px;
+}

@@ -35,9 +35,11 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - Version lives in three places: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. The release job refuses a tag that does not match all three.
 
 ## Releasing
-Add the version's section to `CHANGELOG.md` (newest first, Added / Changed / Fixed / Removed, written for users, one line per change, matching the commits since the last tag), bump the three versions, commit, tag `vX.Y.Z`, push the tag. `.github/workflows/release.yml` builds Windows x64 + macOS arm64/x64, uploads installers and `.sha256` files, and publishes. The app's update check reads that release.
+Add the version's section to `CHANGELOG.md` (newest first, Added / Changed / Fixed / Removed, written for users, one line per change, matching the commits since the last tag), bump the three versions, commit, tag `vX.Y.Z`, push the tag. `.github/workflows/release.yml` refuses a tag whose CHANGELOG section is missing (`.github/changelog_notes.py`, which also writes the release notes), builds Windows x64 + macOS arm64/x64 signed for the updater, uploads installers, `.sha256`, `.sig` and `latest.json`, and publishes. The app's update check and its in-app updater (`install_update`, endpoint `releases/latest/download/latest.json`) read that release.
+Updater key: `C:\Users\miche\.tauri\flashcards-updater.key` and `.password` (never in the repo or the vault), stored as repo secrets `TAURI_SIGNING_PRIVATE_KEY` / `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`; the public key is `plugins.updater.pubkey` in `tauri.conf.json`. Builds signed with another key are refused by installed apps, so losing it means everyone installs by hand once more.
 After it is published, point the 404canvas download at it: `C:\dev\404canvas\private\release-flashcards.json` (version, the three asset URLs, SHA-256 from the release's `.sha256` files), commit "release: Flashcards vX.Y.Z", push. Installs from before 0.1.7 ask that site for updates.
 
 ## Only Michele can do
 - Keep the repo public (the update check reads its releases without a token).
 - Code signing certificates (Apple Developer ID, Windows signing) if wanted.
+- Keep a backup of the updater key and its password (a password manager), and set the two repo secrets from them.

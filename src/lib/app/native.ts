@@ -52,6 +52,8 @@ export type Settings = {
   localPrefsAdopted: boolean;
   /** The study sessions older versions kept in localStorage are in the database. */
   sessionsCarriedOver: boolean;
+  /** The version whose What's new was last seen; "" on a first start. */
+  lastSeenVersion: string;
 };
 
 export type StudyPrefs = Pick<Settings, 'overlaySet' | 'overlayMode' | 'specialKeys' | 'cardsFirstSide'>;
@@ -73,8 +75,12 @@ export const resumeHotkey = () => call<void>('resume_hotkey');
 export type AppInfo = { version: string; dataDir: string; platform: 'windows' | 'macos' | 'linux' };
 export const appInfo = () => call<AppInfo>('app_info');
 
-export type UpdateInfo = { current: string; latest: string | null; newer: boolean };
+/** `notes`: the release's notes, its CHANGELOG section. */
+export type UpdateInfo = { current: string; latest: string | null; newer: boolean; notes: string | null };
 export const checkUpdate = () => call<UpdateInfo>('check_update');
+/** Downloads, checks the signature, installs and restarts; progress comes as "update-progress". */
+export const installUpdate = () => call<void>('install_update');
+export const markVersionSeen = (version: string) => call<Settings>('mark_version_seen', { version });
 export const openDownloadPage = () => call<void>('open_download_page');
 export const openLink = (url: string) => call<void>('open_link', { url });
 export const openDataFolder = () => call<void>('open_data_folder');

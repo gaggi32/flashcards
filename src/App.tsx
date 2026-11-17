@@ -7,6 +7,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate, useParam
 
 import Link from '@/components/Link';
 import { DialogHost } from '@/components/Dialogs';
+import { WhatsNew } from '@/components/WhatsNew';
 import { SetEditor, type EditorPanel } from '@/components/flashcards/SetEditor';
 import { IconCards } from '@/components/flashcards/FlashcardIcons';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
@@ -122,6 +123,7 @@ export function App() {
         <div className="rt-page fc-page">
           <div className="fc-app">
             <AppBar />
+            <WhatsNew />
             <PageMotion>
             <Routes>
               <Route path="/" element={<Navigate to="/flashcards" replace />} />

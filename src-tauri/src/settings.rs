@@ -72,6 +72,9 @@ pub struct Settings {
     /// removing the old keys is itself a localStorage write a killed webview
     /// can lose, and a round finished since must not come back from them.
     pub sessions_carried_over: bool,
+    /// The version whose "What's new" the user has seen (or that was first
+    /// installed): the card shows what came after it. Empty on a first start.
+    pub last_seen_version: String,
 }
 
 impl Default for Settings {
@@ -100,6 +103,7 @@ impl Default for Settings {
             cards_first_side: "term".into(),
             local_prefs_adopted: false,
             sessions_carried_over: false,
+            last_seen_version: String::new(),
         }
     }
 }
@@ -129,6 +133,12 @@ pub fn has_modifier(accelerator: &str) -> bool {
             )
         })
         && !parts[parts.len() - 1].is_empty()
+}
+
+/// "1.2.3", nothing else.
+pub fn is_version(v: &str) -> bool {
+    let parts: Vec<&str> = v.split('.').collect();
+    v.len() <= 20 && parts.len() == 3 && parts.iter().all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
 }
 
 /// OpenRouter model slugs: "vendor/model", optionally with ":variant".
@@ -165,6 +175,9 @@ impl Settings {
         self.overlay_set = self.overlay_set.filter(|&id| id > 0);
         self.overlay_mode = one_of(&self.overlay_mode, &["cards", "write", "learn"], "cards");
         self.cards_first_side = one_of(&self.cards_first_side, &["term", "definition"], "term");
+        if !is_version(&self.last_seen_version) {
+            self.last_seen_version = String::new();
+        }
         self
     }
 
@@ -178,6 +191,7 @@ impl Settings {
         self.cards_first_side = prev.cards_first_side.clone();
         self.local_prefs_adopted = prev.local_prefs_adopted;
         self.sessions_carried_over = prev.sessions_carried_over;
+        self.last_seen_version = prev.last_seen_version.clone();
     }
 
     pub fn with(mut self, pref: StudyPref) -> Self {
@@ -386,6 +400,19 @@ mod tests {
     }
 
     #[test]
+    fn the_version_seen_is_a_version_or_nothing() {
+        assert_eq!(Settings::default().last_seen_version, "");
+        for bad in ["1.2", "1.2.3.4", "v1.2.3", "1.2.x", "../../x", " 1.2.3"] {
+            let s = Settings { last_seen_version: bad.into(), ..Settings::default() }.sanitized();
+            assert_eq!(s.last_seen_version, "", "{bad}");
+        }
+        let s = Settings { last_seen_version: "0.1.20".into(), ..Settings::default() }.sanitized();
+        assert_eq!(s.last_seen_version, "0.1.20");
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(json.contains("\"lastSeenVersion\":\"0.1.20\""), "{json}");
+    }
+
+    #[test]
     fn a_settings_save_leaves_the_study_choices_alone() {
         let prev = Settings {
             overlay_set: Some(4),
@@ -394,11 +421,14 @@ mod tests {
             cards_first_side: "definition".into(),
             local_prefs_adopted: true,
             sessions_carried_over: true,
+            last_seen_version: "0.1.19".into(),
             autostart: Some(true),
             ..Settings::default()
         };
         let mut next = Settings { theme: "dark".into(), ..Settings::default() };
         next.keep_own_fields(&prev);
+        // ...nor show an old "What's new" again.
+        assert_eq!(next.last_seen_version, "0.1.19");
         // A stale copy can't make the sessions be carried over again.
         assert!(next.sessions_carried_over);
         assert!(next.local_prefs_adopted);

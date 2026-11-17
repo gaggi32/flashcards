@@ -10,6 +10,9 @@ import { ask } from '@/components/Dialogs';
 import { AiKeyPanel } from '@/components/flashcards/AiKeyPanel';
 import { IconChevronLeft } from '@/components/flashcards/FlashcardIcons';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
+import { ChangeGroups } from '@/components/WhatsNew';
+import { parseGroups } from '@/lib/app/changelog';
+import { listen } from '@tauri-apps/api/event';
 import { announceDataChange } from '@/lib/app/events';
 import { eventToChord, formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import {
@@ -19,6 +22,7 @@ import {
   exportFile,
   importFile,
   openDataFolder,
+  installUpdate,
   openDownloadPage,
   resumeHotkey,
   setAutostart as setLoginItem,
@@ -182,6 +186,8 @@ export function SettingsScreen() {
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const [update, setUpdate] = useState<UpdateInfo | null>(latestUpdate());
   const [checking, setChecking] = useState(false);
+  /** While an update downloads: percent, or -1 while the size is unknown. */
+  const [installing, setInstalling] = useState<number | null>(null);
   const [note, setNote] = useState<{ kind: 'ok' | 'err'; text: string; at: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [model, setModel] = useState('');
@@ -268,6 +274,21 @@ export function SettingsScreen() {
       say('data', 'err', asApiError(err, 'Could not write a backup.').message);
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function doInstall() {
+    setInstalling(-1);
+    clearNote('update');
+    const off = await listen<number>('update-progress', (e) => setInstalling(e.payload));
+    try {
+      // Restarts the app when it is done, so this only returns on a failure.
+      await installUpdate();
+    } catch (err) {
+      say('update', 'err', `${asApiError(err).message} You can still get it from the download page.`);
+      setInstalling(null);
+    } finally {
+      off();
     }
   }
 
@@ -451,7 +472,7 @@ export function SettingsScreen() {
         <Row label="Start with the computer" hint="Starts quietly in the tray, so the hotkey always works.">
           <Switch label="Start with the computer" on={autostart === true} disabled={autostart === null} onChange={toggleAutostart} />
         </Row>
-        <Row label="Check for updates" hint="Asks GitHub for the newest version number twice a day. Nothing is downloaded.">
+        <Row label="Check for updates" hint="Asks GitHub for the newest version twice a day. Nothing is downloaded until you press install.">
           <Switch label="Check for updates" on={s.checkUpdates} onChange={(v) => patch({ checkUpdates: v })} />
         </Row>
         <Row
@@ -469,12 +490,43 @@ export function SettingsScreen() {
               {checking ? 'checking…' : 'check now'}
             </button>
             {update?.newer && (
-              <button type="button" className="rt-btn rt-btn--sm rt-btn--primary" onClick={() => void openDownloadPage()}>
-                get {update.latest}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="rt-btn rt-btn--sm rt-btn--primary"
+                  disabled={installing !== null}
+                  onClick={() => void doInstall()}
+                >
+                  {installing === null
+                    ? `install ${update.latest}`
+                    : installing < 0
+                      ? 'downloading…'
+                      : installing >= 100
+                        ? 'installing…'
+                        : `downloading ${installing}%`}
+                </button>
+                <button
+                  type="button"
+                  className="rt-linkbtn"
+                  title="The release page on GitHub, to download the installer yourself"
+                  onClick={() => void openDownloadPage()}
+                >
+                  download page
+                </button>
+              </>
             )}
           </div>
         </Row>
+        {update?.newer && update.notes && parseGroups(update.notes).length > 0 && (
+          <div className="rt-note fc-news fc-news--update">
+            <div className="rt-note__title">What&apos;s new in {update.latest}</div>
+            <ChangeGroups groups={parseGroups(update.notes)} />
+            <p className="rt-small rt-ink-faint">
+              Installing downloads it from GitHub, checks it is signed by Flashcards, installs it and restarts the app.
+              Your sets and progress stay.
+            </p>
+          </div>
+        )}
         {noteFor('update')}
         {noteFor('system')}
       </Section>

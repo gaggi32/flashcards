@@ -721,6 +721,8 @@ struct UpdateInfo {
     current: String,
     latest: Option<String>,
     newer: bool,
+    /// The release's notes: its CHANGELOG section, as the release job writes it.
+    notes: Option<String>,
 }
 
 fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
@@ -760,7 +762,64 @@ async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
         (Some(l), Some(c)) => parse_version(l).map_or(false, |l| l > c),
         _ => false,
     };
-    Ok(UpdateInfo { current, latest, newer })
+    let notes = body
+        .get("body")
+        .and_then(Json::as_str)
+        .map(|b| b.chars().take(8000).collect::<String>())
+        .filter(|b| !b.trim().is_empty());
+    Ok(UpdateInfo { current, latest, newer, notes })
+}
+
+/// Download the newest release, check its signature against the key built
+/// into this app (tauri.conf.json, plugins.updater.pubkey), install it and
+/// restart. The installer comes from the app, not a browser, so Windows does
+/// not ask about it the way it does a download; the signature is what makes
+/// that safe: anything not signed with the release key is refused. Progress
+/// goes out as "update-progress" (0-100, or -1 while the size is unknown).
+#[tauri::command]
+async fn install_update(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    main_only(&window)?;
+    use tauri_plugin_updater::UpdaterExt;
+    let update = app
+        .updater()
+        .map_err(|e| e.to_string())?
+        .check()
+        .await
+        .map_err(|e| format!("Could not check for the update: {e}"))?
+        .ok_or("There is no newer version to install.")?;
+    let mut done: usize = 0;
+    let progress = app.clone();
+    update
+        .download_and_install(
+            move |chunk, total| {
+                done += chunk;
+                let pct = total.map_or(-1, |t| if t == 0 { -1 } else { (done as u64 * 100 / t) as i64 });
+                let _ = progress.emit("update-progress", pct);
+            },
+            || {},
+        )
+        .await
+        .map_err(|e| format!("Could not install the update: {e}"))?;
+    app.restart();
+}
+
+/// The main window showed "What's new" up to `version` (or it was the first
+/// start): remember it, so the card shows only what comes after.
+#[tauri::command]
+fn mark_version_seen(app: AppHandle, window: WebviewWindow, state: State<'_, AppState>, version: String) -> Result<Settings, String> {
+    main_only(&window)?;
+    if !settings::is_version(&version) {
+        return Err("Not a version".into());
+    }
+    let prev = state.settings.lock().unwrap().clone();
+    if prev.last_seen_version == version {
+        return Ok(prev);
+    }
+    let next = Settings { last_seen_version: version, ..prev };
+    settings::store(&app, &next)?;
+    *state.settings.lock().unwrap() = next.clone();
+    let _ = app.emit("settings-changed", &next);
+    Ok(next)
 }
 
 #[tauri::command]
@@ -920,6 +979,7 @@ pub fn run() {
         ))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .manage(ai::KeyCache(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
@@ -941,6 +1001,8 @@ pub fn run() {
             open_link,
             open_download_page,
             check_update,
+            install_update,
+            mark_version_seen,
             set_tray_status,
             show_overlay,
             hide_overlay,
