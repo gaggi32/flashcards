@@ -68,6 +68,10 @@ function NavigationListener() {
 
 function AppBar() {
   const [update, setUpdate] = useState<UpdateInfo | null>(latestUpdate());
+  // The cog turns one tooth (60°) when the pointer comes onto it, and always
+  // finishes: it then looks exactly as at rest, so leaving has nothing to
+  // undo and nothing can jump.
+  const [turning, setTurning] = useState(false);
   useEffect(() => onUpdate(setUpdate), []);
   return (
     <div className="fc-bar">
@@ -81,8 +85,16 @@ function AppBar() {
           update {update.latest}
         </Link>
       )}
-      <Link href="/settings" className="app-bar__settings" title="Settings" aria-label="Settings">
-        <IconSettings size={20} />
+      <Link
+        href="/settings"
+        className="app-bar__settings"
+        title="Settings"
+        aria-label="Settings"
+        onPointerEnter={() => setTurning(true)}
+      >
+        <span className={`app-bar__cog${turning ? ' is-turning' : ''}`} onAnimationEnd={() => setTurning(false)}>
+          <IconSettings size={20} />
+        </span>
       </Link>
     </div>
   );

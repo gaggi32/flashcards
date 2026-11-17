@@ -1,6 +1,10 @@
-// "What's new in 0.1.20": shown once in the main window after an update,
-// from the CHANGELOG.md built into the app. A first install shows nothing (a
-// new user has no "before" to compare with); it only remembers the version.
+// "What's new": shown once in the main window after an update, from the
+// CHANGELOG.md built into the app, and in Settings for the versions an update
+// would bring. A first install shows nothing (a new user has no "before" to
+// compare with); it only remembers the version.
+//
+// The newest version is open; older ones are one line each ("1.2.0 · 4
+// changes") that open on a click, so a long way behind stays readable.
 
 import changelogText from '../../CHANGELOG.md?raw';
 import { useEffect, useMemo, useState } from 'react';
@@ -8,9 +12,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { changesSince, parseChangelog, parseGroups, plainLine, type ChangeGroup } from '@/lib/app/changelog';
 import { appInfo, markVersionSeen } from '@/lib/app/native';
 import { useSettings } from '@/lib/app/settings';
+import { IconChevronRight } from './flashcards/FlashcardIcons';
 
-/** Past this many versions, the card says "and earlier changes" instead. */
-const MOST = 3;
+type Version = { version: string; date?: string; groups: ChangeGroup[] };
 
 export function WhatsNew() {
   const { settings } = useSettings();
@@ -36,9 +40,16 @@ export function WhatsNew() {
   if (news.length === 0) return null;
 
   return (
-    <section className="rt-note rt-note--ok fc-news" aria-label={`What's new in ${running}`}>
+    <section className="fc-news" aria-labelledby="fc-news-title">
       <div className="fc-news__head">
-        <div className="rt-note__title">What&apos;s new in {running}</div>
+        <div>
+          <h2 id="fc-news-title" className="fc-news__title">
+            What&apos;s new
+          </h2>
+          <p className="fc-news__sub">
+            {news.length > 1 ? `Flashcards ${running} · ${news.length} versions since ${seen}` : `Flashcards ${running}`}
+          </p>
+        </div>
         <button
           type="button"
           className="rt-btn rt-btn--sm"
@@ -59,56 +70,98 @@ export function WhatsNew() {
  * Every version an update brings, from the releases' notes on GitHub, for
  * Settings before installing. Null when none of them has notes.
  */
-export function UpdateNotes({ missed }: { missed: { version: string; notes: string }[] }) {
+export function UpdateNotes({ missed, current }: { missed: { version: string; notes: string }[]; current: string }) {
   const entries = missed
     .map((m) => ({ version: m.version, groups: parseGroups(m.notes) }))
     .filter((e) => e.groups.length > 0);
   if (entries.length === 0) return null;
   return (
     <>
-      <div className="rt-note__title">
-        What&apos;s new in {entries.length > 1 ? `the ${entries.length} versions up to ${entries[0].version}` : entries[0].version}
+      <div className="fc-news__head">
+        <div>
+          <h3 className="fc-news__title">What&apos;s new in {entries[0].version}</h3>
+          <p className="fc-news__sub">
+            {entries.length > 1 ? `${entries.length} versions since yours (${current})` : `You have ${current}`}
+          </p>
+        </div>
       </div>
       <Versions entries={entries} />
     </>
   );
 }
 
-/** Versions newest first, a label on each when there are several; past MOST, behind a button. */
-function Versions({ entries }: { entries: { version: string; groups: ChangeGroup[] }[] }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? entries : entries.slice(0, MOST);
+/** The newest version open, older ones folded to a line each. */
+function Versions({ entries }: { entries: Version[] }) {
+  const [open, setOpen] = useState<Set<string>>(() => new Set([entries[0]?.version]));
+  const several = entries.length > 1;
   return (
-    <>
-      {shown.map((entry) => (
-        <div key={entry.version} className="fc-news__version">
-          {entries.length > 1 && <div className="fc-news__label">{entry.version}</div>}
-          <ChangeGroups groups={entry.groups} />
-        </div>
-      ))}
-      {entries.length > shown.length && (
-        <button type="button" className="rt-linkbtn fc-news__more" onClick={() => setAll(true)}>
-          {entries.length - shown.length === 1 ? 'show 1 earlier version' : `show ${entries.length - shown.length} earlier versions`}
-        </button>
-      )}
-    </>
+    <div className="fc-news__versions">
+      {entries.map((entry) => {
+        const isOpen = open.has(entry.version);
+        const count = entry.groups.reduce((n, g) => n + g.items.length, 0);
+        return (
+          <div key={entry.version} className="fc-news__version">
+            {several && (
+              <button
+                type="button"
+                className={`fc-news__toggle${isOpen ? ' is-open' : ''}`}
+                aria-expanded={isOpen}
+                onClick={() =>
+                  setOpen((s) => {
+                    const next = new Set(s);
+                    if (isOpen) next.delete(entry.version);
+                    else next.add(entry.version);
+                    return next;
+                  })
+                }
+              >
+                <IconChevronRight size={14} />
+                <span className="fc-news__vnum">{entry.version}</span>
+                {entry.date && <span className="fc-news__date">{formatDate(entry.date)}</span>}
+                {!isOpen && <span className="fc-news__count">{count === 1 ? '1 change' : `${count} changes`}</span>}
+              </button>
+            )}
+            {(isOpen || !several) && <ChangeGroups groups={entry.groups} />}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
-/** Headings and their items, for the card and for an update's notes in Settings. */
+const TAGS: Record<string, { label: string; tone: string }> = {
+  added: { label: 'New', tone: 'new' },
+  changed: { label: 'Improved', tone: 'improved' },
+  fixed: { label: 'Fixed', tone: 'fixed' },
+  removed: { label: 'Removed', tone: 'removed' },
+  security: { label: 'Security', tone: 'fixed' },
+};
+
+/** A version's groups: a coloured tag per kind of change, its items as a list. */
 export function ChangeGroups({ groups }: { groups: ChangeGroup[] }) {
   return (
-    <>
-      {groups.map((g) => (
-        <div key={g.heading} className="fc-news__group">
-          <span className="fc-news__heading">{g.heading.toLowerCase()}</span>
-          <ul>
-            {g.items.map((item) => (
-              <li key={item}>{plainLine(item)}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </>
+    <div className="fc-news__groups">
+      {groups.map((g) => {
+        const tag = TAGS[g.heading.toLowerCase()] ?? { label: g.heading, tone: 'other' };
+        return (
+          <div key={g.heading} className="fc-news__group">
+            <span className={`fc-news__tag fc-news__tag--${tag.tone}`}>{tag.label}</span>
+            <ul className="fc-news__list">
+              {g.items.map((item) => (
+                <li key={item}>{plainLine(item)}</li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
   );
+}
+
+/** "2026-11-17" as "17 Nov 2026"; anything else as it is. */
+function formatDate(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }

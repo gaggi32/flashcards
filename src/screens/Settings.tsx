@@ -518,9 +518,9 @@ export function SettingsScreen() {
           </div>
         </Row>
         {update?.newer && update.missed.some((m) => parseGroups(m.notes).length > 0) && (
-          <div className="rt-note fc-news fc-news--update">
-            <UpdateNotes missed={update.missed} />
-            <p className="rt-small rt-ink-faint">
+          <div className="fc-news fc-news--update">
+            <UpdateNotes missed={update.missed} current={update.current} />
+            <p className="rt-small rt-ink-faint fc-news__foot">
               Installing downloads it from GitHub, checks it is signed by Flashcards, installs it and restarts the app.
               Your sets and progress stay.
             </p>

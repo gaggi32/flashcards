@@ -2,6 +2,12 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.3.1] — 2026-11-17
+### Changed
+- The "What's new" card is easier to read: coloured New, Improved and Fixed labels, a bullet per change, and older versions folded to one line each. The update notes in Settings look the same.
+### Fixed
+- The settings cog turns one tooth when you point at it and no longer jumps when the mouse leaves.
+
 ## [1.3.0] — 2026-11-17
 ### Added
 - Test: a new study mode that puts a set on one paper of true or false, multiple choice, matching and written questions. Pick how many questions and which kinds, answer them in any order, and hand it in to see your score with every answer marked. Then test only the cards you missed.
