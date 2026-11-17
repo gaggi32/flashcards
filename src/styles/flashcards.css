@@ -2267,13 +2267,13 @@
 }
 
 /* A set being dragged over a folder (or over "My sets", to take it out). */
-.rt-page.fc-page .fc-row.fc-drop,
-.rt-page.fc-page .fc-row.fc-drop:hover {
+.rt-page.fc-page .fc-row.fc-dropon,
+.rt-page.fc-page .fc-row.fc-dropon:hover {
   border-color: var(--fc-accent);
   background: var(--fc-accent-soft);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--fc-accent) 35%, transparent);
 }
-.fc-crumbs__back.fc-drop {
+.fc-crumbs__back.fc-dropon {
   margin: -4px -8px;
   padding: 4px 8px;
   border-radius: var(--fc-radius-sm);

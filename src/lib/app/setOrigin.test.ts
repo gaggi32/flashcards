@@ -41,6 +41,46 @@ describe('originOf', () => {
   });
 });
 
+describe('back links never loop', () => {
+  /** Walk through `pages` the way useSetOrigins does, then follow back links from the last one. */
+  function backTrail(pages: string[]): string[] {
+    const origins = new Map<number, string>();
+    let prev: string | null = null;
+    for (const here of pages) {
+      const entered = originOf(prev, here, (id) => origins.get(id));
+      if (entered) origins.set(entered.setId, entered.back);
+      prev = here;
+    }
+    const trail: string[] = [];
+    let at = pages[pages.length - 1];
+    for (let i = 0; i < 10 && setOf(at) !== null; i++) {
+      at = origins.get(setOf(at)!) ?? '/flashcards';
+      trail.push(at);
+    }
+    return trail;
+  }
+
+  it('going back from a set to the one before keeps that one’s way out', () => {
+    // List -> A -> B (a set file dropped while A was open) -> back to A.
+    expect(backTrail(['/flashcards', '/flashcards/1', '/flashcards/2', '/flashcards/1'])).toEqual(['/flashcards']);
+  });
+
+  it('a set reached again through other sets still leads out', () => {
+    // List -> A -> B -> C, then straight to A (overlay, today panel...).
+    const trail = backTrail(['/flashcards?folder=X', '/flashcards/1', '/flashcards/2', '/flashcards/3', '/flashcards/1']);
+    expect(trail[trail.length - 1]).toBe('/flashcards?folder=X');
+    expect(trail).toEqual(['/flashcards?folder=X']);
+  });
+
+  it('back from C goes to B, then A, then out', () => {
+    expect(backTrail(['/flashcards', '/flashcards/1', '/flashcards/2', '/flashcards/3'])).toEqual([
+      '/flashcards/2',
+      '/flashcards/1',
+      '/flashcards',
+    ]);
+  });
+});
+
 describe('backLabel', () => {
   it('names where back goes', () => {
     expect(backLabel('/flashcards')).toBe('All sets');

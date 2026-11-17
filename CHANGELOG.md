@@ -2,6 +2,14 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.2.0] — 2026-11-17
+### Added
+- Drag a set from the sets page out of the window to get its file: onto the desktop, into a folder or into a mail. Dragging it onto a folder in the app still files it there.
+### Fixed
+- After opening a set from another set (for example by dropping a set file while one was open), the back links sent you between the two sets and never back to your sets. They now always lead back out.
+- A file dropped on the set editor adds the set without leaving the editor, so unsaved changes stay.
+- Pictures dragged over the window no longer show the "drop to add the set" prompt, and the prompt can no longer stay stuck on screen.
+
 ## [1.1.0] — 2026-11-17
 ### Added
 - Drop a Flashcards file (a shared set or an export) anywhere on the window to add it, the same as "Open shared set". Inside a folder, it goes into that folder.

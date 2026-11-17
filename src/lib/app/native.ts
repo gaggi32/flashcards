@@ -89,6 +89,9 @@ export const backupNow = (stamp: string) => call<string>('backup_now', { stamp }
 export const exportFile = (contents: string, suggestedName: string) =>
   call<string | null>('export_file', { contents, suggestedName });
 export const importFile = (kind: 'json' | 'text') => call<string | null>('import_file', { kind });
+/** Drag a set's file out of the window (the OS drag); true when it was dropped somewhere. */
+export const dragSetOut = (contents: string, suggestedName: string) =>
+  call<boolean>('drag_set_out', { contents, suggestedName });
 
 export const hideOverlay = () => call<void>('hide_overlay');
 /** The overlay page finished playing close number `gen`: the window may go. */

@@ -3,10 +3,11 @@ import { ask } from '@/components/Dialogs';
 import Link from '@/components/Link';
 import { importFile } from '@/lib/app/native';
 import { useRouter } from '@/lib/app/router';
-import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { addSetsFromText } from '@/components/SetFileDrop';
+import { clearOwnDrag, dragSetFile, ownDraggedSet, prepareSetFile } from '@/lib/app/setDrag';
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
 import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder, updateSet } from '@/lib/flashcards/client';
@@ -25,9 +26,8 @@ import {
 
 type Folder = { name: string; sets: number; cards: number };
 
-/** What a dragged set row carries: its id, under a type only this screen reads. */
-const SET_DRAG = 'application/x-flashcards-set';
-const isSetDrag = (e: DragEvent) => e.dataTransfer.types.includes(SET_DRAG);
+/** A set row of this window being dragged (an OS file drag, see setDrag.ts). */
+const isSetDrag = (e: DragEvent) => e.dataTransfer.types.includes('Files') && ownDraggedSet() !== null;
 
 /** Past this many of your own sets, the list gets a search box. */
 const SEARCH_FROM = 6;
@@ -173,17 +173,17 @@ export function SetsClient() {
       },
       onDrop(e: DragEvent) {
         if (!isSetDrag(e)) return;
+        // Handled here: the window's file drop (SetFileDrop) sees this and
+        // leaves the set's file alone.
         e.preventDefault();
-        const id = Number(e.dataTransfer.getData(SET_DRAG));
-        if (Number.isInteger(id) && id > 0) void fileSet(id, to);
+        const id = ownDraggedSet();
+        clearOwnDrag();
+        if (id !== null) void fileSet(id, to);
         else setDropOn(null);
       },
     };
   }
 
-  // Sets can be dragged where there is somewhere to drop them: from the main
-  // list onto a folder, or from inside a folder back onto "My sets".
-  const canDrag = !searching && (folder !== null || folders.length > 0);
 
   const newSetHref = folder ? `/flashcards/new?folder=${encodeURIComponent(folder)}` : '/flashcards/new';
 
@@ -267,7 +267,7 @@ export function SetsClient() {
               <div className="fc-crumbs">
                 <button
                   type="button"
-                  className={`fc-crumbs__back${dropOn === '' ? ' fc-drop' : ''}`}
+                  className={`fc-crumbs__back${dropOn === '' ? ' fc-dropon' : ''}`}
                   onClick={() => setFolder(null)}
                   title="Drop a set here to take it out of the folder"
                   {...dropTarget('', null)}
@@ -296,7 +296,7 @@ export function SetsClient() {
                       <button
                         key={f.name}
                         type="button"
-                        className={`fc-row fc-row--folder${dropOn === f.name ? ' fc-drop' : ''}`}
+                        className={`fc-row fc-row--folder${dropOn === f.name ? ' fc-dropon' : ''}`}
                         onClick={() => setFolder(f.name)}
                         {...dropTarget(f.name, f.name)}
                       >
@@ -330,8 +330,7 @@ export function SetsClient() {
                     key={set.id}
                     set={set}
                     showFolder={searching}
-                    draggable={canDrag}
-                    onDragEnd={() => setDropOn(null)}
+                    onDragDone={() => setDropOn(null)}
                   />
                 ))}
               </div>
@@ -400,32 +399,56 @@ function SearchBox({
 function SetRow({
   set,
   showFolder = false,
-  draggable = false,
-  onDragEnd,
+  onDragDone,
 }: {
   set: SetSummaryDTO;
   /** While searching, where each hit is filed stands in for its description. */
   showFolder?: boolean;
-  /** Whether the row can be dragged onto a folder. */
-  draggable?: boolean;
-  onDragEnd?: () => void;
+  /** The row's drag is over, wherever it ended. */
+  onDragDone?: () => void;
 }) {
   const folder = showFolder ? set.folder : null;
   const sub = folder ?? set.description;
+  // Pressed here and not yet dragged: where, and the set's file, read at once
+  // so the OS drag can start the moment the pointer has moved far enough.
+  const press = useRef<{ x: number; y: number; file: Promise<{ contents: string; name: string }> } | null>(null);
+  const dragging = useRef(false);
   return (
     <Link
       href={`/flashcards/${set.id}`}
       className="fc-row"
-      draggable={draggable}
-      onDragStart={
-        draggable
-          ? (e) => {
-              e.dataTransfer.setData(SET_DRAG, String(set.id));
-              e.dataTransfer.effectAllowed = 'move';
-            }
-          : undefined
-      }
-      onDragEnd={onDragEnd}
+      draggable={false}
+      title="Open the set, or drag it onto a folder, the desktop or another app"
+      onPointerDown={(e) => {
+        if (e.button !== 0 || e.pointerType !== 'mouse') return;
+        const file = prepareSetFile(set.id, set.title);
+        file.catch(() => {});
+        press.current = { x: e.clientX, y: e.clientY, file };
+      }}
+      onPointerMove={(e) => {
+        const p = press.current;
+        if (!p || dragging.current) return;
+        if (!(e.buttons & 1)) {
+          press.current = null;
+          return;
+        }
+        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6) return;
+        press.current = null;
+        dragging.current = true;
+        void (async () => {
+          try {
+            await dragSetFile(set.id, await p.file);
+          } catch {
+            // Nothing to undo: the set is where it was.
+          } finally {
+            dragging.current = false;
+            onDragDone?.();
+          }
+        })();
+      }}
+      onPointerUp={() => {
+        press.current = null;
+      }}
     >
       <span className="fc-row__badge" aria-label={plural(set.cardCount, 'term')}>
         <span className="fc-row__count">{set.cardCount}</span>

@@ -479,6 +479,82 @@ async fn export_file(
     Ok(Some(path.display().to_string()))
 }
 
+/// A set's file name for dragging out: what the page suggests, kept to safe
+/// characters, always ending in `.json`.
+fn drag_file_name(suggested: &str) -> String {
+    let stem: String = suggested
+        .trim_end_matches(".json")
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || "-_ ".contains(*c))
+        .take(80)
+        .collect();
+    let stem = stem.trim();
+    format!("{}.json", if stem.is_empty() { "set" } else { stem })
+}
+
+/// Drag one set out of the window as a file: onto the desktop, into a folder,
+/// into a mail. The page sends the set's export and a name; Rust writes it to
+/// its own cache folder and starts the OS drag from there, so the UI never
+/// names a path. Resolves when the drag ends: true when it was dropped
+/// somewhere (inside this window too: folder rows take it as a move).
+#[tauri::command]
+async fn drag_set_out(
+    app: AppHandle,
+    window: WebviewWindow,
+    contents: String,
+    suggested_name: String,
+) -> Result<bool, String> {
+    main_only(&window)?;
+    if contents.len() as u64 > MAX_IMPORT_BYTES {
+        return Err("That set is too big to drag out.".into());
+    }
+    let dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("drag-out");
+    // Files from earlier drags: whatever they were dropped on has copied them.
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join(drag_file_name(&suggested_name));
+    std::fs::write(&path, contents).map_err(|e| e.to_string())?;
+    start_native_drag(&window, path).await
+}
+
+#[cfg(any(windows, target_os = "macos"))]
+async fn start_native_drag(window: &WebviewWindow, path: PathBuf) -> Result<bool, String> {
+    let (tx, rx) = std::sync::mpsc::channel::<bool>();
+    let target = window.clone();
+    // The OS drag has to start on the main thread, while the button is held.
+    window
+        .run_on_main_thread(move || {
+            let tx = Mutex::new(Some(tx));
+            let icon = drag::Image::Raw(include_bytes!("../icons/128x128.png").to_vec());
+            let started = drag::start_drag(
+                &target,
+                drag::DragItem::Files(vec![path]),
+                icon,
+                move |result, _| {
+                    if let Some(tx) = tx.lock().ok().and_then(|mut t| t.take()) {
+                        let _ = tx.send(matches!(result, drag::DragResult::Dropped));
+                    }
+                },
+                drag::Options::default(),
+            );
+            if let Err(e) = started {
+                eprintln!("drag out failed to start: {e}");
+            }
+        })
+        .map_err(|e| e.to_string())?;
+    // Windows returns once the drop is done, macOS calls back later; either way
+    // the answer comes through the channel (or the sender is dropped on failure).
+    tauri::async_runtime::spawn_blocking(move || rx.recv())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|_| "Could not start the drag.".to_string())
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+async fn start_native_drag(_window: &WebviewWindow, _path: PathBuf) -> Result<bool, String> {
+    Err("Dragging a set out is not available on this system.".into())
+}
+
 /// Read a file the user picks in a native dialog (JSON or plain text).
 #[tauri::command]
 async fn import_file(app: AppHandle, window: WebviewWindow, kind: String) -> Result<Option<String>, String> {
@@ -988,6 +1064,7 @@ pub fn run() {
             backup_now,
             export_file,
             import_file,
+            drag_set_out,
             open_data_folder,
             get_settings,
             save_settings,
@@ -1099,6 +1176,16 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_dragged_set_gets_a_safe_json_name() {
+        assert_eq!(drag_file_name("german-verbs.json"), "german-verbs.json");
+        assert_eq!(drag_file_name(r"../../evil\x.json"), "evilx.json");
+        assert_eq!(drag_file_name("C:/Windows/system32"), "CWindowssystem32.json");
+        assert_eq!(drag_file_name(""), "set.json");
+        assert_eq!(drag_file_name("..."), "set.json");
+        assert_eq!(drag_file_name(&"a".repeat(200)).len(), 85);
+    }
 
     #[test]
     fn the_overlay_grows_with_the_screen() {
