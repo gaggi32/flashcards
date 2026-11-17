@@ -2,12 +2,14 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
-## [0.1.20] — 2026-11-16
+## [0.1.20] — 2026-11-17
 ### Added
 - Install updates from inside the app: Settings → "install" downloads the new version, checks it is signed by Flashcards, installs it and restarts. No browser download needed. (This version itself is the last one to install by hand.)
 - "What's new": after an update, a short card in the main window lists what changed since the version you had.
 - Settings shows what is new in an available update before you install it.
 ### Changed
+- The set pickers (overlay, quick add, "The overlay studies") list sets under their folders, then the ones in no folder.
+- New installs keep the last 7 daily backups instead of 14; an existing setting stays as it is.
 - The release pages on GitHub list the changes from this changelog.
 
 ## [0.1.19] — 2026-11-16
