@@ -296,16 +296,18 @@
 }
 /* The cog turns one tooth on hover (App.tsx starts it and lets it finish).
    Six teeth, so 60deg ends where it began and the mouse leaving changes
-   nothing. */
-.rt-page.fc-page a.app-bar__settings .app-bar__cog {
-  display: block;
-  width: 20px;
-  height: 20px;
-}
+   nothing. The group inside the svg turns, not the svg: a transformed box
+   gets a layer of its own, placed on the pixel grid differently from the
+   page, and the cog visibly hopped when the turn began or ended. */
+.rt-page.fc-page a.app-bar__settings .app-bar__cog,
 .rt-page.fc-page a.app-bar__settings svg {
   display: block;
 }
-.app-bar__cog.is-turning {
+.cog-g {
+  transform-box: view-box;
+  transform-origin: center;
+}
+.app-bar__cog.is-turning .cog-g {
   animation: app-cog-turn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 @keyframes app-cog-turn {
@@ -313,7 +315,7 @@
   to { transform: rotate(60deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .app-bar__cog.is-turning { animation: none; }
+  .app-bar__cog.is-turning .cog-g { animation: none; }
 }
 
 /* A Flashcards file held over the window: the whole window is the target. */

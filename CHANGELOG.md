@@ -2,6 +2,10 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.3.2] — 2026-11-17
+### Fixed
+- The settings cog no longer hops a pixel when it starts or stops turning.
+
 ## [1.3.1] — 2026-11-17
 ### Changed
 - The "What's new" card is easier to read: coloured New, Improved and Fixed labels, a bullet per change, and older versions folded to one line each. The update notes in Settings look the same.
