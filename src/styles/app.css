@@ -276,3 +276,64 @@
   font-size: 15px;
   line-height: 1.6;
 }
+
+/* Settings, as a cog in the top bar. */
+.rt-page.fc-page a.app-bar__settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  color: var(--rt-ink-soft);
+  text-decoration: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.rt-page.fc-page a.app-bar__settings:hover {
+  background: var(--rt-panel-2);
+  color: var(--rt-ink);
+}
+.rt-page.fc-page a.app-bar__settings svg {
+  transition: transform 0.3s ease;
+}
+.rt-page.fc-page a.app-bar__settings:hover svg {
+  transform: rotate(45deg);
+}
+
+/* A Flashcards file held over the window: the whole window is the target. */
+.fc-filedrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--rt-paper) 70%, transparent);
+  pointer-events: none;
+}
+.fc-filedrop__box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 520px;
+  min-height: 140px;
+  justify-content: center;
+  border: 2px dashed var(--fc-accent);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+  color: var(--fc-accent);
+  font-size: 15px;
+  font-weight: 600;
+}
+.rt-page.fc-page .fc-filedrop__err {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 51;
+  transform: translateX(-50%);
+  max-width: min(520px, calc(100% - 32px));
+  cursor: pointer;
+}

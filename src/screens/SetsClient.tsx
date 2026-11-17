@@ -1,13 +1,12 @@
 
 import { ask } from '@/components/Dialogs';
 import Link from '@/components/Link';
-import { announceDataChange } from '@/lib/app/events';
 import { importFile } from '@/lib/app/native';
 import { useRouter } from '@/lib/app/router';
-import { importAll, parseExport } from '@/lib/store/transfer';
 import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
+import { addSetsFromText } from '@/components/SetFileDrop';
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
 import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder, updateSet } from '@/lib/flashcards/client';
@@ -190,29 +189,16 @@ export function SetsClient() {
 
   /**
    * A set someone sent (or any Flashcards export): added as new sets, into
-   * the folder showing, and opened when it is just one.
+   * the folder showing, and opened when it is just one. Dropping the file on
+   * the window does the same (SetFileDrop).
    */
   async function openShared() {
     setError(null);
     try {
       const text = await importFile('json');
       if (text === null) return;
-      const file = parseExport(text);
-      if (file.sets.length === 0) {
-        setError('That file has no sets in it.');
-        return;
-      }
-      if (file.sets.length > 1) {
-        const cards = file.sets.reduce((n, x) => n + x.cards.length, 0);
-        const yes = await ask.confirm(
-          `That file holds ${file.sets.length} sets with ${cards} cards. Add them all? Your sets stay as they are.`,
-          { ok: 'add them' },
-        );
-        if (!yes) return;
-      }
-      const res = await importAll(file, { folder });
-      announceDataChange();
-      if (res.setIds.length === 1) router.push(`/flashcards/${res.setIds[0]}`);
+      const ids = await addSetsFromText(text, folder);
+      if (ids?.length === 1) router.push(`/flashcards/${ids[0]}`);
     } catch (err) {
       setError(errorMessage(err, 'Could not open that file.'));
     }
@@ -227,7 +213,7 @@ export function SetsClient() {
             type="button"
             className="rt-btn rt-btn--sm"
             onClick={() => void openShared()}
-            title="Add a set someone sent you (a Flashcards .json file)"
+            title="Add a set someone sent you (a Flashcards .json file). You can also drop the file on the window."
           >
             <IconImport />
             Open shared set

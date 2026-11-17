@@ -9,7 +9,8 @@ import Link from '@/components/Link';
 import { DialogHost } from '@/components/Dialogs';
 import { WhatsNew } from '@/components/WhatsNew';
 import { SetEditor, type EditorPanel } from '@/components/flashcards/SetEditor';
-import { IconCards } from '@/components/flashcards/FlashcardIcons';
+import { IconCards, IconSettings } from '@/components/flashcards/FlashcardIcons';
+import { SetFileDrop } from '@/components/SetFileDrop';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
 import { useDataVersion } from '@/lib/app/events';
 import { SettingsProvider, useSettings } from '@/lib/app/settings';
@@ -79,8 +80,8 @@ function AppBar() {
           update {update.latest}
         </Link>
       )}
-      <Link href="/settings" className="rt-btn rt-btn--sm app-bar__settings">
-        settings
+      <Link href="/settings" className="app-bar__settings" title="Settings" aria-label="Settings">
+        <IconSettings size={19} />
       </Link>
     </div>
   );
@@ -142,6 +143,7 @@ export function App() {
             </Routes>
             </PageMotion>
           </div>
+          <SetFileDrop />
           <DialogHost />
         </div>
       </HashRouter>
