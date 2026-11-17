@@ -26,6 +26,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../schema/001_init.sql"),
     include_str!("../schema/002_study_sessions.sql"),
     include_str!("../schema/003_study_sides.sql"),
+    include_str!("../schema/004_folders.sql"),
 ];
 
 pub struct Db(pub Arc<Mutex<Connection>>);
@@ -93,7 +94,7 @@ pub fn check_sql(sql: &str) -> Result<(), String> {
 /// the app's own tables. Schema changes, ATTACH, PRAGMA and anything else are
 /// refused by SQLite itself while it compiles the statement, so this holds no
 /// matter how the SQL text is spelled.
-const APP_TABLES: &[&str] = &["sets", "cards", "progress", "reviews", "study_sessions", "study_sides"];
+const APP_TABLES: &[&str] = &["sets", "cards", "progress", "reviews", "study_sessions", "study_sides", "folders"];
 
 fn ui_authorizer(ctx: AuthContext<'_>) -> Authorization {
     let own = |t: &str| APP_TABLES.contains(&t);
@@ -263,6 +264,29 @@ mod tests {
         migrate(&conn).unwrap();
         let v: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0)).unwrap();
         assert_eq!(v as usize, MIGRATIONS.len());
+    }
+
+    #[test]
+    fn the_folders_step_keeps_the_folders_sets_already_use() {
+        let conn = Connection::open_in_memory().unwrap();
+        for sql in &MIGRATIONS[..3] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 3).unwrap();
+        conn.execute_batch(
+            "INSERT INTO sets (folder, title, created_at, updated_at) VALUES
+               ('Uni', 'a', 'n', 'n'), ('Uni', 'b', 'n', 'n'), (NULL, 'c', 'n', 'n');",
+        )
+        .unwrap();
+        migrate(&conn).unwrap();
+        let names: Vec<String> = conn
+            .prepare("SELECT name FROM folders")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(names, vec!["Uni".to_string()]);
     }
 
     #[test]

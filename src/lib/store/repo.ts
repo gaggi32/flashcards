@@ -128,6 +128,7 @@ export async function createSet(meta: unknown): Promise<SetSummary> {
       sql: 'INSERT INTO sets (folder, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
       params: [data.folder ?? null, data.title, data.description ?? null, t, t],
     },
+    ...keepFolder(data.folder ?? null),
   ]);
   return summary(res.lastInsertId);
 }
@@ -154,7 +155,17 @@ export async function updateSet(id: number, changes: unknown): Promise<SetSummar
   if (data.inOverlay !== undefined) (sets.push('in_overlay = ?'), params.push(data.inOverlay ? 1 : 0));
   sets.push('updated_at = ?');
   params.push(now(), id);
-  const [res] = await db().batch([{ sql: `UPDATE sets SET ${sets.join(', ')} WHERE id = ?`, params }]);
+  const [res] = await db().batch([
+    { sql: `UPDATE sets SET ${sets.join(', ')} WHERE id = ?`, params },
+    ...(data.folder
+      ? [
+          {
+            sql: 'INSERT OR IGNORE INTO folders (name) SELECT ? WHERE EXISTS (SELECT 1 FROM sets WHERE id = ?)',
+            params: [data.folder, id],
+          },
+        ]
+      : []),
+  ]);
   if (res.rowsAffected === 0) throw notFound('set');
   return summary(id);
 }
@@ -183,23 +194,51 @@ export async function resetProgress(id: number): Promise<number> {
 
 // --- folders --------------------------------------------------------------------
 
+/**
+ * The statement that gives a folder name its row in `folders`, for a batch
+ * that files a set under it (none for "no folder"). Every name a set uses has
+ * one, so a folder outlives its last set until it is removed.
+ */
+export function keepFolder(name: string | null): Stmt[] {
+  return name ? [{ sql: 'INSERT OR IGNORE INTO folders (name) VALUES (?)', params: [name] }] : [];
+}
+
+/** Every folder, the empty ones too, by name. */
 export async function listFolders(): Promise<string[]> {
-  const rows = await db().select<{ folder: string }>(
-    'SELECT DISTINCT folder FROM sets WHERE folder IS NOT NULL ORDER BY folder COLLATE NOCASE',
+  // The UNION also catches a name a set uses without a row of its own.
+  const rows = await db().select<{ name: string }>(
+    `SELECT name FROM folders
+     UNION SELECT folder FROM sets WHERE folder IS NOT NULL
+     ORDER BY 1 COLLATE NOCASE`,
   );
-  return rows.map((r) => r.folder);
+  return rows.map((r) => r.name);
+}
+
+const folderNameField = z.string().trim().min(1, 'Give the folder a name').max(LIMITS.folderNameLength);
+
+/** Make an empty folder (nothing happens if it is there already); returns its name as kept. */
+export async function createFolder(name: string): Promise<string> {
+  const data = parse(folderNameField, name);
+  await db().batch(keepFolder(data));
+  return data;
 }
 
 const renameSchema = z.object({
-  from: z.string().trim().min(1).max(LIMITS.folderNameLength),
+  from: folderNameField,
   to: folderField,
 });
 
-/** Rename a folder, or take every set out of it with `to: null`. */
+/**
+ * Rename a folder (into one that exists already: the two become one), or
+ * remove it with `to: null`, its sets staying outside any folder. Returns how
+ * many sets moved.
+ */
 export async function renameFolder(from: string, to: string | null): Promise<number> {
   const data = parse(renameSchema, { from, to });
   const [res] = await db().batch([
     { sql: 'UPDATE sets SET folder = ?, updated_at = ? WHERE folder = ?', params: [data.to, now(), data.from] },
+    { sql: 'DELETE FROM folders WHERE name = ?', params: [data.from] },
+    ...keepFolder(data.to),
   ]);
   return res.rowsAffected;
 }

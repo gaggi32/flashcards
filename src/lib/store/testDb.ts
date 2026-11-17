@@ -8,7 +8,7 @@ import { DatabaseSync } from 'node:sqlite';
 
 import type { Db, ExecResult, Param, Stmt } from './db';
 
-const SCHEMA = ['001_init.sql', '002_study_sessions.sql', '003_study_sides.sql'].map((f) =>
+const SCHEMA = ['001_init.sql', '002_study_sessions.sql', '003_study_sides.sql', '004_folders.sql'].map((f) =>
   readFileSync(fileURLToPath(new URL(`../../../src-tauri/schema/${f}`, import.meta.url)), 'utf8'),
 );
 

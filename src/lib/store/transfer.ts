@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { LIMITS } from '@/lib/flashcards/types';
 import { db, type Stmt } from './db';
 import { invalid } from './errors';
+import { keepFolder } from './repo';
 import { isDayKey } from './validate';
 
 export const FORMAT = 'flashcards';
@@ -190,12 +191,13 @@ export async function importAll(file: ExportFile, options: { folder?: string | n
       .map((c, i) => ({ ...c, order: c.position ?? i, i }))
       .sort((a, b) => a.order - b.order || a.i - b.i);
 
+    const folder = (options.folder !== undefined ? options.folder : set.folder) || null;
     const statements: Stmt[] = [
       {
         sql: `INSERT INTO sets (folder, title, description, in_overlay, created_at, updated_at)
               VALUES (?, ?, ?, ?, ?, ?)`,
         params: [
-          (options.folder !== undefined ? options.folder : set.folder) || null,
+          folder,
           set.title,
           set.description || null,
           set.inOverlay === false ? 0 : 1,
@@ -231,6 +233,7 @@ export async function importAll(file: ExportFile, options: { folder?: string | n
       });
       result.withProgress++;
     });
+    statements.push(...keepFolder(folder));
     const [inserted] = await db().batch(statements);
     result.setIds.push(inserted.lastInsertId);
     result.sets++;

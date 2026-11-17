@@ -79,6 +79,37 @@ describe('sets and cards', () => {
     expect(await repo.listFolders()).toEqual([]);
   });
 
+  it('keeps an empty folder until it is removed', async () => {
+    expect(await repo.createFolder('  Uni  ')).toBe('Uni');
+    await repo.createFolder('Uni');
+    expect(await repo.listFolders()).toEqual(['Uni']);
+    const set = await repo.createSet({ title: 'A', folder: 'Uni' });
+    await repo.updateSet(set.id, { folder: null });
+    expect(await repo.listFolders()).toEqual(['Uni']);
+    await repo.renameFolder('Uni', 'School');
+    expect(await repo.listFolders()).toEqual(['School']);
+    await repo.renameFolder('School', null);
+    expect(await repo.listFolders()).toEqual([]);
+    await expect(repo.createFolder('   ')).rejects.toThrow();
+  });
+
+  it('remembers a folder a set is moved into, but not for a set that is not there', async () => {
+    const set = await repo.createSet({ title: 'A' });
+    await repo.updateSet(set.id, { folder: 'Lang' });
+    await repo.updateSet(set.id, { folder: null });
+    expect(await repo.listFolders()).toEqual(['Lang']);
+    await expect(repo.updateSet(set.id + 99, { folder: 'Ghost' })).rejects.toThrow();
+    expect(await repo.listFolders()).toEqual(['Lang']);
+  });
+
+  it('merges a folder renamed into one that exists', async () => {
+    await repo.createSet({ title: 'A', folder: 'Uni' });
+    await repo.createSet({ title: 'B', folder: 'School' });
+    await repo.renameFolder('Uni', 'School');
+    expect(await repo.listFolders()).toEqual(['School']);
+    expect((await repo.listSets()).map((s) => s.folder)).toEqual(['School', 'School']);
+  });
+
   it('deleting a set removes its cards and their progress', async () => {
     const { set, cards } = await setWith(2);
     await repo.reviewCard(cards[0].id, 5, TODAY, null);

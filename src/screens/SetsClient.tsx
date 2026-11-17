@@ -10,13 +10,14 @@ import { useSearchParams } from 'react-router';
 
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
-import { errorMessage, fetchSets, renameFolder } from '@/lib/flashcards/client';
+import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder } from '@/lib/flashcards/client';
 import { plural } from '@/lib/flashcards/format';
 import { LIMITS, type SetSummaryDTO } from '@/lib/flashcards/types';
 import {
   IconChevronLeft,
   IconChevronRight,
   IconFolder,
+  IconFolderPlus,
   IconGenerate,
   IconImport,
   IconPlus,
@@ -29,13 +30,16 @@ type Folder = { name: string; sets: number; cards: number };
 const SEARCH_FROM = 6;
 
 /**
- * The sets screen: today's numbers, then every set (a folder is just a label
- * on them). Filing a set happens on the set's own page; this screen only
- * browses, so a row is one link and nothing on it can be mis-clicked.
+ * The sets screen: today's numbers, then the folders and the sets in none.
+ * A folder can be made here, empty; filing a set happens on the set's own
+ * page (or by making it inside the folder), so a set row is one link and
+ * nothing on it can be mis-clicked.
  */
 export function SetsClient() {
   const router = useRouter();
   const [sets, setSets] = useState<SetSummaryDTO[] | null>(null);
+  // Every folder by name, the empty ones too (sets only name the full ones).
+  const [folderNames, setFolderNames] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   // In the URL (?folder=), so coming back from a set opens the same folder.
   const [params, setParams] = useSearchParams();
@@ -47,15 +51,18 @@ export function SetsClient() {
   const version = useDataVersion();
 
   useEffect(() => {
-    fetchSets()
-      .then((res) => setSets(res.sets))
+    Promise.all([fetchSets(), fetchFolders()])
+      .then(([res, f]) => {
+        setFolderNames(f.folders);
+        setSets(res.sets);
+      })
       .catch((err: unknown) => setError(errorMessage(err, 'Could not load your sets.')));
   }, [version]);
 
   const mine = useMemo(() => sets ?? [], [sets]);
 
   const folders = useMemo(() => {
-    const byName = new Map<string, Folder>();
+    const byName = new Map<string, Folder>(folderNames.map((name) => [name, { name, sets: 0, cards: 0 }]));
     for (const s of mine) {
       if (!s.folder) continue;
       const f = byName.get(s.folder) ?? { name: s.folder, sets: 0, cards: 0 };
@@ -64,9 +71,9 @@ export function SetsClient() {
       byName.set(s.folder, f);
     }
     return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [mine]);
+  }, [mine, folderNames]);
 
-  // A folder that was emptied (or renamed away) stops existing; fall back out.
+  // A folder renamed or removed (here or in the other window) is gone; fall back out.
   // Only once the sets are in: before that every folder looks empty.
   useEffect(() => {
     if (sets !== null && folder !== null && !folders.some((f) => f.name === folder)) setFolder(null);
@@ -91,6 +98,7 @@ export function SetsClient() {
     setError(null);
     try {
       await renameFolder(from, to);
+      setFolderNames((prev) => [...new Set(prev.map((n) => (n === from ? to : n)))]);
       setSets((prev) => prev?.map((s) => (s.isOwner && s.folder === from ? { ...s, folder: to } : s)) ?? null);
       setFolder(to);
     } catch (err) {
@@ -103,10 +111,30 @@ export function SetsClient() {
     setError(null);
     try {
       await renameFolder(name, null);
+      setFolderNames((prev) => prev.filter((n) => n !== name));
       setSets((prev) => prev?.map((s) => (s.isOwner && s.folder === name ? { ...s, folder: null } : s)) ?? null);
       setFolder(null);
     } catch (err) {
       setError(errorMessage(err, 'Could not remove the folder.'));
+    }
+  }
+
+  /** An empty folder, opened at once so its first set can be made right there. */
+  async function newFolder() {
+    const name = (await ask.prompt('Name the new folder:'))?.trim();
+    if (!name) return;
+    if (name.length > LIMITS.folderNameLength) {
+      setError(`Keep folder names under ${LIMITS.folderNameLength} characters.`);
+      return;
+    }
+    setError(null);
+    try {
+      const { folder: made } = await createFolder(name);
+      setFolderNames((prev) => (prev.includes(made) ? prev : [...prev, made]));
+      setQuery('');
+      setFolder(made);
+    } catch (err) {
+      setError(errorMessage(err, 'Could not make the folder.'));
     }
   }
 
@@ -164,6 +192,17 @@ export function SetsClient() {
             <IconGenerate />
             Generate
           </Link>
+          {folder === null && (
+            <button
+              type="button"
+              className="rt-btn rt-btn--sm"
+              onClick={() => void newFolder()}
+              title="Make an empty folder to put sets in"
+            >
+              <IconFolderPlus />
+              New folder
+            </button>
+          )}
           <Link href={newSetHref} className="rt-btn rt-btn--sm rt-btn--primary">
             <IconPlus />
             New set
@@ -249,6 +288,11 @@ export function SetsClient() {
               </div>
             ) : searching ? (
               <div className="rt-empty">None of your sets match that.</div>
+            ) : folder !== null ? (
+              <div className="rt-empty">
+                Nothing in this folder yet. <Link href={newSetHref}>Make a set</Link> here, or open a set
+                and use <b>put in a folder</b>.
+              </div>
             ) : (
               mine.length === 0 && (
                 <div className="fc-emptystate">

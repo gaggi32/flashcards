@@ -93,7 +93,12 @@ export function fetchFolders(): Promise<{ folders: string[] }> {
   return read(async () => ({ folders: await repo.listFolders() }));
 }
 
-/** Rename a folder, or take every set out of it with `to: null`. */
+/** Make an empty folder; returns its name as kept (trimmed). One that exists already is left as it is. */
+export function createFolder(name: string): Promise<{ folder: string }> {
+  return write(async () => ({ folder: await repo.createFolder(name) }));
+}
+
+/** Rename a folder, or remove it with `to: null` (its sets stay, outside any folder). */
 export function renameFolder(from: string, to: string | null): Promise<{ ok: true; moved: number }> {
   return write(async () => ({ ok: true as const, moved: await repo.renameFolder(from, to) }));
 }
