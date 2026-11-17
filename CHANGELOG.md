@@ -2,6 +2,12 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.1.0] — 2026-11-17
+### Added
+- Drop a Flashcards file (a shared set or an export) anywhere on the window to add it, the same as "Open shared set". Inside a folder, it goes into that folder.
+### Changed
+- Settings is a cog icon in the top bar.
+
 ## [1.0.0] — 2026-11-17
 ### Added
 - Drag a set from the sets page onto a folder to put it there; inside a folder, drag it onto "My sets" to take it out again.
