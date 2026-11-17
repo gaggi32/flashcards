@@ -93,7 +93,7 @@ impl Default for Settings {
             theme: "system".into(),
             eye_comfort: false,
             auto_backup: true,
-            backups_kept: 14,
+            backups_kept: 7,
             ai_model: DEFAULT_MODEL.into(),
             check_updates: true,
             autostart: None,
