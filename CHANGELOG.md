@@ -2,6 +2,12 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.0.0] — 2026-11-17
+### Added
+- Drag a set from the sets page onto a folder to put it there; inside a folder, drag it onto "My sets" to take it out again.
+### Changed
+- Flashcards is 1.0: its first stable version.
+
 ## [0.1.21] — 2026-11-17
 ### Added
 - "New folder" on the sets page makes an empty folder and opens it, ready for its first set.
