@@ -6,3 +6,6 @@ src-tauri/gen/schemas/
 .env
 .env.*
 .DS_Store
+
+# local dev-build identity override
+dev.json
