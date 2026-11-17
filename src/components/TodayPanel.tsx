@@ -8,6 +8,7 @@ import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { showOverlay } from '@/lib/app/native';
 import { studySetFrom, usePref } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
+import { SetOptions } from '@/components/flashcards/SetOptions';
 import type { SetSummaryDTO } from '@/lib/flashcards/types';
 import { todayKey } from '@/lib/nutrition/day';
 import { listSets, overview, type Overview } from '@/lib/store/repo';
@@ -77,13 +78,7 @@ export function TodayPanel({ version }: { version: number }) {
           value={String(studying)}
           onChange={(e) => setChosen(Number(e.target.value))}
         >
-          {[...sets]
-            .sort((a, b) => a.title.localeCompare(b.title))
-            .map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
+          <SetOptions sets={sets} />
         </select>
       </div>
       <div className="today__stats">

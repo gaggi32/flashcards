@@ -200,6 +200,7 @@ html.overlay body {
   border-color: var(--fc-accent);
   outline: none;
 }
+.ov__setpick optgroup,
 .ov__setpick option {
   background: var(--rt-panel);
   color: var(--rt-ink);

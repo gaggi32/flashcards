@@ -19,7 +19,7 @@
 // in the panel has to be scrolled to.
 
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 
 import { announceDataChange, useDataVersion } from '@/lib/app/events';
@@ -33,6 +33,7 @@ import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
 import { WriteClient } from '@/screens/WriteClient';
+import { SetOptions } from '@/components/flashcards/SetOptions';
 import { tabStops } from '@/components/flashcards/StudyHeader';
 
 const MODES: { id: OverlayMode; route: string; label: string; hint: string }[] = [
@@ -253,7 +254,6 @@ function OverlayFrame() {
 
   const hotkey = settings ? formatHotkey(settings.hotkey, isMacPlatform()) : '';
   const modeIndex = MODES.findIndex((m) => m.id === mode);
-  const ordered = useMemo(() => [...(sets ?? [])].sort((a, b) => a.title.localeCompare(b.title)), [sets]);
 
   return (
     <div className="rt-page fc-page ov" data-phase={phase}>
@@ -291,11 +291,7 @@ function OverlayFrame() {
               e.currentTarget.blur();
             }}
           >
-            {ordered.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title}
-              </option>
-            ))}
+            <SetOptions sets={sets ?? []} />
           </select>
           <span className="ov__spacer" data-tauri-drag-region />
           <button
@@ -375,7 +371,6 @@ function QuickAdd({ onDone, preferSet }: { onDone: () => void; preferSet: number
     termRef.current?.focus();
   }, [preferSet]);
 
-  const ordered = useMemo(() => [...(sets ?? [])].sort((a, b) => a.title.localeCompare(b.title)), [sets]);
 
   async function submit() {
     if (!setId || !term.trim() || !definition.trim()) return;
@@ -412,11 +407,7 @@ function QuickAdd({ onDone, preferSet }: { onDone: () => void; preferSet: number
       }}
     >
       <select className="rt-input" aria-label="Set" value={setId ?? ''} onChange={(e) => setSetId(Number(e.target.value))}>
-        {ordered.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.title}
-          </option>
-        ))}
+        <SetOptions sets={sets ?? []} />
       </select>
       <input
         id="qa-term"
