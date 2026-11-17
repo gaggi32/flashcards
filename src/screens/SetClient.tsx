@@ -13,6 +13,7 @@ import {
   IconChevronLeft,
   IconGlobe,
   IconLearn,
+  IconTest,
   IconWrite,
 } from '@/components/flashcards/FlashcardIcons';
 import { OrganizeSet } from '@/components/flashcards/OrganizeSet';
@@ -170,6 +171,15 @@ export function SetClient({ setId }: { setId: number }) {
               <span className="fc-mode__name">learn</span>
               <span className="fc-mode__sub">
                 Multiple choice, then typed. Cards you don&apos;t know yet first; misses come back until you get them.
+              </span>
+            </Link>
+            <Link href={`/flashcards/${set.id}/test`} className="fc-mode">
+              <span className="fc-mode__icon">
+                <IconTest />
+              </span>
+              <span className="fc-mode__name">test</span>
+              <span className="fc-mode__sub">
+                One paper of true or false, multiple choice, matching and written questions, marked when you hand it in.
               </span>
             </Link>
           </div>

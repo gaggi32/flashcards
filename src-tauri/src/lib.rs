@@ -32,6 +32,8 @@ const OVERLAY: &str = "overlay";
 const AUTOSTART_FLAG: &str = "--hidden";
 const DOWNLOAD_PAGE: &str = "https://github.com/gaggi32/flashcards/releases/latest";
 const LATEST_RELEASE: &str = "https://api.github.com/repos/gaggi32/flashcards/releases/latest";
+/// The recent releases, for the notes of every version an update skips over.
+const RECENT_RELEASES: &str = "https://api.github.com/repos/gaggi32/flashcards/releases?per_page=20";
 /// Hosts a link in the UI may open in the default browser. Everything else is
 /// refused, and the webviews themselves never navigate away from the app.
 const LINK_HOSTS: &[&str] = &["openrouter.ai", "github.com"];
@@ -799,6 +801,50 @@ struct UpdateInfo {
     newer: bool,
     /// The release's notes: its CHANGELOG section, as the release job writes it.
     notes: Option<String>,
+    /// Every version the update brings, newest first, with its notes: more
+    /// than one when this install is several versions behind.
+    missed: Vec<ReleaseNotes>,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+struct ReleaseNotes {
+    version: String,
+    notes: String,
+}
+
+/// The most versions and characters per version listed before an update.
+const MISSED_MAX: usize = 10;
+const NOTES_MAX_CHARS: usize = 8000;
+
+fn release_notes(body: &Json) -> Option<String> {
+    body.get("body")
+        .and_then(Json::as_str)
+        .map(|b| b.chars().take(NOTES_MAX_CHARS).collect::<String>())
+        .filter(|b| !b.trim().is_empty())
+}
+
+/// From GitHub's list of releases: the published ones after `current` up to
+/// and including `latest`, newest first.
+fn missed_releases(list: &Json, current: &str, latest: &str) -> Vec<ReleaseNotes> {
+    let (Some(c), Some(l)) = (parse_version(current), parse_version(latest)) else {
+        return Vec::new();
+    };
+    let mut found: Vec<((u64, u64, u64), ReleaseNotes)> = list
+        .as_array()
+        .map(|a| a.as_slice())
+        .unwrap_or_default()
+        .iter()
+        .filter(|r| !r.get("draft").and_then(Json::as_bool).unwrap_or(false))
+        .filter(|r| !r.get("prerelease").and_then(Json::as_bool).unwrap_or(false))
+        .filter_map(|r| {
+            let version = release_version(r)?;
+            let v = parse_version(&version)?;
+            (v > c && v <= l).then(|| (v, ReleaseNotes { version, notes: release_notes(r).unwrap_or_default() }))
+        })
+        .collect();
+    found.sort_by(|a, b| b.0.cmp(&a.0));
+    found.dedup_by(|a, b| a.0 == b.0);
+    found.into_iter().take(MISSED_MAX).map(|(_, r)| r).collect()
 }
 
 fn parse_version(v: &str) -> Option<(u64, u64, u64)> {
@@ -838,12 +884,28 @@ async fn check_update(app: AppHandle) -> Result<UpdateInfo, String> {
         (Some(l), Some(c)) => parse_version(l).map_or(false, |l| l > c),
         _ => false,
     };
-    let notes = body
-        .get("body")
-        .and_then(Json::as_str)
-        .map(|b| b.chars().take(8000).collect::<String>())
-        .filter(|b| !b.trim().is_empty());
-    Ok(UpdateInfo { current, latest, newer, notes })
+    let notes = release_notes(&body);
+    let mut missed = Vec::new();
+    if let (true, Some(l)) = (newer, &latest) {
+        // Best effort: without the list, the newest release's notes still show.
+        if let Ok(res) = http
+            .get(RECENT_RELEASES)
+            .header("Accept", "application/vnd.github+json")
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+        {
+            if res.status().is_success() {
+                if let Ok(list) = res.json::<Json>().await {
+                    missed = missed_releases(&list, &current, l);
+                }
+            }
+        }
+        if missed.is_empty() {
+            missed.push(ReleaseNotes { version: l.clone(), notes: notes.clone().unwrap_or_default() });
+        }
+    }
+    Ok(UpdateInfo { current, latest, newer, notes, missed })
 }
 
 /// Download the newest release, check its signature against the key built
@@ -1176,6 +1238,35 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_update_lists_every_version_it_brings_newest_first() {
+        let list = serde_json::json!([
+            { "tag_name": "v1.4.0", "body": "### Added\n- four" },
+            { "tag_name": "v1.5.0-rc", "body": "nope" },
+            { "tag_name": "v1.3.0", "body": "### Fixed\n- three", "prerelease": true },
+            { "tag_name": "v1.2.0", "body": "### Fixed\n- two" },
+            { "tag_name": "v1.3.1", "body": "", "draft": true },
+            { "tag_name": "v1.3.0", "body": "### Added\n- three" },
+            { "tag_name": "v1.1.0", "body": "### Added\n- one" },
+            { "tag_name": "v1.5.0", "body": "### Added\n- after latest" },
+        ]);
+        let got = missed_releases(&list, "1.1.0", "1.4.0");
+        let versions: Vec<&str> = got.iter().map(|r| r.version.as_str()).collect();
+        assert_eq!(versions, ["1.4.0", "1.3.0", "1.2.0"]);
+        assert_eq!(got[1].notes, "### Added\n- three");
+        assert!(missed_releases(&list, "1.4.0", "1.4.0").is_empty());
+        assert!(missed_releases(&serde_json::json!({ "message": "rate limited" }), "1.1.0", "1.4.0").is_empty());
+    }
+
+    #[test]
+    fn a_long_way_behind_lists_the_newest_ten() {
+        let list: Vec<Json> = (1..=15).map(|m| serde_json::json!({ "tag_name": format!("v1.{m}.0"), "body": "x" })).collect();
+        let got = missed_releases(&Json::Array(list), "1.0.0", "1.15.0");
+        assert_eq!(got.len(), MISSED_MAX);
+        assert_eq!(got[0].version, "1.15.0");
+        assert_eq!(got[9].version, "1.6.0");
+    }
 
     #[test]
     fn a_dragged_set_gets_a_safe_json_name() {

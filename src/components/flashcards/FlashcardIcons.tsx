@@ -215,6 +215,18 @@ export function IconLock({ size = 16 }: { size?: number }) {
   );
 }
 
+/** A sheet with ticks: the test. */
+export function IconTest({ size = 20 }: { size?: number }) {
+  return (
+    <Frame size={size}>
+      <rect x="5" y="3" width="14" height="18" rx="2" />
+      <path d="m8.5 8.5 1.5 1.5 3-3" />
+      <path d="m8.5 14.5 1.5 1.5 3-3" />
+      <path d="M15.5 9h0.01M15.5 15h0.01" />
+    </Frame>
+  );
+}
+
 /** A cog: the settings screen. */
 export function IconSettings({ size = 18 }: { size?: number }) {
   return (

@@ -5,7 +5,7 @@
 import changelogText from '../../CHANGELOG.md?raw';
 import { useEffect, useMemo, useState } from 'react';
 
-import { changesSince, parseChangelog, plainLine, type ChangeGroup } from '@/lib/app/changelog';
+import { changesSince, parseChangelog, parseGroups, plainLine, type ChangeGroup } from '@/lib/app/changelog';
 import { appInfo, markVersionSeen } from '@/lib/app/native';
 import { useSettings } from '@/lib/app/settings';
 
@@ -35,7 +35,6 @@ export function WhatsNew() {
   const news = changesSince(entries, seen, running);
   if (news.length === 0) return null;
 
-  const shown = news.slice(0, MOST);
   return (
     <section className="rt-note rt-note--ok fc-news" aria-label={`What's new in ${running}`}>
       <div className="fc-news__head">
@@ -51,14 +50,48 @@ export function WhatsNew() {
           got it
         </button>
       </div>
+      <Versions entries={news} />
+    </section>
+  );
+}
+
+/**
+ * Every version an update brings, from the releases' notes on GitHub, for
+ * Settings before installing. Null when none of them has notes.
+ */
+export function UpdateNotes({ missed }: { missed: { version: string; notes: string }[] }) {
+  const entries = missed
+    .map((m) => ({ version: m.version, groups: parseGroups(m.notes) }))
+    .filter((e) => e.groups.length > 0);
+  if (entries.length === 0) return null;
+  return (
+    <>
+      <div className="rt-note__title">
+        What&apos;s new in {entries.length > 1 ? `the ${entries.length} versions up to ${entries[0].version}` : entries[0].version}
+      </div>
+      <Versions entries={entries} />
+    </>
+  );
+}
+
+/** Versions newest first, a label on each when there are several; past MOST, behind a button. */
+function Versions({ entries }: { entries: { version: string; groups: ChangeGroup[] }[] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? entries : entries.slice(0, MOST);
+  return (
+    <>
       {shown.map((entry) => (
         <div key={entry.version} className="fc-news__version">
-          {shown.length > 1 && <div className="fc-news__label">{entry.version}</div>}
+          {entries.length > 1 && <div className="fc-news__label">{entry.version}</div>}
           <ChangeGroups groups={entry.groups} />
         </div>
       ))}
-      {news.length > MOST && <p className="rt-small rt-ink-faint">…and earlier changes, listed in CHANGELOG.md on GitHub.</p>}
-    </section>
+      {entries.length > shown.length && (
+        <button type="button" className="rt-linkbtn fc-news__more" onClick={() => setAll(true)}>
+          {entries.length - shown.length === 1 ? 'show 1 earlier version' : `show ${entries.length - shown.length} earlier versions`}
+        </button>
+      )}
+    </>
   );
 }
 

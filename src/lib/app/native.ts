@@ -75,8 +75,18 @@ export const resumeHotkey = () => call<void>('resume_hotkey');
 export type AppInfo = { version: string; dataDir: string; platform: 'windows' | 'macos' | 'linux' };
 export const appInfo = () => call<AppInfo>('app_info');
 
-/** `notes`: the release's notes, its CHANGELOG section. */
-export type UpdateInfo = { current: string; latest: string | null; newer: boolean; notes: string | null };
+/**
+ * `notes`: the newest release's notes, its CHANGELOG section. `missed`: every
+ * version the update brings, newest first, each with its notes (empty when
+ * there is nothing newer).
+ */
+export type UpdateInfo = {
+  current: string;
+  latest: string | null;
+  newer: boolean;
+  notes: string | null;
+  missed: { version: string; notes: string }[];
+};
 export const checkUpdate = () => call<UpdateInfo>('check_update');
 /** Downloads, checks the signature, installs and restarts; progress comes as "update-progress". */
 export const installUpdate = () => call<void>('install_update');

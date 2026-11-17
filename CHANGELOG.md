@@ -2,6 +2,15 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.3.0] — 2026-11-17
+### Added
+- Test: a new study mode that puts a set on one paper of true or false, multiple choice, matching and written questions. Pick how many questions and which kinds, answer them in any order, and hand it in to see your score with every answer marked. Then test only the cards you missed.
+- Before you install an update, Settings lists what is new in every version you would get, not only the newest.
+### Changed
+- The "What's new" card after an update can show every version you skipped, not only the last three.
+### Fixed
+- The settings cog no longer jumps slightly when the mouse leaves it.
+
 ## [1.2.0] — 2026-11-17
 ### Added
 - Drag a set from the sets page out of the window to get its file: onto the desktop, into a folder or into a mail. Dragging it onto a folder in the app still files it there.

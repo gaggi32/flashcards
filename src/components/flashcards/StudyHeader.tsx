@@ -5,12 +5,13 @@ import Link from '@/components/Link';
 import type { SetDTO } from '@/lib/flashcards/types';
 import { IconChevronLeft } from './FlashcardIcons';
 
-type Mode = 'cards' | 'write' | 'learn';
+type Mode = 'cards' | 'write' | 'learn' | 'test';
 
 const MODES: { mode: Mode; label: string }[] = [
   { mode: 'cards', label: 'flashcards' },
   { mode: 'write', label: 'write' },
   { mode: 'learn', label: 'learn' },
+  { mode: 'test', label: 'test' },
 ];
 
 /** Back to the set, the set's name, and a switch between the study modes. */

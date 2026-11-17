@@ -22,6 +22,7 @@ import { LearnClient } from '@/screens/LearnClient';
 import { SetClient } from '@/screens/SetClient';
 import { SetsClient } from '@/screens/SetsClient';
 import { SettingsScreen } from '@/screens/Settings';
+import { TestClient } from '@/screens/TestClient';
 import { WriteClient } from '@/screens/WriteClient';
 
 /** `:id` → a set id, or the sets list for anything that is not one. */
@@ -81,7 +82,7 @@ function AppBar() {
         </Link>
       )}
       <Link href="/settings" className="app-bar__settings" title="Settings" aria-label="Settings">
-        <IconSettings size={19} />
+        <IconSettings size={20} />
       </Link>
     </div>
   );
@@ -134,6 +135,7 @@ export function App() {
               <Route path="/flashcards/:id/edit" element={<EditSet />} />
               <Route path="/flashcards/:id/learn" element={<WithSetId render={(id) => <LearnClient setId={id} />} />} />
               <Route path="/flashcards/:id/write" element={<WithSetId render={(id) => <WriteClient setId={id} />} />} />
+              <Route path="/flashcards/:id/test" element={<WithSetId render={(id) => <TestClient setId={id} />} />} />
               <Route
                 path="/flashcards/:id/cards"
                 element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />}

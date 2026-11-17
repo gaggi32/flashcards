@@ -294,11 +294,21 @@
   background: var(--rt-panel-2);
   color: var(--rt-ink);
 }
+/* The cog turns on hover. It stays on its own layer and is an even size, so
+   it is drawn the same way at rest as while turning: otherwise its centre
+   lands on a half pixel and visibly jumps when the turn back ends. */
 .rt-page.fc-page a.app-bar__settings svg {
+  display: block;
+  transform: rotate(0deg);
+  will-change: transform;
   transition: transform 0.3s ease;
 }
 .rt-page.fc-page a.app-bar__settings:hover svg {
   transform: rotate(45deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-page.fc-page a.app-bar__settings svg { transition: none; }
+  .rt-page.fc-page a.app-bar__settings:hover svg { transform: none; }
 }
 
 /* A Flashcards file held over the window: the whole window is the target. */

@@ -10,7 +10,7 @@ import { ask } from '@/components/Dialogs';
 import { AiKeyPanel } from '@/components/flashcards/AiKeyPanel';
 import { IconChevronLeft } from '@/components/flashcards/FlashcardIcons';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
-import { ChangeGroups } from '@/components/WhatsNew';
+import { UpdateNotes } from '@/components/WhatsNew';
 import { parseGroups } from '@/lib/app/changelog';
 import { listen } from '@tauri-apps/api/event';
 import { announceDataChange } from '@/lib/app/events';
@@ -517,10 +517,9 @@ export function SettingsScreen() {
             )}
           </div>
         </Row>
-        {update?.newer && update.notes && parseGroups(update.notes).length > 0 && (
+        {update?.newer && update.missed.some((m) => parseGroups(m.notes).length > 0) && (
           <div className="rt-note fc-news fc-news--update">
-            <div className="rt-note__title">What&apos;s new in {update.latest}</div>
-            <ChangeGroups groups={parseGroups(update.notes)} />
+            <UpdateNotes missed={update.missed} />
             <p className="rt-small rt-ink-faint">
               Installing downloads it from GitHub, checks it is signed by Flashcards, installs it and restarts the app.
               Your sets and progress stay.
