@@ -2265,6 +2265,26 @@
 .fc-crumbs__back:hover {
   color: var(--rt-ink);
 }
+
+/* A set being dragged over a folder (or over "My sets", to take it out). */
+.rt-page.fc-page .fc-row.fc-drop,
+.rt-page.fc-page .fc-row.fc-drop:hover {
+  border-color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--fc-accent) 35%, transparent);
+}
+.fc-crumbs__back.fc-drop {
+  margin: -4px -8px;
+  padding: 4px 8px;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
+  outline: 2px dashed color-mix(in srgb, var(--fc-accent) 55%, transparent);
+}
+.fc-page .rt-label .fc-label-hint {
+  font-weight: 400;
+  color: var(--rt-ink-faint);
+}
 .fc-crumbs__here {
   display: inline-flex;
   align-items: center;

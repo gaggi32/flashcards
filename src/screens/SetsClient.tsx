@@ -5,12 +5,12 @@ import { announceDataChange } from '@/lib/app/events';
 import { importFile } from '@/lib/app/native';
 import { useRouter } from '@/lib/app/router';
 import { importAll, parseExport } from '@/lib/store/transfer';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
-import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder } from '@/lib/flashcards/client';
+import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder, updateSet } from '@/lib/flashcards/client';
 import { plural } from '@/lib/flashcards/format';
 import { LIMITS, type SetSummaryDTO } from '@/lib/flashcards/types';
 import {
@@ -26,14 +26,19 @@ import {
 
 type Folder = { name: string; sets: number; cards: number };
 
+/** What a dragged set row carries: its id, under a type only this screen reads. */
+const SET_DRAG = 'application/x-flashcards-set';
+const isSetDrag = (e: DragEvent) => e.dataTransfer.types.includes(SET_DRAG);
+
 /** Past this many of your own sets, the list gets a search box. */
 const SEARCH_FROM = 6;
 
 /**
  * The sets screen: today's numbers, then the folders and the sets in none.
- * A folder can be made here, empty; filing a set happens on the set's own
- * page (or by making it inside the folder), so a set row is one link and
- * nothing on it can be mis-clicked.
+ * A folder can be made here, empty. A set is filed by dragging its row onto
+ * a folder (and out again onto "My sets"), on the set's own page, or by
+ * making it inside the folder; a set row stays one link with nothing on it
+ * to mis-click.
  */
 export function SetsClient() {
   const router = useRouter();
@@ -47,6 +52,8 @@ export function SetsClient() {
   const setFolder = (name: string | null) =>
     setParams(name ? { folder: name } : {}, { replace: true });
   const [query, setQuery] = useState('');
+  // The folder a set is being dragged over ('' for "My sets"), to light it up.
+  const [dropOn, setDropOn] = useState<string | null>(null);
   // Re-read when the overlay (the other window) studies or adds cards.
   const version = useDataVersion();
 
@@ -137,6 +144,47 @@ export function SetsClient() {
       setError(errorMessage(err, 'Could not make the folder.'));
     }
   }
+
+  /** A set dropped on a folder (or on "My sets", `to: null`) moves there. */
+  async function fileSet(id: number, to: string | null) {
+    setDropOn(null);
+    const set = mine.find((s) => s.id === id);
+    if (!set || set.folder === to) return;
+    setError(null);
+    try {
+      const { set: saved } = await updateSet(id, { folder: to });
+      setSets((prev) => prev?.map((s) => (s.id === id ? { ...s, folder: saved.folder } : s)) ?? null);
+    } catch (err) {
+      setError(errorMessage(err, 'Could not move the set.'));
+    }
+  }
+
+  /** Drag handlers for a place a set can be dropped on: `key` lights it, `to` is where it goes. */
+  function dropTarget(key: string, to: string | null) {
+    return {
+      onDragOver(e: DragEvent) {
+        if (!isSetDrag(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (dropOn !== key) setDropOn(key);
+      },
+      onDragLeave(e: DragEvent) {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setDropOn((cur) => (cur === key ? null : cur));
+      },
+      onDrop(e: DragEvent) {
+        if (!isSetDrag(e)) return;
+        e.preventDefault();
+        const id = Number(e.dataTransfer.getData(SET_DRAG));
+        if (Number.isInteger(id) && id > 0) void fileSet(id, to);
+        else setDropOn(null);
+      },
+    };
+  }
+
+  // Sets can be dragged where there is somewhere to drop them: from the main
+  // list onto a folder, or from inside a folder back onto "My sets".
+  const canDrag = !searching && (folder !== null || folders.length > 0);
 
   const newSetHref = folder ? `/flashcards/new?folder=${encodeURIComponent(folder)}` : '/flashcards/new';
 
@@ -231,7 +279,13 @@ export function SetsClient() {
 
             {searching ? null : folder !== null ? (
               <div className="fc-crumbs">
-                <button type="button" className="fc-crumbs__back" onClick={() => setFolder(null)}>
+                <button
+                  type="button"
+                  className={`fc-crumbs__back${dropOn === '' ? ' fc-drop' : ''}`}
+                  onClick={() => setFolder(null)}
+                  title="Drop a set here to take it out of the folder"
+                  {...dropTarget('', null)}
+                >
                   <IconChevronLeft />
                   My sets
                 </button>
@@ -256,8 +310,9 @@ export function SetsClient() {
                       <button
                         key={f.name}
                         type="button"
-                        className="fc-row fc-row--folder"
+                        className={`fc-row fc-row--folder${dropOn === f.name ? ' fc-drop' : ''}`}
                         onClick={() => setFolder(f.name)}
+                        {...dropTarget(f.name, f.name)}
                       >
                         <span className="fc-row__badge" aria-hidden="true">
                           <IconFolder size={20} />
@@ -277,21 +332,29 @@ export function SetsClient() {
             )}
 
             {!searching && folder === null && folders.length > 0 && visible.length > 0 && (
-              <div className="rt-label fc-label-gap">not in a folder</div>
+              <div className="rt-label fc-label-gap">
+                not in a folder <span className="fc-label-hint">· drag one onto a folder to file it</span>
+              </div>
             )}
 
             {visible.length > 0 ? (
               <div className="fc-list">
                 {visible.map((set) => (
-                  <SetRow key={set.id} set={set} showFolder={searching} />
+                  <SetRow
+                    key={set.id}
+                    set={set}
+                    showFolder={searching}
+                    draggable={canDrag}
+                    onDragEnd={() => setDropOn(null)}
+                  />
                 ))}
               </div>
             ) : searching ? (
               <div className="rt-empty">None of your sets match that.</div>
             ) : folder !== null ? (
               <div className="rt-empty">
-                Nothing in this folder yet. <Link href={newSetHref}>Make a set</Link> here, or open a set
-                and use <b>put in a folder</b>.
+                Nothing in this folder yet. <Link href={newSetHref}>Make a set</Link> here, drag one onto
+                the folder from <b>My sets</b>, or open a set and use <b>put in a folder</b>.
               </div>
             ) : (
               mine.length === 0 && (
@@ -351,15 +414,33 @@ function SearchBox({
 function SetRow({
   set,
   showFolder = false,
+  draggable = false,
+  onDragEnd,
 }: {
   set: SetSummaryDTO;
   /** While searching, where each hit is filed stands in for its description. */
   showFolder?: boolean;
+  /** Whether the row can be dragged onto a folder. */
+  draggable?: boolean;
+  onDragEnd?: () => void;
 }) {
   const folder = showFolder ? set.folder : null;
   const sub = folder ?? set.description;
   return (
-    <Link href={`/flashcards/${set.id}`} className="fc-row">
+    <Link
+      href={`/flashcards/${set.id}`}
+      className="fc-row"
+      draggable={draggable}
+      onDragStart={
+        draggable
+          ? (e) => {
+              e.dataTransfer.setData(SET_DRAG, String(set.id));
+              e.dataTransfer.effectAllowed = 'move';
+            }
+          : undefined
+      }
+      onDragEnd={onDragEnd}
+    >
       <span className="fc-row__badge" aria-label={plural(set.cardCount, 'term')}>
         <span className="fc-row__count">{set.cardCount}</span>
         <span className="fc-row__unit" aria-hidden="true">
