@@ -2,6 +2,12 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [0.1.21] — 2026-11-17
+### Added
+- "New folder" on the sets page makes an empty folder and opens it, ready for its first set.
+### Changed
+- A folder stays when its last set moves out; "remove folder" takes it away.
+
 ## [0.1.20] — 2026-11-17
 ### Added
 - Install updates from inside the app: Settings → "install" downloads the new version, checks it is signed by Flashcards, installs it and restarts. No browser download needed. (This version itself is the last one to install by hand.)
