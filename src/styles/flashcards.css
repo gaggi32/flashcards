@@ -1,153 +1,10 @@
 /* ---------------------------------------------------------------------------
-   Flashcards (/flashcards) — the study app.
-
-   Like the food log, this installs as a PWA and does not wear the retro paper.
-   Studying is reading and recalling, so the page is drawn to stay out of the
-   way: warm off-white ground, ink text, IBM Plex Sans, hairline rules and soft
-   corners, and nothing on screen that moves unless you moved it.
-
-   Colour is kept for things that mean something:
-     --fc-accent  ink blue — the main action, progress, what is selected
-     --rt-teal    got it right
-     --rt-rust    missed it, removing things
-   The accent is deliberately not the green: "do this next" and "that was
-   correct" sit side by side on every question and must not look alike.
-
-   It runs on the shared token names (`--rt-*`), redefined below while a
-   flashcards page is on screen, so the theme toggle and the shared `rt-*`
-   classes these screens are built from keep working. Those classes are
-   restyled here rather than replaced; the selectors carry `.rt-page.fc-page`
-   so they outrank retro-ui.css (including its `.rt-page a.rt-btn` rules)
-   whatever order the stylesheets land in.
+   The study app's components. Drawn to stay out of the way while you read
+   and recall: hairline rules, soft corners, colour only where it means
+   something (see tokens.css). The shared `rt-*` classes these screens are
+   built from are restyled here; selectors carry `.rt-page.fc-page` so they
+   outrank base.css whatever order the stylesheets land in.
    --------------------------------------------------------------------------- */
-
-:root:has(.fc-page) {
-  --rt-paper: #f6f4ef;
-  --rt-panel: #fffefb;
-  --rt-panel-2: #f0ede6;
-  --rt-ink: #1c1a17;
-  --rt-ink-rgb: 28, 26, 23;
-  --rt-ink-soft: #5d5850;
-  --rt-ink-faint: #8a8378;
-  --rt-rust: #b5482b;
-  --rt-teal: #4f7458;
-  --rt-gold: #b4872e;
-  --rt-hl: #fffefb;
-  --rt-on-gold: #1c1a17;
-  --rt-shadow: rgba(28, 26, 23, 0.08);
-  --rt-shadow-soft: rgba(28, 26, 23, 0.05);
-  --rt-inset: rgba(28, 26, 23, 0.04);
-  --rt-stripe: transparent;
-  --rt-note-ok-bg: #ebf0e8;
-  --rt-note-warn-bg: #f6efdf;
-  --rt-note-warn-line: #c9a35a;
-  --rt-note-warn-ink: #7a5813;
-  --rt-note-err-bg: #f7e9e3;
-  --rt-scroll-track: #f6f4ef;
-  --rt-scroll-thumb: #d6d1c7;
-
-  --fc-font: var(--font-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --fc-mono: var(--font-mono), ui-monospace, Menlo, Consolas, monospace;
-  --fc-accent: #44618a;
-  --fc-accent-soft: #e6ebf2;
-  --fc-line: rgba(var(--rt-ink-rgb), 0.09);
-  --fc-line-strong: rgba(var(--rt-ink-rgb), 0.17);
-  --fc-track: rgba(var(--rt-ink-rgb), 0.08);
-  --fc-radius: 14px;
-  --fc-radius-sm: 10px;
-}
-
-:root[data-theme='dark']:has(.fc-page) {
-  --rt-paper: #131210;
-  --rt-panel: #1b1a17;
-  --rt-panel-2: #25231f;
-  --rt-ink: #ece7dd;
-  --rt-ink-rgb: 236, 231, 221;
-  --rt-ink-soft: #aba498;
-  --rt-ink-faint: #827c73;
-  --rt-rust: #e07b59;
-  --rt-teal: #8fb594;
-  --rt-gold: #d6a64c;
-  --rt-hl: #131210;
-  --rt-on-gold: #131210;
-  --rt-shadow: rgba(0, 0, 0, 0.35);
-  --rt-shadow-soft: rgba(0, 0, 0, 0.2);
-  --rt-inset: rgba(0, 0, 0, 0.25);
-  --rt-note-ok-bg: #1b2419;
-  --rt-note-warn-bg: #272114;
-  --rt-note-warn-line: #a8843d;
-  --rt-note-warn-ink: #e2bd70;
-  --rt-note-err-bg: #2b1a14;
-  --rt-scroll-track: #131210;
-  --rt-scroll-thumb: #34312b;
-
-  --fc-accent: #93b0d6;
-  --fc-accent-soft: #1f2733;
-}
-
-:root[data-theme='light'][data-eye='on']:has(.fc-page) {
-  /* Eye comfort (see retro.css): warm paper, brown ink, and a bronze accent
-     instead of the ink blue, which keeps the main action apart from the
-     olive "correct" without adding blue light. */
-  color-scheme: light;
-  --rt-paper: #f2e8d3;
-  --rt-panel: #f7eedb;
-  --rt-panel-2: #ece1c9;
-  --rt-ink: #3d352b;
-  --rt-ink-rgb: 61, 53, 43;
-  --rt-ink-soft: #605446;
-  --rt-ink-faint: #7a6d5c;
-  --rt-rust: #9e5034;
-  --rt-teal: #4a6a50;
-  --rt-gold: #a07a32;
-  --rt-hl: #f7eedb;
-  --rt-on-gold: #2f281f;
-  --rt-shadow: rgba(61, 53, 43, 0.08);
-  --rt-shadow-soft: rgba(61, 53, 43, 0.05);
-  --rt-inset: rgba(61, 53, 43, 0.04);
-  --rt-stripe: transparent;
-  --rt-note-ok-bg: #e4e7d4;
-  --rt-note-warn-bg: #efe2c3;
-  --rt-note-warn-line: #a8843d;
-  --rt-note-warn-ink: #6e5420;
-  --rt-note-err-bg: #f0dccd;
-  --rt-scroll-track: #f2e8d3;
-  --rt-scroll-thumb: #cdbfa5;
-
-  --fc-accent: #7f5a2c;
-  --fc-accent-soft: #eadbbd;
-}
-
-:root[data-theme='dark'][data-eye='on']:has(.fc-page) {
-  /* Eye comfort, night (see retro.css). */
-  color-scheme: dark;
-  --rt-paper: #17140f;
-  --rt-panel: #1f1b16;
-  --rt-panel-2: #28231c;
-  --rt-ink: #dccfb8;
-  --rt-ink-rgb: 220, 207, 184;
-  --rt-ink-soft: #a99c87;
-  --rt-ink-faint: #857a69;
-  --rt-rust: #d68a63;
-  --rt-teal: #9cb48e;
-  --rt-gold: #cfa555;
-  --rt-hl: #17140f;
-  --rt-on-gold: #17140f;
-  --rt-shadow: rgba(0, 0, 0, 0.35);
-  --rt-shadow-soft: rgba(0, 0, 0, 0.2);
-  --rt-inset: rgba(0, 0, 0, 0.25);
-  --rt-stripe: transparent;
-  --rt-note-ok-bg: #1d2319;
-  --rt-note-warn-bg: #282012;
-  --rt-note-warn-line: #a8843d;
-  --rt-note-warn-ink: #d9b469;
-  --rt-note-err-bg: #2a1b14;
-  --rt-scroll-track: #17140f;
-  --rt-scroll-thumb: #3a332a;
-
-  --fc-accent: #cf9d5c;
-  --fc-accent-soft: #2d2519;
-}
 
 /* ---------- app frame ---------- */
 /* The layout sets viewport-fit=cover, so on an iPhone the page paints under
@@ -223,21 +80,6 @@
   flex: 1;
 }
 /* The theme switch, reduced to a plain icon button. */
-.fc-bar .rt-theme {
-  border: none;
-  border-radius: 8px;
-  background: none;
-  color: var(--rt-ink-soft);
-  box-shadow: none;
-  padding: 8px;
-}
-.fc-bar .rt-theme:hover,
-.fc-bar .rt-theme:active {
-  background: var(--rt-panel-2);
-  color: var(--rt-ink);
-  transform: none;
-  box-shadow: none;
-}
 
 /* ---------- shared pieces, restyled ---------- */
 /* The retro sheet steps its sections in on load; here they are simply there. */
@@ -588,45 +430,6 @@
 }
 
 /* ---------- dashboard rows ---------- */
-.fc-page .rt-rows {
-  gap: 10px;
-}
-.fc-page .rt-row {
-  border: 1px solid var(--fc-line);
-  border-radius: var(--fc-radius);
-  box-shadow: 0 1px 2px var(--rt-shadow-soft);
-  padding: 14px 16px;
-  transition: border-color 0.15s ease;
-}
-.fc-page .rt-row:hover {
-  border-color: var(--fc-line-strong);
-}
-.fc-page .rt-row__sub {
-  margin-top: 1px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-.fc-page .rt-row__actions {
-  align-items: center;
-}
-.fc-row__main {
-  flex: 1 1 260px;
-  min-width: 0;
-}
-.rt-page.fc-page .fc-row__title {
-  border: none;
-  background: none;
-  color: var(--rt-ink);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-}
-.rt-page.fc-page .fc-row__title:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--fc-line-strong);
-  text-underline-offset: 3px;
-}
 .fc-row__desc {
   margin-top: 6px;
   font-size: 13.5px;
@@ -2072,20 +1875,6 @@
   font-weight: 600;
   box-shadow: 0 1px 3px var(--rt-shadow);
 }
-.fc-tab__count {
-  min-width: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: var(--fc-track);
-  font-size: 12px;
-  line-height: 18px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-.fc-tab.is-active .fc-tab__count {
-  background: var(--fc-accent-soft);
-  color: var(--fc-accent);
-}
 
 /* Sets and folders are rows: a badge on the left (the term count, or a
    folder), the name with room to wrap, a chevron. One column on a phone, two
@@ -2099,9 +1888,6 @@
   .fc-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-.fc-list + .fc-quota {
-  margin-top: 16px;
 }
 .fc-page .rt-label.fc-label-gap {
   margin-top: 22px;
@@ -2200,9 +1986,6 @@
   color: var(--rt-ink-faint);
   font-variant-numeric: tabular-nums;
 }
-.fc-row__meta > .fc-shared {
-  flex: none;
-}
 .fc-row__desc {
   flex: 1 1 0;
   display: inline-flex;
@@ -2215,33 +1998,6 @@
 }
 .fc-row__desc svg {
   flex: none;
-}
-.fc-shared,
-.fc-author {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-  color: var(--fc-accent);
-  font-weight: 500;
-}
-.fc-author {
-  color: var(--rt-ink-soft);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.fc-author__dot {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--fc-accent-soft);
-  color: var(--fc-accent);
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .fc-crumbs {
@@ -2298,42 +2054,6 @@
 }
 .fc-crumbs__spacer {
   flex: 1;
-}
-
-.fc-quota {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--rt-ink-soft);
-}
-.fc-quota__text {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 12px;
-}
-.fc-quota__bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--fc-track);
-  overflow: hidden;
-}
-.fc-quota__bar span {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--fc-accent);
-}
-.fc-quota__bar span.is-full {
-  background: var(--rt-rust);
-}
-
-.fc-libintro {
-  max-width: 62ch;
-  color: var(--rt-ink-soft);
-  font-size: 14px;
 }
 .fc-search {
   display: flex;

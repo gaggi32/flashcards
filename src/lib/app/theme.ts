@@ -1,6 +1,6 @@
 // Light / dark / system, plus eye comfort — the app's palettes, chosen in
 // Settings and shared by both windows. The CSS keys off data-theme and
-// data-eye on <html> (styles/retro.css).
+// data-eye on <html> (styles/tokens.css).
 //
 // The CSP allows no inline script, so there is no head script: main.tsx and
 // overlay.tsx call applyCachedTheme() before React renders, from a copy of the

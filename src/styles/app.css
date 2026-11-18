@@ -1,12 +1,5 @@
 /* Desktop-only pieces: fonts, the app bar, today's numbers, settings, dialogs. */
 
-:root {
-  /* The faces ship with the app (@fontsource). */
-  --font-mono: 'IBM Plex Mono';
-  --font-sans: 'IBM Plex Sans';
-  --font-pixel: 'Silkscreen';
-}
-
 /* A desktop window has no notch or thumb bar to pay back. */
 .rt-page.fc-page {
   padding-bottom: 40px;
@@ -261,11 +254,6 @@
 }
 .fc-page .rt-section + .rt-section {
   margin-top: 28px;
-}
-.set-round {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 /* Long prompts in Write and Learn step down like long flip cards do. */

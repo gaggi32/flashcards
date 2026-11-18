@@ -205,15 +205,6 @@ html.overlay body {
   background: var(--rt-panel);
   color: var(--rt-ink);
 }
-.ov__stats {
-  font-size: 12px;
-  color: var(--rt-ink-soft);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.ov__streak.is-lit {
-  color: var(--rt-rust);
-}
 .ov__spacer {
   flex: 1;
 }

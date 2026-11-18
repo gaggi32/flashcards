@@ -1,8 +1,6 @@
 
-/* The app runs on one palette in two settings — the retro paper light theme
-   and its night counterpart. Both are defined as tokens in retro.css, which
-   also owns `color-scheme`. This file only dresses the ground the pages sit on
-   and the chrome around them. */
+/* The ground the pages sit on and the chrome around them. Colours come from
+   tokens.css, which also owns `color-scheme`. */
 
 html,
 body {
