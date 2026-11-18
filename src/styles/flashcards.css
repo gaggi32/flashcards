@@ -1939,18 +1939,6 @@
   color: var(--fc-accent);
   line-height: 1;
 }
-.fc-row__count {
-  font-size: 16px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.fc-row__unit {
-  margin-top: 3px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.85;
-}
 /* A folder reads as a different kind of thing: outlined, not filled. */
 .fc-row--folder .fc-row__badge {
   background: none;
