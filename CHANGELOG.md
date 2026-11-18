@@ -2,6 +2,14 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.6.0] — 2026-11-18
+### Added
+- Test works with the keyboard alone: Tab reaches every answer (each true or false, option and matching letter), and Enter picks it and goes on to the next question. After the last one, Enter hands the test in.
+- "I was correct" in Write after an empty Enter or "don't know" too, and "I was right" in Test for a written answer left empty.
+### Fixed
+- The "Saved …" note after making a PDF sits inside the panel instead of beside it.
+- A PDF's file name keeps apostrophes and brackets from the set's title ("d'Internet" no longer becomes "dInternet").
+
 ## [1.5.0] — 2026-11-18
 ### Added
 - A hint in Write, as in Learn: it shows the first letter of each word. A card you answer right with the hint comes back in the next round, to answer without it.
