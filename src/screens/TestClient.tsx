@@ -720,7 +720,7 @@ function Written({
         <label htmlFor={inputId} className="rt-field__label">
           type the {SIDE[q.answerWith]}
         </label>
-        {focused && <SpecialKeys chars={chars} value={given} onChange={set} inputRef={inputRef} />}
+        {focused && <SpecialKeys chars={chars} value={given} onChange={set} inputRef={inputRef} tabbable={false} />}
         <input
           id={inputId}
           ref={inputRef}

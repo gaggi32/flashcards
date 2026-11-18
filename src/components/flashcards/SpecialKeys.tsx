@@ -24,17 +24,23 @@ const SHORTCUT_DIGITS = '1234567890';
  * buttons. It starts on, is kept with the settings (both windows share it),
  * and stays a switch rather than a fixture, because while it is on the input
  * cannot take a digit of its own.
+ *
+ * `tabbable={false}` keeps the buttons out of the Tab order (they still click,
+ * and the number keys still type them): Test shows them only while its answer
+ * box has focus, so tabbing onto one would make the row, and the focus, vanish.
  */
 export function SpecialKeys({
   chars,
   value,
   onChange,
   inputRef,
+  tabbable = true,
 }: {
   chars: string[];
   value: string;
   onChange: (value: string) => void;
   inputRef: RefObject<HTMLInputElement | null>;
+  tabbable?: boolean;
 }) {
   const [shortcuts, setShortcuts] = usePref('specialKeys');
 
@@ -88,6 +94,7 @@ export function SpecialKeys({
           key={char}
           type="button"
           className="fc-key"
+          tabIndex={tabbable ? undefined : -1}
           onMouseDown={keepFocus}
           onClick={() => insert(char)}
         >
@@ -104,6 +111,7 @@ export function SpecialKeys({
         type="button"
         className={`fc-key fc-key--setting${shortcuts ? ' is-on' : ''}`}
         aria-pressed={shortcuts}
+        tabIndex={tabbable ? undefined : -1}
         title={
           shortcuts
             ? 'Number keys type these characters. Turn off to type digits.'
