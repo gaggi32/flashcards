@@ -1,8 +1,10 @@
-// Test: the set as one paper. Pick how many questions and which kinds, answer
-// them in any order, hand it in, and see what was right, with every question
-// marked. A test in progress stays while the app runs (leave for another set
-// and come back to it), but it is not saved: a test is short, and one sat
-// again tomorrow should be new.
+// Test: the set as one paper. Pick how many questions and which kinds (they
+// come mixed, each labelled with its kind), answer them in any order, hand it
+// in, and see what was right, with every question marked. A test in progress
+// stays while the app runs (leave for another set and come back to it), but
+// it is not saved: a test is short, and one sat again tomorrow should be new.
+// Each window keeps its own: a test started in the overlay is not the main
+// window's.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
@@ -224,7 +226,7 @@ function Setup({ set, onStart }: { set: SetDTO; onStart: (o: TestOptions) => voi
       </fieldset>
 
       <p className="rt-small fc-setup__rules">
-        Answer in any order, then hand it in to see your score and every answer marked. Nothing is
+        The kinds come mixed. Answer in any order, then hand it in to see your score and every answer marked. Nothing is
         marked until then. A test is kept while Flashcards is open, not after.
       </p>
 
@@ -285,10 +287,6 @@ function Paper({
     number += pointsOf(q);
     return { q, first };
   });
-  const sections = TEST_KINDS.map((kind) => ({ kind, items: numbered.filter((x) => x.q.kind === kind) })).filter(
-    (s) => s.items.length > 0,
-  );
-
   return (
     <div className="fc-test" ref={top}>
       {result && (
@@ -306,31 +304,18 @@ function Paper({
         />
       )}
 
-      {sections.map((s) => (
-        <section key={s.kind} className="fc-test__section" aria-label={KIND_LABEL[s.kind]}>
-          <h2 className="fc-test__heading">
-            {KIND_LABEL[s.kind]}
-            <span className="fc-test__count">
-              {plural(
-                s.items.reduce((n, x) => n + pointsOf(x.q), 0),
-                'question',
-              )}
-            </span>
-          </h2>
-          {s.items.map(({ q, first }) => (
-            <QuestionCard
-              key={q.id}
-              q={q}
-              first={first}
-              total={total}
-              test={test}
-              byId={byId}
-              check={check}
-              allCards={set.cards}
-              onChange={onChange}
-            />
-          ))}
-        </section>
+      {numbered.map(({ q, first }) => (
+        <QuestionCard
+          key={q.id}
+          q={q}
+          first={first}
+          total={total}
+          test={test}
+          byId={byId}
+          check={check}
+          allCards={set.cards}
+          onChange={onChange}
+        />
       ))}
 
       {!done && (
@@ -387,6 +372,7 @@ function QuestionCard({
       <div className="fc-tq__head">
         <span className="fc-tq__num">
           {label} <span className="rt-ink-faint">of {total}</span>
+          <span className="fc-tq__kind">{KIND_LABEL[q.kind]}</span>
         </span>
         {marks && (
           <span className={`fc-tq__mark${allRight ? ' is-right' : ' is-wrong'}`}>

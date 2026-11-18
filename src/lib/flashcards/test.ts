@@ -1,5 +1,6 @@
 // Test: a whole set (or part of it) as one paper, answered in any order and
-// marked at the end. Four kinds of question, each in its own section:
+// marked at the end. Four kinds of question, mixed through the paper (each
+// kind spread evenly over it, never all of one kind and then the next):
 //
 //   true or false    a prompt and an answer: do they belong together?
 //   multiple choice  a prompt and four answers, one right
@@ -154,9 +155,23 @@ export function buildTest(
       }
     }
   }
-  // The sections in TEST_KINDS order, whatever a fallback changed.
-  questions.sort((a, b) => TEST_KINDS.indexOf(a.kind) - TEST_KINDS.indexOf(b.kind));
-  return { options: { ...options, count }, questions, answers: {}, startedAt: now, finishedAt: null, overridden: [] };
+  // Ids in paper order, so q1 is the first question.
+  const paper = mixKinds(questions, random).map((q, i) => ({ ...q, id: `q${i + 1}` }));
+  return { options: { ...options, count }, questions: paper, answers: {}, startedAt: now, finishedAt: null, overridden: [] };
+}
+
+/**
+ * The questions with the kinds mixed: each kind's questions spread evenly over
+ * the paper, each at a random place inside its share. Two kinds of the same
+ * size never run more than two of one kind in a row; a kind with more
+ * questions comes up more often, but still all through the paper.
+ */
+export function mixKinds(questions: readonly Question[], random: () => number = Math.random): Question[] {
+  const byKind = new Map<TestKind, Question[]>();
+  for (const q of questions) byKind.set(q.kind, [...(byKind.get(q.kind) ?? []), q]);
+  const keyed: { q: Question; key: number }[] = [];
+  for (const list of byKind.values()) list.forEach((q, i) => keyed.push({ q, key: (i + random()) / list.length }));
+  return keyed.sort((a, b) => a.key - b.key).map((x) => x.q);
 }
 
 /**

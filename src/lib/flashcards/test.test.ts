@@ -51,7 +51,7 @@ function answerAllRight(test: Test): Test {
 }
 
 describe('a test', () => {
-  it('splits the questions evenly over the kinds, sections in order', () => {
+  it('splits the questions evenly over the kinds', () => {
     expect([...splitCount(10, ['written', 'truefalse', 'choice', 'matching'])]).toEqual([
       ['truefalse', 3],
       ['choice', 3],
@@ -73,8 +73,31 @@ describe('a test', () => {
     expect(asked).toHaveLength(12);
     expect(new Set(asked).size).toBe(12);
     expect(progress(t)).toEqual({ answered: 0, total: 12 });
+  });
+
+  it('mixes the kinds through the paper instead of one section after another', () => {
+    const many: StudyCard[] = Array.from({ length: 40 }, (_, i) => ({ id: i + 1, term: `t${i + 1}`, definition: `d${i + 1}` }));
+    for (const seed of [1, 7, 42, 1234, 99999]) {
+      const t = buildTest(many, { count: 20, answerWith: 'term', kinds: ['written', 'choice'] }, seeded(seed), 0);
+      const kinds = t.questions.map((q) => q.kind);
+      expect(kinds.filter((k) => k === 'written')).toHaveLength(10);
+      // Never more than two of a kind in a row, so never all of one kind first.
+      let run = 1;
+      for (let i = 1; i < kinds.length; i++) {
+        run = kinds[i] === kinds[i - 1] ? run + 1 : 1;
+        expect(run).toBeLessThanOrEqual(2);
+      }
+      // Each half of the paper has some of each.
+      expect(new Set(kinds.slice(0, 10)).size).toBe(2);
+      expect(new Set(kinds.slice(10)).size).toBe(2);
+      // Ids run in paper order.
+      expect(t.questions.map((q) => q.id)).toEqual(kinds.map((_, i) => `q${i + 1}`));
+    }
+    // All four kinds: none of them sits in one block.
+    const t = build();
     const kinds = t.questions.map((q) => q.kind);
-    expect(kinds).toEqual([...kinds].sort((a, b) => ['truefalse', 'choice', 'matching', 'written'].indexOf(a) - ['truefalse', 'choice', 'matching', 'written'].indexOf(b)));
+    const sorted = [...kinds].sort();
+    expect(kinds).not.toEqual(sorted);
   });
 
   it('never asks more than the set has', () => {
