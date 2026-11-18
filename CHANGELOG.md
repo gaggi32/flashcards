@@ -2,6 +2,10 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.6.1] — 2026-11-18
+### Fixed
+- In a test, Shift+Tab out of a written answer goes back to the previous question again, instead of losing its place and jumping to "hand in". The character buttons above the answer box (é, ñ …) are no longer Tab stops; click them or use the number keys.
+
 ## [1.6.0] — 2026-11-18
 ### Added
 - Test works with the keyboard alone: Tab reaches every answer (each true or false, option and matching letter), and Enter picks it and goes on to the next question. After the last one, Enter goes on to "hand in".
