@@ -376,6 +376,16 @@ describe('switching sides mid-round', () => {
   });
 });
 
+describe('"I was correct"', () => {
+  it('also counts after a "don\'t know" (an empty Enter by mistake)', () => {
+    const missed = dontKnow(start());
+    const overruled = overrideCorrect(missed);
+    expect(overruled.step).toEqual({ kind: 'correct', given: '', overridden: true });
+    expect(overruled.missed).toEqual([]);
+    expect(overruled.credits[1]).toBe(2);
+  });
+});
+
 describe('the hint', () => {
   it('shows only while a card is asked, once', () => {
     const hinted = showHint(start());

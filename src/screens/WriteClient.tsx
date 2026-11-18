@@ -488,17 +488,15 @@ function Play({
               ) : expected}
             </span>
           </div>
-          {step.given !== null && (
-            <div className="rt-btnrow">
-              <button
-                type="button"
-                className="rt-btn rt-btn--sm"
-                onClick={() => setSession(overrideCorrect(session))}
-              >
-                I was correct
-              </button>
-            </div>
-          )}
+          <div className="rt-btnrow">
+            <button
+              type="button"
+              className="rt-btn rt-btn--sm"
+              onClick={() => setSession(overrideCorrect(session))}
+            >
+              I was correct
+            </button>
+          </div>
         </div>
       )}
 

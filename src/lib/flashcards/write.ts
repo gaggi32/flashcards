@@ -388,12 +388,15 @@ function miss(session: WriteSession, card: StudyCard, given: string | null, hint
   };
 }
 
-/** "I was correct": only for a typed answer — there is nothing to overrule in "don't know". */
+/**
+ * "I was correct": a typed answer the check did not take (a typo, a synonym),
+ * or an empty Enter / "don't know" that was a slip of the finger.
+ */
 export function overrideCorrect(session: WriteSession): WriteSession {
   const card = currentCard(session);
   const { step } = session;
-  if (!card || step.kind !== 'reveal' || step.given === null) return session;
-  return right(session, card, step.given, true, step.hinted === true);
+  if (!card || step.kind !== 'reveal') return session;
+  return right(session, card, step.given ?? '', true, step.hinted === true);
 }
 
 /**
