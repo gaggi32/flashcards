@@ -2,6 +2,11 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.5.0] — 2026-11-18
+### Added
+- A hint in Write, as in Learn: it shows the first letter of each word. A card you answer right with the hint comes back in the next round, to answer without it.
+- Save a test as a PDF to print: "Save as PDF" on the Test start screen makes a new test with your settings, and "PDF" on a test in progress saves its questions, blank. An answer key on the last page is optional. On a Mac it opens the print panel, which saves as PDF.
+
 ## [1.4.1] — 2026-11-18
 ### Fixed
 - Dragging a set onto a folder (or out of a folder onto "My sets") files it again. Since 1.2.0 the drop did nothing.
