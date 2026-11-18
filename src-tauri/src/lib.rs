@@ -481,6 +481,100 @@ async fn export_file(
     Ok(Some(path.display().to_string()))
 }
 
+/// A PDF's file name from what the page suggests: safe characters, `.pdf`.
+#[cfg_attr(not(windows), allow(dead_code))]
+fn pdf_file_name(suggested: &str) -> String {
+    let stem: String = suggested
+        .trim_end_matches(".pdf")
+        .chars()
+        .filter(|c| c.is_alphanumeric() || "-_ ".contains(*c))
+        .take(80)
+        .collect();
+    let stem = stem.trim();
+    format!("{}.pdf", if stem.is_empty() { "test" } else { stem })
+}
+
+/// The page as it prints (its `@media print` styles), as a PDF.
+///
+/// Windows: the user picks where in a native save dialog, and WebView2 writes
+/// the PDF there (A4, no header or footer). Resolves to the path, or None when
+/// the dialog was cancelled. macOS: WKWebView has no direct PDF here, so the
+/// system print panel opens, which has its own "Save as PDF"; resolves to None.
+#[tauri::command]
+async fn save_pdf(app: AppHandle, window: WebviewWindow, suggested_name: String) -> Result<Option<String>, String> {
+    main_only(&window)?;
+    #[cfg(windows)]
+    {
+        let picked = app
+            .dialog()
+            .file()
+            .add_filter("PDF", &["pdf"])
+            .set_file_name(pdf_file_name(&suggested_name))
+            .blocking_save_file();
+        let Some(path) = picked else { return Ok(None) };
+        let path = path.into_path().map_err(|e| e.to_string())?;
+        let rx = print_to_pdf(&window, &path)?;
+        tauri::async_runtime::spawn_blocking(move || rx.recv_timeout(Duration::from_secs(60)))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|_| "The PDF took too long.".to_string())??;
+        Ok(Some(path.display().to_string()))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (app, suggested_name);
+        window.print().map_err(|e| e.to_string())?;
+        Ok(None)
+    }
+}
+
+/// Starts WebView2's PrintToPdf on the window's page; the receiver gets the outcome.
+#[cfg(windows)]
+fn print_to_pdf(
+    window: &WebviewWindow,
+    path: &std::path::Path,
+) -> Result<std::sync::mpsc::Receiver<Result<(), String>>, String> {
+    use webview2_com::Microsoft::Web::WebView2::Win32::{ICoreWebView2Environment6, ICoreWebView2_7};
+    use webview2_com::PrintToPdfCompletedHandler;
+    use windows_core::{Interface, HSTRING};
+
+    let (tx, rx) = std::sync::mpsc::channel::<Result<(), String>>();
+    let target = HSTRING::from(path.as_os_str());
+    window
+        .with_webview(move |webview| {
+            let done = tx.clone();
+            let start = move || -> windows_core::Result<()> {
+                unsafe {
+                    let core = webview.controller().CoreWebView2()?.cast::<ICoreWebView2_7>()?;
+                    let settings = webview.environment().cast::<ICoreWebView2Environment6>()?.CreatePrintSettings()?;
+                    // A4 in inches, 15 mm margins; the page's own title and URL stay off it.
+                    settings.SetPageWidth(8.27)?;
+                    settings.SetPageHeight(11.69)?;
+                    settings.SetMarginTop(0.59)?;
+                    settings.SetMarginBottom(0.59)?;
+                    settings.SetMarginLeft(0.59)?;
+                    settings.SetMarginRight(0.59)?;
+                    settings.SetShouldPrintHeaderAndFooter(false)?;
+                    settings.SetShouldPrintBackgrounds(true)?;
+                    let handler = PrintToPdfCompletedHandler::create(Box::new(move |result, ok: bool| {
+                        let _ = done.send(match result {
+                            Err(e) => Err(e.message()),
+                            Ok(()) if ok => Ok(()),
+                            Ok(()) => Err("The PDF could not be written there.".into()),
+                        });
+                        Ok(())
+                    }));
+                    core.PrintToPdf(&target, &settings, &handler)
+                }
+            };
+            if let Err(e) = start() {
+                let _ = tx.send(Err(e.message()));
+            }
+        })
+        .map_err(|e| e.to_string())?;
+    Ok(rx)
+}
+
 /// A set's file name for dragging out: what the page suggests, kept to safe
 /// characters, always ending in `.json`.
 fn drag_file_name(suggested: &str) -> String {
@@ -1125,6 +1219,7 @@ pub fn run() {
             db_batch,
             backup_now,
             export_file,
+            save_pdf,
             import_file,
             drag_set_out,
             open_data_folder,
@@ -1276,6 +1371,15 @@ mod tests {
         assert_eq!(drag_file_name(""), "set.json");
         assert_eq!(drag_file_name("..."), "set.json");
         assert_eq!(drag_file_name(&"a".repeat(200)).len(), 85);
+    }
+
+    #[test]
+    fn a_test_pdf_gets_a_safe_name() {
+        assert_eq!(pdf_file_name("Französisch Unit 3 - test.pdf"), "Französisch Unit 3 - test.pdf");
+        assert_eq!(pdf_file_name(r"../../evil\x"), "evilx.pdf");
+        assert_eq!(pdf_file_name("a:b*c?"), "abc.pdf");
+        assert_eq!(pdf_file_name("  "), "test.pdf");
+        assert_eq!(pdf_file_name(&"a".repeat(200)).len(), 84);
     }
 
     #[test]

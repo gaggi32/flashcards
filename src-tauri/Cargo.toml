@@ -37,6 +37,9 @@ drag = "2.1.1"
 [target.'cfg(windows)'.dependencies]
 # Reads the login item, to tell "turned off in Task Manager" from "deleted".
 windows-registry = "0.6"
+# A test as a PDF (save_pdf in lib.rs): WebView2's PrintToPdf. Same versions as wry's.
+webview2-com = "0.39"
+windows-core = "0.62"
 
 [profile.release]
 codegen-units = 1

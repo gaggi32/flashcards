@@ -127,3 +127,9 @@ export function stampNow(d = new Date()): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
+
+/**
+ * The page as it prints, as a PDF. Windows: a save dialog, then the path (null
+ * when cancelled). macOS: the print panel opens (it has "Save as PDF"); null.
+ */
+export const savePdf = (suggestedName: string) => call<string | null>('save_pdf', { suggestedName });

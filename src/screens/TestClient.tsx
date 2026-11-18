@@ -14,6 +14,7 @@ import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { IconCheck, IconClose } from '@/components/flashcards/FlashcardIcons';
 import { ResetButton } from '@/components/flashcards/ResetButton';
 import { SpecialKeys } from '@/components/flashcards/SpecialKeys';
+import { PDF_LABEL, useTestPdf } from '@/components/flashcards/TestPrint';
 import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { useSettings } from '@/lib/app/settings';
@@ -22,16 +23,18 @@ import { plural } from '@/lib/flashcards/format';
 import { specialCharsOf } from '@/lib/flashcards/specialChars';
 import {
   KIND_LABEL,
+  LETTERS,
   TEST_KINDS,
   answer,
   answeredPoints,
   buildTest,
   finish,
+  isTruthful,
   kindsFor,
   markQuestion,
   matchPair,
+  numbered as numberQuestions,
   overrideWritten,
-  pointsOf,
   progress,
   reconcile,
   score,
@@ -48,9 +51,10 @@ import { answerOf, normalizeAnswer, promptOf, type AnswerCheck, type AnswerWith,
 /** Tests in progress (and the last options), per set, for as long as the app runs. */
 const papers = new Map<number, Test>();
 const lastOptions = new Map<number, TestOptions>();
+/** Whether a PDF gets the answer key on its last page; kept while the app runs. */
+let pdfWithKey = true;
 
 const DEFAULT_COUNT = 20;
-const LETTERS = 'ABCDEFGHIJ';
 const SIDE: Record<AnswerWith, string> = { term: 'term', definition: 'definition' };
 const other = (s: AnswerWith): AnswerWith => (s === 'term' ? 'definition' : 'term');
 
@@ -102,27 +106,67 @@ function TestMode({ set }: { set: SetDTO }) {
     window.scrollTo({ top: 0 });
   }
 
+  const pdf = useTestPdf(set.title, set.cards);
+  const pdfNote = pdf.note && (
+    <div className={`rt-note fc-test__pdfnote${pdf.note.ok ? '' : ' rt-note--err'}`} role="status">
+      {pdf.note.text}
+    </div>
+  );
+
   if (!test) {
-    return <Setup set={set} onStart={start} />;
+    return (
+      <>
+        <Setup
+          set={set}
+          onStart={start}
+          pdfBusy={pdf.busy}
+          onPdf={(options, withKey) => {
+            lastOptions.set(set.id, options);
+            pdfWithKey = withKey;
+            pdf.save(buildTest(set.cards, options), withKey);
+          }}
+        />
+        {pdfNote}
+        {pdf.sheet}
+      </>
+    );
   }
   return (
-    <Paper
-      key={test.startedAt}
-      set={set}
-      test={test}
-      check={check}
-      onChange={setTest}
-      onNew={() => start(test.options)}
-      onMissed={(ids) => start({ ...test.options, count: ids.length }, set.cards.filter((c) => ids.includes(c.id)))}
-      onSettings={() => setTest(null)}
-    />
+    <>
+      <Paper
+        key={test.startedAt}
+        set={set}
+        test={test}
+        check={check}
+        onChange={setTest}
+        onNew={() => start(test.options)}
+        onMissed={(ids) => start({ ...test.options, count: ids.length }, set.cards.filter((c) => ids.includes(c.id)))}
+        onSettings={() => setTest(null)}
+        pdfBusy={pdf.busy}
+        onPdf={() => pdf.save(test, pdfWithKey)}
+      />
+      {pdfNote}
+      {pdf.sheet}
+    </>
   );
 }
 
 // --- setup ---
 
-function Setup({ set, onStart }: { set: SetDTO; onStart: (o: TestOptions) => void }) {
+function Setup({
+  set,
+  onStart,
+  pdfBusy,
+  onPdf,
+}: {
+  set: SetDTO;
+  onStart: (o: TestOptions) => void;
+  pdfBusy: boolean;
+  /** A new test with these options, straight to a PDF instead of the screen. */
+  onPdf: (o: TestOptions, withKey: boolean) => void;
+}) {
   const uid = useId();
+  const [withKey, setWithKey] = useState(pdfWithKey);
   const total = set.cards.length;
   const can = useMemo(() => kindsFor(set.cards), [set.cards]);
   const before = lastOptions.get(set.id);
@@ -230,6 +274,22 @@ function Setup({ set, onStart }: { set: SetDTO; onStart: (o: TestOptions) => voi
         marked until then. A test is kept while Flashcards is open, not after.
       </p>
 
+      <div className="fc-test__pdfrow">
+        <button
+          type="button"
+          className="rt-btn"
+          disabled={kinds.length === 0 || pdfBusy}
+          title="The same kind of test, on paper: a new set of questions as a PDF to print"
+          onClick={() => onPdf({ count: n, answerWith, kinds }, withKey)}
+        >
+          {pdfBusy ? 'making the PDF…' : PDF_LABEL}
+        </button>
+        <label className="fc-check">
+          <input type="checkbox" checked={withKey} onChange={(e) => setWithKey(e.target.checked)} />
+          Answer key on the last page
+        </label>
+      </div>
+
       <div className="rt-btnrow">
         <button type="submit" className="rt-btn rt-btn--primary" disabled={kinds.length === 0} autoFocus>
           start test · {plural(n, 'question')}
@@ -250,6 +310,8 @@ function Paper({
   onNew,
   onMissed,
   onSettings,
+  pdfBusy,
+  onPdf,
 }: {
   set: SetDTO;
   test: Test;
@@ -258,6 +320,9 @@ function Paper({
   onNew: () => void;
   onMissed: (cardIds: number[]) => void;
   onSettings: () => void;
+  pdfBusy: boolean;
+  /** This paper's questions as a PDF (blank, as handed out). */
+  onPdf: () => void;
 }) {
   const byId = useMemo(() => new Map(set.cards.map((c) => [c.id, c])), [set.cards]);
   const done = test.finishedAt !== null;
@@ -280,13 +345,7 @@ function Paper({
     requestAnimationFrame(() => top.current?.scrollIntoView({ block: 'start' }));
   }
 
-  // Question numbers run through the paper; a matching block takes one per prompt.
-  let number = 0;
-  const numbered = test.questions.map((q) => {
-    const first = number + 1;
-    number += pointsOf(q);
-    return { q, first };
-  });
+  const numbered = numberQuestions(test);
   return (
     <div className="fc-test" ref={top}>
       {result && (
@@ -331,6 +390,15 @@ function Paper({
             title="Back to the start screen: this test and its answers are thrown away"
             onReset={onSettings}
           />
+          <button
+            type="button"
+            className="rt-btn fc-test__pdf"
+            disabled={pdfBusy}
+            title="These questions on paper, blank, as a PDF to print"
+            onClick={onPdf}
+          >
+            {pdfBusy ? 'PDF…' : 'PDF'}
+          </button>
           <button type="button" className="rt-btn rt-btn--primary" onClick={() => void handIn()}>
             hand in
           </button>
@@ -417,9 +485,7 @@ function TrueFalse({
   if (!card || !shown) return null;
   const given = test.answers[q.id];
   const done = test.finishedAt !== null;
-  // True when the shown answer is the card's own (or reads the same).
-  const truthful =
-    q.shownId === q.cardId || normalizeAnswer(answerOf(shown, q.answerWith)) === normalizeAnswer(answerOf(card, q.answerWith));
+  const truthful = isTruthful(q, byId);
   return (
     <>
       <div className="fc-tq__pair">

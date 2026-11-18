@@ -28,6 +28,9 @@ export const KIND_LABEL: Record<TestKind, string> = {
   written: 'written',
 };
 
+/** The letters of multiple-choice options and matching answers. */
+export const LETTERS = 'ABCDEFGHIJ';
+
 /** Prompts per matching block. */
 export const MATCH_GROUP = 5;
 export const CHOICE_OPTIONS = 4;
@@ -232,6 +235,54 @@ function otherAnswer(
 /** Points a question is worth: one, or one per matching prompt. */
 export const pointsOf = (q: Question) => (q.kind === 'matching' ? q.cardIds.length : 1);
 
+/** Each question with its first number: numbers run through the paper, a matching block taking one per prompt. */
+export function numbered(test: Test): { q: Question; first: number }[] {
+  let number = 0;
+  return test.questions.map((q) => {
+    const first = number + 1;
+    number += pointsOf(q);
+    return { q, first };
+  });
+}
+
+/** Whether a true-or-false statement is true: the shown answer is the card's own, or reads the same. */
+export function isTruthful(q: Extract<Question, { kind: 'truefalse' }>, byId: ReadonlyMap<number, StudyCard>): boolean {
+  const card = byId.get(q.cardId);
+  const shown = byId.get(q.shownId);
+  return (
+    q.shownId === q.cardId ||
+    (!!card && !!shown && normalizeAnswer(answerOf(shown, q.answerWith)) === normalizeAnswer(answerOf(card, q.answerWith)))
+  );
+}
+
+/** The answer key for a question: one line per point, numbered as on the paper. */
+export function keyLines(
+  q: Question,
+  first: number,
+  byId: ReadonlyMap<number, StudyCard>,
+): { number: number; text: string }[] {
+  if (q.kind === 'matching') {
+    return q.cardIds.map((id, row) => {
+      const card = byId.get(id);
+      const letter = LETTERS[q.answers.indexOf(id)] ?? '?';
+      return { number: first + row, text: card ? `${letter} · ${answerOf(card, q.answerWith)}` : letter };
+    });
+  }
+  const card = byId.get(q.cardId);
+  const answerText = card ? answerOf(card, q.answerWith) : '';
+  if (q.kind === 'truefalse') {
+    return [{ number: first, text: isTruthful(q, byId) ? 'true' : `false · ${answerText}` }];
+  }
+  if (q.kind === 'choice') {
+    const right = q.options.findIndex((id) => {
+      const option = byId.get(id);
+      return id === q.cardId || (!!option && normalizeAnswer(answerOf(option, q.answerWith)) === normalizeAnswer(answerText));
+    });
+    return [{ number: first, text: `${LETTERS[right] ?? '?'} · ${answerText}` }];
+  }
+  return [{ number: first, text: answerText }];
+}
+
 /** Whether a question (or each prompt of a matching block) has been answered. */
 export function answeredPoints(test: Test, q: Question): number {
   const a = test.answers[q.id];
@@ -313,11 +364,7 @@ export function markQuestion(
       a === card.id ||
       (!!picked && normalizeAnswer(answerOf(picked, q.answerWith)) === normalizeAnswer(answerOf(card, q.answerWith)));
   } else {
-    const shown = byId.get(q.shownId);
-    const truthful =
-      q.shownId === card.id ||
-      (!!shown && normalizeAnswer(answerOf(shown, q.answerWith)) === normalizeAnswer(answerOf(card, q.answerWith)));
-    right = a === truthful;
+    right = a === isTruthful(q, byId);
   }
   return [{ cardId: q.cardId, right, answered }];
 }

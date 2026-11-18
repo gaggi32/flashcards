@@ -4,8 +4,11 @@ import {
   answer,
   buildTest,
   finish,
+  keyLines,
   kindsFor,
+  LETTERS,
   matchPair,
+  numbered,
   overrideWritten,
   progress,
   reconcile,
@@ -171,5 +174,38 @@ describe('a test', () => {
     expect(r.questions.some((q) => q.kind !== 'matching' && q.cardId === gone)).toBe(false);
     expect(reconcile(t, cards)).toBe(t);
     expect(reconcile(t, [])).toBeNull();
+  });
+});
+
+describe('the paper as a PDF', () => {
+  const byId = new Map(cards.map((c) => [c.id, c]));
+
+  it('numbers the questions through the paper, a matching block one per prompt', () => {
+    const t = build();
+    const list = numbered(t);
+    expect(list[0].first).toBe(1);
+    for (let i = 1; i < list.length; i++) {
+      const before = list[i - 1].q;
+      expect(list[i].first).toBe(list[i - 1].first + (before.kind === 'matching' ? before.cardIds.length : 1));
+    }
+  });
+
+  it('keys every point with the answer that marks it right', () => {
+    const t = build();
+    const lines = numbered(t).flatMap(({ q, first }) => keyLines(q, first, byId));
+    expect(lines.map((l) => l.number)).toEqual(Array.from({ length: 12 }, (_, i) => i + 1));
+    for (const { q, first } of numbered(t)) {
+      const [line] = keyLines(q, first, byId);
+      if (q.kind === 'truefalse') {
+        expect(line.text).toBe(q.shownId === q.cardId ? 'true' : `false · ${byId.get(q.cardId)!.definition}`);
+      } else if (q.kind === 'choice') {
+        expect(line.text).toBe(`${LETTERS[q.options.indexOf(q.cardId)]} · ${byId.get(q.cardId)!.definition}`);
+      } else if (q.kind === 'matching') {
+        const id = q.cardIds[0];
+        expect(line.text).toBe(`${LETTERS[q.answers.indexOf(id)]} · ${byId.get(id)!.definition}`);
+      } else {
+        expect(line.text).toBe(byId.get(q.cardId)!.definition);
+      }
+    }
   });
 });

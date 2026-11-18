@@ -2947,3 +2947,200 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* --- Test as a PDF (TestPrint.tsx) ---------------------------------------- */
+
+.fc-test__pdfrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+.fc-test__pdfnote {
+  margin-top: 10px;
+}
+
+/* The sheet is only for print; on screen it is not there at all. */
+.fc-print {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  body > *:not(.fc-print) {
+    display: none !important;
+  }
+  .fc-print {
+    display: block;
+    font-family: var(--font-sans), 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.4;
+    color: #000;
+  }
+  .fc-print__head {
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 8pt;
+    margin-bottom: 14pt;
+  }
+  .fc-print__title {
+    margin: 0;
+    font-size: 17pt;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .fc-print__meta {
+    margin-top: 2pt;
+    color: #555;
+  }
+  .fc-print__fields {
+    display: flex;
+    gap: 18pt;
+    margin-top: 12pt;
+  }
+  .fc-print__fields > span {
+    flex: 1;
+    border-bottom: 0.75pt solid #000;
+    padding-bottom: 2pt;
+    color: #555;
+    font-size: 9pt;
+  }
+  .fc-print__fields > span:last-child {
+    flex: 0 0 auto;
+    min-width: 90pt;
+  }
+
+  .fc-pq {
+    break-inside: avoid;
+    padding: 8pt 0 10pt;
+    border-bottom: 0.5pt solid #ccc;
+  }
+  .fc-pq__head {
+    display: flex;
+    align-items: baseline;
+    gap: 8pt;
+    margin-bottom: 5pt;
+  }
+  .fc-pq__num {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .fc-pq__kind {
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #555;
+  }
+  .fc-pq__task {
+    margin-left: auto;
+    font-size: 8.5pt;
+    color: #555;
+  }
+  .fc-pq__prompt {
+    margin: 2pt 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .fc-pq__side {
+    display: inline-block;
+    min-width: 62pt;
+    font-size: 8pt;
+    color: #555;
+  }
+  .fc-pq__line {
+    height: 22pt;
+    margin-left: 62pt;
+    border-bottom: 0.75pt solid #000;
+  }
+  .fc-pq__ticks {
+    display: flex;
+    gap: 24pt;
+    margin: 6pt 0 0 62pt;
+  }
+  .fc-pq__box {
+    display: inline-block;
+    width: 9pt;
+    height: 9pt;
+    border: 0.75pt solid #000;
+    border-radius: 1.5pt;
+    vertical-align: -1pt;
+    margin-right: 5pt;
+  }
+  .fc-pq__choices,
+  .fc-pq__rows,
+  .fc-pq__options,
+  .fc-print__keylist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .fc-pq__choices {
+    margin: 4pt 0 0 62pt;
+    display: grid;
+    gap: 3pt;
+  }
+  .fc-pq__choices li,
+  .fc-pq__options li {
+    overflow-wrap: anywhere;
+  }
+  .fc-pq__letter {
+    display: inline-block;
+    width: 13pt;
+    font-weight: 600;
+  }
+  .fc-pq__match {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14pt;
+  }
+  .fc-pq__rows {
+    display: grid;
+    gap: 7pt;
+  }
+  .fc-pq__rows li {
+    overflow-wrap: anywhere;
+  }
+  .fc-pq__options {
+    display: grid;
+    gap: 5pt;
+    padding-left: 10pt;
+    border-left: 0.75pt solid #ccc;
+  }
+  .fc-pq__blank {
+    display: inline-block;
+    width: 22pt;
+    border-bottom: 0.75pt solid #000;
+    margin-right: 7pt;
+    vertical-align: -2pt;
+  }
+  .fc-print__num {
+    display: inline-block;
+    min-width: 20pt;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fc-print__key {
+    break-before: page;
+  }
+  .fc-print__keytitle {
+    margin: 0 0 10pt;
+    font-size: 13pt;
+    font-weight: 600;
+    border-bottom: 1.5pt solid #000;
+    padding-bottom: 6pt;
+  }
+  .fc-print__keylist {
+    columns: 2;
+    column-gap: 24pt;
+  }
+  .fc-print__keylist li {
+    break-inside: avoid;
+    padding: 1.5pt 0;
+    overflow-wrap: anywhere;
+  }
+}

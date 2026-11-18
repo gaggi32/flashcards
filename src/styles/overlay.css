@@ -635,3 +635,10 @@ html.overlay body {
 .ov__embed .fc-verdict ~ * .rt-field__label {
   display: none;
 }
+
+/* A PDF is made from the main window only (save_pdf refuses the overlay). */
+.ov__embed .fc-test__pdfrow,
+.ov__embed .fc-test__pdf,
+.ov__embed .fc-test__pdfnote {
+  display: none;
+}
