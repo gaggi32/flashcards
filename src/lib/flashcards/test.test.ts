@@ -177,6 +177,17 @@ describe('a test', () => {
   });
 });
 
+describe('a written question left empty', () => {
+  it('can still be counted as right', () => {
+    const t = build({ kinds: ['written'], count: 2 });
+    const [q] = t.questions;
+    const handedIn = finish(t);
+    expect(score(handedIn, cards, 'exact').right).toBe(0);
+    const marked = overrideWritten(handedIn, q.id);
+    expect(score(marked, cards, 'exact')).toMatchObject({ right: 1, total: 2 });
+  });
+});
+
 describe('the paper as a PDF', () => {
   const byId = new Map(cards.map((c) => [c.id, c]));
 

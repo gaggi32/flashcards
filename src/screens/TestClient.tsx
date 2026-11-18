@@ -125,8 +125,8 @@ function TestMode({ set }: { set: SetDTO }) {
             pdfWithKey = withKey;
             pdf.save(buildTest(set.cards, options), withKey);
           }}
+          pdfNote={pdfNote}
         />
-        {pdfNote}
         {pdf.sheet}
       </>
     );
@@ -144,8 +144,8 @@ function TestMode({ set }: { set: SetDTO }) {
         onSettings={() => setTest(null)}
         pdfBusy={pdf.busy}
         onPdf={() => pdf.save(test, pdfWithKey)}
+        pdfNote={pdfNote}
       />
-      {pdfNote}
       {pdf.sheet}
     </>
   );
@@ -158,12 +158,15 @@ function Setup({
   onStart,
   pdfBusy,
   onPdf,
+  pdfNote,
 }: {
   set: SetDTO;
   onStart: (o: TestOptions) => void;
   pdfBusy: boolean;
   /** A new test with these options, straight to a PDF instead of the screen. */
   onPdf: (o: TestOptions, withKey: boolean) => void;
+  /** Where the last PDF went, or what went wrong. */
+  pdfNote: React.ReactNode;
 }) {
   const uid = useId();
   const [withKey, setWithKey] = useState(pdfWithKey);
@@ -289,6 +292,7 @@ function Setup({
           Answer key on the last page
         </label>
       </div>
+      {pdfNote}
 
       <div className="rt-btnrow">
         <button type="submit" className="rt-btn rt-btn--primary" disabled={kinds.length === 0} autoFocus>
@@ -312,6 +316,7 @@ function Paper({
   onSettings,
   pdfBusy,
   onPdf,
+  pdfNote,
 }: {
   set: SetDTO;
   test: Test;
@@ -323,6 +328,7 @@ function Paper({
   pdfBusy: boolean;
   /** This paper's questions as a PDF (blank, as handed out). */
   onPdf: () => void;
+  pdfNote: React.ReactNode;
 }) {
   const byId = useMemo(() => new Map(set.cards.map((c) => [c.id, c])), [set.cards]);
   const done = test.finishedAt !== null;
@@ -377,6 +383,7 @@ function Paper({
         />
       ))}
 
+      {!done && pdfNote}
       {!done && (
         <div className="fc-test__bar">
           <span className="fc-test__answered">
@@ -399,7 +406,7 @@ function Paper({
           >
             {pdfBusy ? 'PDF…' : 'PDF'}
           </button>
-          <button type="button" className="rt-btn rt-btn--primary" onClick={() => void handIn()}>
+          <button type="button" className="rt-btn rt-btn--primary fc-test__handin" onClick={() => void handIn()}>
             hand in
           </button>
         </div>
@@ -479,7 +486,6 @@ function TrueFalse({
   byId: ReadonlyMap<number, StudyCard>;
   onChange: (t: Test) => void;
 }) {
-  const uid = useId();
   const card = byId.get(q.cardId);
   const shown = byId.get(q.shownId);
   if (!card || !shown) return null;
@@ -492,7 +498,7 @@ function TrueFalse({
         <Prompt side={SIDE[other(q.answerWith)]} text={promptOf(card, q.answerWith)} />
         <Prompt side={SIDE[q.answerWith]} text={answerOf(shown, q.answerWith)} />
       </div>
-      <div className="fc-tq__choices fc-tq__choices--two" role="radiogroup" aria-label="True or false">
+      <div className="fc-tq__choices fc-tq__choices--two" role="radiogroup" aria-label="True or false" data-stop>
         {[true, false].map((v) => {
           let cls = given === v ? ' is-picked' : '';
           if (done) cls = v === truthful ? ' is-correct' : given === v ? ' is-wrong' : ' is-dim';
@@ -500,11 +506,11 @@ function TrueFalse({
             <label key={String(v)} className={`fc-choice${cls}`}>
               <input
                 type="radio"
-                name={`${uid}-tf`}
                 className="fc-option__input"
                 checked={given === v}
                 disabled={done}
                 onChange={() => onChange(answer(test, q.id, v))}
+                onKeyDown={(e) => pickAndGoOn(e, () => onChange(answer(test, q.id, v)))}
               />
               <span className="fc-choice__text">{v ? 'True' : 'False'}</span>
             </label>
@@ -531,7 +537,6 @@ function Choice({
   byId: ReadonlyMap<number, StudyCard>;
   onChange: (t: Test) => void;
 }) {
-  const uid = useId();
   const card = byId.get(q.cardId);
   if (!card) return null;
   const given = test.answers[q.id];
@@ -540,7 +545,7 @@ function Choice({
   return (
     <>
       <Prompt side={SIDE[other(q.answerWith)]} text={promptOf(card, q.answerWith)} />
-      <div className="fc-tq__choices" role="radiogroup" aria-label={`Pick the ${SIDE[q.answerWith]}`}>
+      <div className="fc-tq__choices" role="radiogroup" aria-label={`Pick the ${SIDE[q.answerWith]}`} data-stop>
         {q.options.map((id, i) => {
           const option = byId.get(id);
           if (!option) return null;
@@ -551,11 +556,11 @@ function Choice({
             <label key={id} className={`fc-choice${cls}`}>
               <input
                 type="radio"
-                name={`${uid}-choice`}
                 className="fc-option__input"
                 checked={given === id}
                 disabled={done}
                 onChange={() => onChange(answer(test, q.id, id))}
+                onKeyDown={(e) => pickAndGoOn(e, () => onChange(answer(test, q.id, id)))}
               />
               <span className="fc-choice__key" aria-hidden="true">
                 {LETTERS[i]}
@@ -582,7 +587,6 @@ function Matching({
   marks: Mark[] | null;
   onChange: (t: Test) => void;
 }) {
-  const uid = useId();
   const done = test.finishedAt !== null;
   const a = test.answers[q.id];
   const pairs: Record<number, number> = typeof a === 'object' ? a : {};
@@ -610,7 +614,7 @@ function Matching({
           const put = pairs[id];
           const mark = marks?.[row];
           return (
-            <div key={id} className={`fc-match__row${mark ? (mark.right ? ' is-right' : ' is-wrong') : ''}`}>
+            <div key={id} className={`fc-match__row${mark ? (mark.right ? ' is-right' : ' is-wrong') : ''}`} data-stop>
               <div className="fc-match__prompt">{promptOf(c, q.answerWith)}</div>
               <div className="fc-match__letters" role="radiogroup" aria-label={`The ${SIDE[q.answerWith]} for ${promptOf(c, q.answerWith)}`}>
                 {q.answers.map((answerId, i) => {
@@ -620,11 +624,11 @@ function Matching({
                     <label key={answerId} className={`fc-letter${cls}`} title={done ? undefined : `Put ${LETTERS[i]} here`}>
                       <input
                         type="radio"
-                        name={`${uid}-${id}`}
                         className="fc-option__input"
                         checked={put === answerId}
                         disabled={done}
                         onChange={() => onChange(matchPair(test, q.id, id, answerId))}
+                        onKeyDown={(e) => pickAndGoOn(e, () => onChange(matchPair(test, q.id, id, answerId)))}
                         onClick={() => {
                           // A second click on the picked letter takes it off again.
                           if (put === answerId) onChange(matchPair(test, q.id, id, null));
@@ -696,7 +700,7 @@ function Written({
               <span className="fc-verdict__answer">{diff ? <AnswerLine parts={diff} /> : expected}</span>
             </div>
           )}
-          {!right && given.trim() && (
+          {!right && (
             <div className="rt-btnrow">
               <button type="button" className="rt-btn rt-btn--sm" onClick={() => onChange(overrideWritten(test, q.id))}>
                 I was right
@@ -712,7 +716,7 @@ function Written({
   return (
     <>
       <Prompt side={SIDE[other(q.answerWith)]} text={promptOf(card, q.answerWith)} />
-      <div className="rt-field fc-tq__written">
+      <div className="rt-field fc-tq__written" data-stop>
         <label htmlFor={inputId} className="rt-field__label">
           type the {SIDE[q.answerWith]}
         </label>
@@ -742,15 +746,34 @@ function Written({
   );
 }
 
-/** The next question's first control after `from`, scrolled into view. */
+/**
+ * Enter on an answer (a true/false, an option, a matching letter): pick it and
+ * go on to the next place to answer, as Enter in a written answer does. Tab
+ * reaches every answer on its own (the radios share no name, which would make
+ * each question a single Tab stop), so the whole paper works with Tab and Enter.
+ */
+function pickAndGoOn(e: React.KeyboardEvent<HTMLInputElement>, pick: () => void) {
+  if (e.key !== 'Enter' || e.repeat || e.nativeEvent.isComposing) return;
+  e.preventDefault();
+  pick();
+  focusNext(e.currentTarget);
+}
+
+/**
+ * The first control of the next place to answer after `from` (the next
+ * question, or the next prompt of a matching block), scrolled into view.
+ * After the last one: "hand in".
+ */
 function focusNext(from: HTMLElement) {
-  const here = from.closest('[data-question]');
-  const all = Array.from(document.querySelectorAll<HTMLElement>('[data-question]'));
+  const scope = from.closest('.fc-test') ?? document;
+  const here = from.closest('[data-stop]');
+  const all = Array.from(scope.querySelectorAll<HTMLElement>('[data-stop]'));
   const next = all[all.indexOf(here as HTMLElement) + 1];
-  const target = next?.querySelector<HTMLElement>('input:not([disabled])');
+  const target =
+    next?.querySelector<HTMLElement>('input:not([disabled])') ?? scope.querySelector<HTMLElement>('.fc-test__handin');
   if (target) {
     target.focus({ preventScroll: true });
-    next.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    (next ?? target).scrollIntoView({ block: 'center', behavior: 'smooth' });
   } else from.blur();
 }
 

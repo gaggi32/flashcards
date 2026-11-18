@@ -324,7 +324,7 @@ export function finish(test: Test, now: number = Date.now()): Test {
   return test.finishedAt === null ? { ...test, finishedAt: now } : test;
 }
 
-/** Count a written miss as right: a typo, or an answer the check did not know. */
+/** Count a written miss as right: a typo, an answer the check did not know, or one left empty by a slip. */
 export function overrideWritten(test: Test, questionId: string): Test {
   return test.overridden.includes(questionId) ? test : { ...test, overridden: [...test.overridden, questionId] };
 }
@@ -354,7 +354,10 @@ export function markQuestion(
   }
   const card = byId.get(q.cardId);
   const answered = answeredPoints(test, q) > 0;
-  if (!card || !answered) return [{ cardId: q.cardId, right: false, answered }];
+  // "I was right" also stands for a written question left empty (Enter went on past it).
+  if (!card || !answered) {
+    return [{ cardId: q.cardId, right: !!card && q.kind === 'written' && test.overridden.includes(q.id), answered }];
+  }
   let right = false;
   if (q.kind === 'written') {
     right = test.overridden.includes(q.id) || isMatch(String(a), answerOf(card, q.answerWith), check);

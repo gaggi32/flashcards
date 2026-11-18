@@ -487,7 +487,7 @@ fn pdf_file_name(suggested: &str) -> String {
     let stem: String = suggested
         .trim_end_matches(".pdf")
         .chars()
-        .filter(|c| c.is_alphanumeric() || "-_ ".contains(*c))
+        .filter(|c| c.is_alphanumeric() || "-_ '’(),&!+".contains(*c))
         .take(80)
         .collect();
     let stem = stem.trim();
@@ -1378,6 +1378,7 @@ mod tests {
         assert_eq!(pdf_file_name("Französisch Unit 3 - test.pdf"), "Französisch Unit 3 - test.pdf");
         assert_eq!(pdf_file_name(r"../../evil\x"), "evilx.pdf");
         assert_eq!(pdf_file_name("a:b*c?"), "abc.pdf");
+        assert_eq!(pdf_file_name("Réseaux et d'Internet (B1)"), "Réseaux et d'Internet (B1).pdf");
         assert_eq!(pdf_file_name("  "), "test.pdf");
         assert_eq!(pdf_file_name(&"a".repeat(200)).len(), 84);
     }

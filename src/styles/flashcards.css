@@ -2958,7 +2958,7 @@
   margin-bottom: 14px;
 }
 .fc-test__pdfnote {
-  margin-top: 10px;
+  margin: -4px 0 14px;
 }
 
 /* The sheet is only for print; on screen it is not there at all. */
