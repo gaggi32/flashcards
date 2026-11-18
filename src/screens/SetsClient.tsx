@@ -164,7 +164,10 @@ export function SetsClient() {
       onDragOver(e: DragEvent) {
         if (!isSetDrag(e)) return;
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
+        // 'copy', the only effect the OS drag allows (drag_set_out in lib.rs
+        // starts it as a copy, so the desktop gets a copy of the file). Any
+        // other effect makes Windows refuse the drop: no drop event at all.
+        e.dataTransfer.dropEffect = 'copy';
         if (dropOn !== key) setDropOn(key);
       },
       onDragLeave(e: DragEvent) {
