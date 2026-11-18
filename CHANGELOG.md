@@ -2,6 +2,14 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.4.0] — 2026-11-18
+### Added
+- Test in the overlay: a fourth tab (Ctrl+4) next to Cards, Write and Learn. The panel keeps its size and the test scrolls inside it.
+### Changed
+- A test mixes its kinds of question instead of asking all of one kind and then the next. Each question shows which kind it is.
+### Fixed
+- After going from a set to Test and back to the set, the back link returned to Test instead of leaving the set.
+
 ## [1.3.2] — 2026-11-17
 ### Fixed
 - The settings cog no longer hops a pixel when it starts or stops turning.
