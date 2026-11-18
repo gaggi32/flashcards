@@ -19,6 +19,7 @@ import type { UpdateInfo } from '@/lib/app/native';
 import { DEFAULT_MODEL } from '@/screens/Settings';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
+import { MotionLab } from '@/screens/MotionLab';
 import { SetClient } from '@/screens/SetClient';
 import { SetsClient } from '@/screens/SetsClient';
 import { SettingsScreen } from '@/screens/Settings';
@@ -153,6 +154,7 @@ export function App() {
                 element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />}
               />
               <Route path="/settings" element={<SettingsScreen />} />
+              {import.meta.env.DEV && <Route path="/dev/motion" element={<MotionLab />} />}
               <Route path="*" element={<Navigate to="/flashcards" replace />} />
             </Routes>
             </PageMotion>

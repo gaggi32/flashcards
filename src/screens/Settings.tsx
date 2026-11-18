@@ -410,6 +410,18 @@ export function SettingsScreen() {
         <Row label="Eye comfort" hint="Warmer colours, less blue light and softer contrast.">
           <Switch label="Eye comfort" on={s.eyeComfort} onChange={(v) => patch({ eyeComfort: v })} />
         </Row>
+        <Row label="Motion" hint="Calm keeps the flip and the marks, without celebrations or screens sliding.">
+          <Choice
+            label="Motion"
+            value={s.motion}
+            onChange={(v) => patch({ motion: v })}
+            options={[
+              ['full', 'full'],
+              ['calm', 'calm'],
+              ['off', 'off'],
+            ]}
+          />
+        </Row>
       </Section>
 
       <Section id="ai" title="AI card generator">
@@ -529,6 +541,11 @@ export function SettingsScreen() {
         {noteFor('update')}
         {noteFor('system')}
       </Section>
+      {import.meta.env.DEV && (
+        <p className="rt-small" style={{ marginTop: 24 }}>
+          <Link href="/dev/motion">Motion lab</Link> (development build only)
+        </p>
+      )}
     </main>
   );
 }

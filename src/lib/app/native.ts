@@ -18,6 +18,8 @@ export type ThemeChoice = 'system' | 'light' | 'dark';
 export type OverlaySize = 'small' | 'normal' | 'large';
 /** See AnswerCheck in flashcards/write.ts. */
 export type AnswerCheckChoice = 'exact' | 'easier';
+/** How much the screens animate: calm keeps the feedback, off keeps nothing. */
+export type MotionChoice = 'full' | 'calm' | 'off';
 export type OverlayMode = 'cards' | 'write' | 'learn' | 'test';
 
 export type Settings = {
@@ -33,6 +35,7 @@ export type Settings = {
   reminderTime: string;
   theme: ThemeChoice;
   eyeComfort: boolean;
+  motion: MotionChoice;
   autoBackup: boolean;
   backupsKept: number;
   aiModel: string;

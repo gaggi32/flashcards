@@ -220,6 +220,11 @@
     transform 0.14s var(--ease-out);
 }
 
+/* Settings → Motion. "off" stills everything, as the system's reduce-motion
+   does; "calm" keeps the feedback (a flip, a mark landing, a bar filling)
+   and drops what only celebrates or decorates: anything marked .fx-big,
+   and screens sliding into each other. JavaScript-driven effects ask
+   motionLevel() (src/lib/app/theme.ts) before they start. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -227,6 +232,32 @@
     animation-duration: 0.01ms !important;
     animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
+  }
+}
+:root[data-motion='off'] *,
+:root[data-motion='off'] *::before,
+:root[data-motion='off'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  transition-duration: 0.01ms !important;
+}
+:root[data-motion='calm'] .fx-big,
+:root[data-motion='calm'] .fx-big * {
+  animation: none !important;
+}
+:root[data-motion='off']::view-transition-group(*),
+:root[data-motion='calm']::view-transition-group(*),
+:root[data-motion='off']::view-transition-old(*),
+:root[data-motion='calm']::view-transition-old(*),
+:root[data-motion='off']::view-transition-new(*),
+:root[data-motion='calm']::view-transition-new(*) {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 
@@ -268,4 +299,13 @@
   pointer-events: none;
   background: var(--rt-rust);
   opacity: calc(var(--swipe-miss, 0) * 0.16);
+}
+
+/* ---------- motion lab (development only) ---------- */
+.lab__switcher {
+  margin: 14px 0 22px;
+  flex-wrap: wrap;
+}
+.lab__stage {
+  padding: 18px 8px 8px;
 }

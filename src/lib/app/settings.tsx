@@ -26,7 +26,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const use = (s: Settings) => {
       setSettings(s);
-      applyTheme(s.theme, s.eyeComfort);
+      applyTheme(s.theme, s.eyeComfort, s.motion);
     };
     getSettings().then(use).catch(() => {});
     return onSettingsChanged(use);
@@ -35,7 +35,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const save = async (next: Settings) => {
     const saved = await saveSettings(next);
     setSettings(saved);
-    applyTheme(saved.theme, saved.eyeComfort);
+    applyTheme(saved.theme, saved.eyeComfort, saved.motion);
     return saved;
   };
 

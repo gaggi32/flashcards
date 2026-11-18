@@ -43,6 +43,9 @@ pub struct Settings {
     /// "system" | "light" | "dark"
     pub theme: String,
     pub eye_comfort: bool,
+    /// "full" | "calm" | "off": how much the screens animate. Calm keeps the
+    /// feedback (flip, a mark landing) and drops celebrations and page morphs.
+    pub motion: String,
     // --- data ---
     pub auto_backup: bool,
     pub backups_kept: u32,
@@ -92,6 +95,7 @@ impl Default for Settings {
             reminder_time: "18:00".into(),
             theme: "system".into(),
             eye_comfort: false,
+            motion: "full".into(),
             auto_backup: true,
             backups_kept: 7,
             ai_model: DEFAULT_MODEL.into(),
@@ -167,6 +171,7 @@ impl Settings {
             self.reminder_time = d.reminder_time;
         }
         self.theme = one_of(&self.theme, &["system", "light", "dark"], "system");
+        self.motion = one_of(&self.motion, &["full", "calm", "off"], "full");
         self.backups_kept = self.backups_kept.clamp(1, 90);
         self.ai_model = self.ai_model.trim().to_string();
         if !valid_model(&self.ai_model) {
@@ -312,6 +317,7 @@ mod tests {
             answer_check: "lenient".into(),
             ai_model: "rm -rf /".into(),
             hotkey: "   ".into(),
+            motion: "wobbly".into(),
             ..Settings::default()
         }
         .sanitized();
@@ -325,6 +331,8 @@ mod tests {
         assert_eq!(s.answer_check, "exact");
         assert_eq!(s.ai_model, DEFAULT_MODEL);
         assert_eq!(s.hotkey, DEFAULT_HOTKEY);
+        assert_eq!(s.motion, "full");
+        assert_eq!(Settings { motion: "calm".into(), ..Settings::default() }.sanitized().motion, "calm");
     }
 
     #[test]
@@ -333,6 +341,7 @@ mod tests {
         let old: Settings = serde_json::from_str(r#"{"dailyGoal":20,"theme":"dark"}"#).unwrap();
         assert_eq!(old.theme, "dark");
         assert_eq!(old.overlay_size, "normal");
+        assert_eq!(old.motion, "full");
         let s: Settings = serde_json::from_str(r#"{"hotkey":"Alt+K"}"#).unwrap();
         assert_eq!(s.hotkey, "Alt+K");
         assert_eq!(s.overlay_round, 10);
