@@ -2,6 +2,10 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.4.1] — 2026-11-18
+### Fixed
+- Dragging a set onto a folder (or out of a folder onto "My sets") files it again. Since 1.2.0 the drop did nothing.
+
 ## [1.4.0] — 2026-11-18
 ### Added
 - Test in the overlay: a fourth tab (Ctrl+4) next to Cards, Write and Learn. The panel keeps its size and the test scrolls inside it.
