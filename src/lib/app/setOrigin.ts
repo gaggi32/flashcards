@@ -1,7 +1,7 @@
 // Where a set's back link leads: the page you were on before you went into
 // the set, not always the sets list.
 //
-// The set page, its three study modes and its editor are one place: moving
+// The set page, its four study modes and its editor are one place: moving
 // between them ("Back to set" from Write, then back again) never changes where
 // the set's back link goes. Entering that place from anywhere else (a folder
 // of the sets list, Settings, another set, the overlay) records the page you
@@ -16,7 +16,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router';
 
-const IN_SET = /^\/flashcards\/(\d+)(?:\/(?:cards|write|learn|edit))?$/;
+const IN_SET = /^\/flashcards\/(\d+)(?:\/(?:cards|write|learn|test|edit))?$/;
 
 /** The set a path belongs to, or null for a page outside every set. */
 export function setOf(path: string): number | null {

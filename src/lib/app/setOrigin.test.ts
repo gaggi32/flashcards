@@ -6,6 +6,7 @@ describe('setOf', () => {
   it('knows the set page, its modes and its editor as one set', () => {
     expect(setOf('/flashcards/7')).toBe(7);
     expect(setOf('/flashcards/7/write')).toBe(7);
+    expect(setOf('/flashcards/7/test')).toBe(7);
     expect(setOf('/flashcards/7/edit')).toBe(7);
     expect(setOf('/flashcards/7?x=1')).toBe(7);
     expect(setOf('/flashcards')).toBeNull();
@@ -24,6 +25,9 @@ describe('originOf', () => {
   it('leaves it alone while moving inside the set', () => {
     expect(originOf('/flashcards/7', '/flashcards/7/write')).toBeNull();
     expect(originOf('/flashcards/7/write', '/flashcards/7')).toBeNull();
+    // Test -> back to set -> back must leave the set, not return to Test.
+    expect(originOf('/flashcards/7', '/flashcards/7/test')).toBeNull();
+    expect(originOf('/flashcards/7/test', '/flashcards/7')).toBeNull();
     expect(originOf('/flashcards/7/edit', '/flashcards/7')).toBeNull();
   });
 
