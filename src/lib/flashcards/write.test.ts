@@ -5,7 +5,11 @@ import {
   advance,
   currentCard,
   dontKnow,
+  isFinished,
   isMatch,
+  masteredCount,
+  overrideCorrect,
+  showHint,
   skipRetype,
   startNextRound,
   startSession,
@@ -13,6 +17,7 @@ import {
   submitRetype,
 } from './write';
 import { computeDiff, type DiffPart } from './diff';
+import { packWrite, unpackWrite } from './saved';
 
 const CARDS = [
   { id: 1, term: 'chat', definition: 'cat' },
@@ -40,7 +45,7 @@ describe('skipRetype', () => {
     let session = skipRetype(dontKnow(start()));
     session = skipRetype(submitAnswer(session, 'wrong'));
     expect(session.step.kind).toBe('summary');
-    expect(session.rounds).toEqual([{ round: 1, total: 2, missed: 2, accuracy: 0 }]);
+    expect(session.rounds).toEqual([{ round: 1, total: 2, missed: 2, hinted: 0, accuracy: 0 }]);
     expect(startNextRound(session).queue).toEqual([1, 2]);
   });
 
@@ -368,5 +373,63 @@ describe('switching sides mid-round', () => {
     const s = submitAnswer(startSession(cards, { answerWith: 'term', shuffled: false }), 'Fisch');
     expect(s.step.kind).toBe('reveal');
     expect(switchSides(s)).toBe(s);
+  });
+});
+
+describe('the hint', () => {
+  it('shows only while a card is asked, once', () => {
+    const hinted = showHint(start());
+    expect(hinted.step).toEqual({ kind: 'ask', hinted: true });
+    expect(showHint(hinted)).toBe(hinted);
+    const missed = submitAnswer(start(), 'chien');
+    expect(showHint(missed)).toBe(missed);
+  });
+
+  it('a right answer with it counts this round, earns one credit and comes back next round', () => {
+    let s = submitAnswer(showHint(start()), 'chat');
+    expect(s.step).toMatchObject({ kind: 'correct', hinted: true });
+    expect(s.missed).toEqual([]);
+    expect(s.hinted).toEqual([1]);
+    expect(s.credits[1]).toBe(1);
+    s = advance(s);
+    s = advance(submitAnswer(s, 'chien'));
+    expect(s.step.kind).toBe('summary');
+    expect(s.rounds[0]).toEqual({ round: 1, total: 2, missed: 0, hinted: 1, accuracy: 50 });
+    expect(isFinished(s)).toBe(false);
+    expect(masteredCount(s)).toBe(1);
+
+    s = startNextRound(s);
+    expect(s.queue).toEqual([1]);
+    expect(s.hinted).toEqual([]);
+    s = advance(submitAnswer(s, 'chat'));
+    expect(isFinished(s)).toBe(true);
+    expect(masteredCount(s)).toBe(2);
+  });
+
+  it('a wrong answer with it is a plain miss, and "I was correct" keeps it hinted', () => {
+    const missed = submitAnswer(showHint(start()), 'chta');
+    expect(missed.step).toMatchObject({ kind: 'reveal', hinted: true });
+    expect(missed.missed).toEqual([1]);
+    const overruled = overrideCorrect(missed);
+    expect(overruled.step).toMatchObject({ kind: 'correct', overridden: true, hinted: true });
+    expect(overruled.missed).toEqual([]);
+    expect(overruled.hinted).toEqual([1]);
+    expect(overruled.credits[1]).toBe(1);
+  });
+
+  it('goes when the sides switch', () => {
+    const switched = switchSides(showHint(start()));
+    expect(switched.step).toEqual({ kind: 'ask' });
+    expect(submitAnswer(switched, 'cat').hinted).toEqual([]);
+  });
+
+  it('survives a save, and a round saved before the hint loads with none', () => {
+    const s = showHint(start());
+    expect(unpackWrite(packWrite(s), CARDS)?.step).toEqual({ kind: 'ask', hinted: true });
+
+    const { hinted: _hinted, ...old } = packWrite(advance(submitAnswer(start(), 'chat')));
+    const back = unpackWrite({ ...old, rounds: [{ round: 1, total: 2, missed: 1, accuracy: 50 }] }, CARDS)!;
+    expect(back.hinted).toEqual([]);
+    expect(back.rounds[0].hinted).toBe(0);
   });
 });

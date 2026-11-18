@@ -19,7 +19,7 @@ import type { Deck } from './deck';
 import { questionFor, type LearnSession, type LearnStep, type Question } from './learn';
 import type { Quality } from './sm2';
 import type { LearnCardDTO } from './types';
-import { percent, type StudyCard, type WriteSession } from './write';
+import { roundSummary, type StudyCard, type WriteSession } from './write';
 
 export type StudyMode = 'cards' | 'write' | 'learn';
 
@@ -49,9 +49,9 @@ const deckSchema = z.object({
 });
 
 const writeStep = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('ask') }),
-  z.object({ kind: z.literal('correct'), given: z.string(), overridden: z.boolean() }),
-  z.object({ kind: z.literal('reveal'), given: z.string().nullable() }),
+  z.object({ kind: z.literal('ask'), hinted: z.boolean().optional() }),
+  z.object({ kind: z.literal('correct'), given: z.string(), overridden: z.boolean(), hinted: z.boolean().optional() }),
+  z.object({ kind: z.literal('reveal'), given: z.string().nullable(), hinted: z.boolean().optional() }),
   z.object({ kind: z.literal('summary') }),
 ]);
 
@@ -63,8 +63,10 @@ const writeFields = {
   index: count,
   step: writeStep,
   missed: ids,
+  // Rounds saved before the Write hint (1.4.1 and older) have no hinted cards.
+  hinted: ids.default([]),
   credits: perCard(count),
-  rounds: z.array(z.object({ round: count, total: count, missed: count, accuracy: count })),
+  rounds: z.array(z.object({ round: count, total: count, missed: count, hinted: count.default(0), accuracy: count })),
 };
 
 const writeSchema = z.object({ cardIds: ids, ...writeFields });
@@ -205,17 +207,12 @@ export function unpackWrite(raw: unknown, cards: StudyCard[]): WriteSession | nu
     index: queue.index,
     step: queue.currentGone ? { kind: 'ask' } : saved.step,
     missed: saved.missed.filter(keep),
+    hinted: saved.hinted.filter(keep),
     credits: keepKeys(saved.credits, keep),
   };
   if (session.index < session.queue.length) return session;
   // The rest of the round was deleted: the round is over, as if just answered.
-  const total = session.queue.length;
-  const missed = session.missed.length;
-  return {
-    ...session,
-    step: { kind: 'summary' },
-    rounds: [...session.rounds, { round: session.round, total, missed, accuracy: percent(total - missed, total) }],
-  };
+  return { ...session, step: { kind: 'summary' }, rounds: [...session.rounds, roundSummary(session)] };
 }
 
 /**

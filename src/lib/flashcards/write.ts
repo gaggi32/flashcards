@@ -13,6 +13,10 @@
 //   • "I was correct" turns a wrong answer back into a correct one (typos).
 //   • When a round ends with misses, the next round asks only those cards,
 //     and so on until a round ends clean.
+//   • The hint shows each word's first letter (as in Learn). A right answer
+//     with the hint counts as right this round, but the card comes back in
+//     the next one, as a miss does: with the answer half shown, it is not yet
+//     known.
 //
 // Mastery counts correct answers per card, two to master:
 //
@@ -25,6 +29,8 @@
 //     which is where a second correct answer would come from, never asks it
 //     again; holding it at one would leave the best-known cards as the only
 //     ones that can never be mastered.
+//   • A right answer with the hint earns the first credit, like a retype; the
+//     next round, where it comes back, can earn the second.
 
 import { shuffle } from './shuffle';
 
@@ -41,12 +47,15 @@ export type AnswerCheck = 'exact' | 'easier';
 export type StudyCard = { id: number; term: string; definition: string };
 
 export type Step =
-  /** Waiting for an answer. */
-  | { kind: 'ask' }
-  /** Answered correctly; a brief confirmation before the next card. */
-  | { kind: 'correct'; given: string; overridden: boolean }
-  /** Missed. `given` is null for "don't know". Retype, or skip, to continue. */
-  | { kind: 'reveal'; given: string | null }
+  /** Waiting for an answer. `hinted` once the hint is showing. */
+  | { kind: 'ask'; hinted?: boolean }
+  /** Answered correctly; a brief confirmation before the next card. `hinted`: with the hint. */
+  | { kind: 'correct'; given: string; overridden: boolean; hinted?: boolean }
+  /**
+   * Missed. `given` is null for "don't know". Retype, or skip, to continue.
+   * `hinted`: the hint was showing, so "I was correct" counts it as a hinted answer.
+   */
+  | { kind: 'reveal'; given: string | null; hinted?: boolean }
   /** The round is over. */
   | { kind: 'summary' };
 
@@ -54,7 +63,9 @@ export type RoundSummary = {
   round: number;
   total: number;
   missed: number;
-  /** Whole percent of the round answered correctly on the first try. */
+  /** Answered right with the hint (they come back next round, like the misses). */
+  hinted: number;
+  /** Whole percent of the round answered correctly on the first try, without the hint. */
   accuracy: number;
 };
 
@@ -70,6 +81,8 @@ export type WriteSession = {
   step: Step;
   /** Ids missed so far this round, in the order they were missed. */
   missed: number[];
+  /** Ids answered right with the hint this round, in that order. */
+  hinted: number[];
   /** Correct answers per card id, 0 to MASTERY_CREDITS. */
   credits: Record<number, number>;
   /** Finished rounds, oldest first. */
@@ -297,6 +310,7 @@ export function startSession(
     index: 0,
     step: { kind: 'ask' },
     missed: [],
+    hinted: [],
     credits: Object.fromEntries(ids.map((id) => [id, 0])),
     rounds: [],
   };
@@ -314,14 +328,37 @@ export function submitAnswer(session: WriteSession, given: string, check: Answer
   // dontKnow() itself, so the timing guard against a stray Enter lives there.
   if (!card || session.step.kind !== 'ask' || given.trim() === '') return session;
 
+  const hinted = session.step.hinted === true;
   if (isMatch(given, answerOf(card, session.answerWith), check)) {
+    return right(session, card, given, false, hinted);
+  }
+  return miss(session, card, given, hinted);
+}
+
+/** Show the hint for the card being asked (each word's first letter). */
+export function showHint(session: WriteSession): WriteSession {
+  if (session.step.kind !== 'ask' || session.step.hinted || !currentCard(session)) return session;
+  return { ...session, step: { kind: 'ask', hinted: true } };
+}
+
+/** A right answer: mastered, or with the hint one credit and back next round. */
+function right(session: WriteSession, card: StudyCard, given: string, overridden: boolean, hinted: boolean): WriteSession {
+  const missed = session.missed.filter((id) => id !== card.id);
+  if (hinted) {
     return {
       ...session,
-      step: { kind: 'correct', given, overridden: false },
-      credits: { ...session.credits, [card.id]: MASTERY_CREDITS },
+      step: { kind: 'correct', given, overridden, hinted: true },
+      missed,
+      hinted: session.hinted.includes(card.id) ? session.hinted : [...session.hinted, card.id],
+      credits: { ...session.credits, [card.id]: Math.max(session.credits[card.id] ?? 0, 1) },
     };
   }
-  return miss(session, card, given);
+  return {
+    ...session,
+    step: { kind: 'correct', given, overridden },
+    missed,
+    credits: { ...session.credits, [card.id]: MASTERY_CREDITS },
+  };
 }
 
 export const otherSide = (side: AnswerWith): AnswerWith => (side === 'term' ? 'definition' : 'term');
@@ -329,23 +366,24 @@ export const otherSide = (side: AnswerWith): AnswerWith => (side === 'term' ? 'd
 /**
  * Answer with the other side from this card on. Only while a card is being
  * asked: with a verdict showing, the answer on screen belongs to the old side.
- * Nothing else changes: the round, the misses and the mastery carry on.
+ * The hint goes (it was for the old side); nothing else changes: the round,
+ * the misses and the mastery carry on.
  */
 export function switchSides(session: WriteSession): WriteSession {
   if (session.step.kind !== 'ask' || !currentCard(session)) return session;
-  return { ...session, answerWith: otherSide(session.answerWith) };
+  return { ...session, answerWith: otherSide(session.answerWith), step: { kind: 'ask' } };
 }
 
 export function dontKnow(session: WriteSession): WriteSession {
   const card = currentCard(session);
   if (!card || session.step.kind !== 'ask') return session;
-  return miss(session, card, null);
+  return miss(session, card, null, false);
 }
 
-function miss(session: WriteSession, card: StudyCard, given: string | null): WriteSession {
+function miss(session: WriteSession, card: StudyCard, given: string | null, hinted: boolean): WriteSession {
   return {
     ...session,
-    step: { kind: 'reveal', given },
+    step: hinted ? { kind: 'reveal', given, hinted: true } : { kind: 'reveal', given },
     missed: [...session.missed, card.id],
   };
 }
@@ -355,13 +393,7 @@ export function overrideCorrect(session: WriteSession): WriteSession {
   const card = currentCard(session);
   const { step } = session;
   if (!card || step.kind !== 'reveal' || step.given === null) return session;
-
-  return {
-    ...session,
-    step: { kind: 'correct', given: step.given, overridden: true },
-    missed: session.missed.filter((id) => id !== card.id),
-    credits: { ...session.credits, [card.id]: MASTERY_CREDITS },
-  };
+  return right(session, card, step.given, true, step.hinted === true);
 }
 
 /**
@@ -398,39 +430,44 @@ function nextCard(session: WriteSession): WriteSession {
     return { ...session, index, step: { kind: 'ask' } };
   }
 
-  const total = session.queue.length;
-  const missed = session.missed.length;
-  return {
-    ...session,
-    index,
-    step: { kind: 'summary' },
-    rounds: [
-      ...session.rounds,
-      { round: session.round, total, missed, accuracy: percent(total - missed, total) },
-    ],
-  };
+  return { ...session, index, step: { kind: 'summary' }, rounds: [...session.rounds, roundSummary(session)] };
 }
 
-/** From a summary with misses: a round of only the missed cards. */
+/** The round on record once it is over. */
+export function roundSummary(session: WriteSession): RoundSummary {
+  const total = session.queue.length;
+  const missed = session.missed.length;
+  const hinted = session.hinted.length;
+  return { round: session.round, total, missed, hinted, accuracy: percent(total - missed - hinted, total) };
+}
+
+/** The cards the next round asks: the misses, then the ones answered with the hint. */
+export function cardsAgain(session: WriteSession): number[] {
+  return [...session.missed, ...session.hinted.filter((id) => !session.missed.includes(id))];
+}
+
+/** From a summary with misses (or hinted answers): a round of only those cards. */
 export function startNextRound(
   session: WriteSession,
   random: () => number = Math.random,
 ): WriteSession {
-  if (session.step.kind !== 'summary' || session.missed.length === 0) return session;
+  const again = cardsAgain(session);
+  if (session.step.kind !== 'summary' || again.length === 0) return session;
   return {
     ...session,
     round: session.round + 1,
-    queue: session.shuffled ? shuffle(session.missed, random) : session.missed,
+    queue: session.shuffled ? shuffle(again, random) : again,
     index: 0,
     step: { kind: 'ask' },
     missed: [],
+    hinted: [],
   };
 }
 
 // --- reading a session ---
 
 export function isFinished(session: WriteSession): boolean {
-  return session.step.kind === 'summary' && session.missed.length === 0;
+  return session.step.kind === 'summary' && cardsAgain(session).length === 0;
 }
 
 export function masteredCount(session: WriteSession): number {

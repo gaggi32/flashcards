@@ -9,9 +9,11 @@ import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { useSettings } from '@/lib/app/settings';
 import type { SetDTO } from '@/lib/flashcards/types';
+import { hintFor } from '@/lib/flashcards/learn';
 import {
   advance,
   answerOf,
+  cardsAgain,
   currentCard,
   dontKnow,
   isFinished,
@@ -20,6 +22,7 @@ import {
   overrideCorrect,
   promptOf,
   roundProgress,
+  showHint,
   skipRetype,
   startNextRound,
   startSession,
@@ -291,7 +294,8 @@ function Setup(props: {
 
       <p className="rt-small fc-setup__rules">
         Miss a card and the answer is shown — type it out to move on, or skip. Missed cards come
-        back in another round, until every card has been answered right.
+        back in another round, until every card has been answered right. The hint shows each
+        word&apos;s first letter; a card answered with it comes back too.
       </p>
 
       <div className="rt-btnrow">
@@ -445,8 +449,10 @@ function Play({
         <div className="fc-verdict fc-verdict--ok" role="status">
           <div className="fc-verdict__title">
             {step.overridden ? 'counted as correct' : 'correct'}
+            {step.hinted ? ', with the hint' : ''}
           </div>
           <div className="fc-verdict__answer">{expected}</div>
+          {step.hinted && <div className="rt-small rt-ink-soft">It comes back next round, to answer without it.</div>}
           <div className="rt-btnrow">
             <button
               type="button"
@@ -545,6 +551,12 @@ function Play({
             enterKeyHint="go"
           />
         </div>
+        {step.kind === 'ask' && step.hinted && (
+          <div className="fc-verdict__line fc-learn__hint" aria-live="polite">
+            <span className="fc-verdict__key">hint</span>
+            <span className="fc-learn__hinttext">{hintFor(expected)}</span>
+          </div>
+        )}
         {retypeWrong && (
           <div className="fc-answer__hint" role="alert">
             Not quite — type it exactly as shown.
@@ -567,6 +579,20 @@ function Play({
                 'answer'
               )}
             </button>
+            {step.kind === 'ask' && !step.hinted && (
+              <button
+                type="button"
+                className="rt-btn"
+                title="Show each word's first letter. A card answered with the hint comes back next round."
+                onMouseDown={keepFocus}
+                onClick={() => {
+                  setSession(showHint(session));
+                  inputRef.current?.focus();
+                }}
+              >
+                hint
+              </button>
+            )}
             {step.kind === 'ask' ? (
               <button
                 type="button"
@@ -613,6 +639,8 @@ function Summary({
   const finished = isFinished(session);
   const mastered = masteredCount(session);
   const total = session.cards.length;
+  const again = cardsAgain(session).length;
+  const anyHinted = session.rounds.some((r) => r.hinted > 0);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -641,6 +669,12 @@ function Summary({
           <dt>missed</dt>
           <dd className={round.missed > 0 ? 'fc-stats__miss' : undefined}>{round.missed}</dd>
         </div>
+        {round.hinted > 0 && (
+          <div>
+            <dt>with hint</dt>
+            <dd>{round.hinted}</dd>
+          </div>
+        )}
         <div>
           <dt>accuracy</dt>
           <dd>{round.accuracy}%</dd>
@@ -663,6 +697,7 @@ function Summary({
               <th scope="col">round</th>
               <th scope="col">cards</th>
               <th scope="col">missed</th>
+              {anyHinted && <th scope="col">with hint</th>}
               <th scope="col">accuracy</th>
             </tr>
           </thead>
@@ -672,6 +707,7 @@ function Summary({
                 <td>{r.round}</td>
                 <td>{r.total}</td>
                 <td>{r.missed}</td>
+                {anyHinted && <td>{r.hinted}</td>}
                 <td>{r.accuracy}%</td>
               </tr>
             ))}
@@ -682,7 +718,8 @@ function Summary({
       <div className="rt-btnrow">
         {!finished && (
           <button type="button" className="rt-btn rt-btn--primary" onClick={onNextRound} autoFocus>
-            round {round.round + 1}: {plural(session.missed.length, 'missed card')}
+            round {round.round + 1}:{' '}
+            {round.hinted > 0 ? plural(again, 'card') : plural(session.missed.length, 'missed card')}
           </button>
         )}
         <button
