@@ -1,14 +1,16 @@
-// The hotkey overlay: the main window's own Flashcards, Write and Learn screens
-// for the set you pick, in a compact frame, plus a quick-add form.
+// The hotkey overlay: the main window's own Flashcards, Write, Learn and Test
+// screens for the set you pick, in a compact frame, plus a quick-add form.
 //
 // It is the same session, not a copy: each mode keeps its place per set in
 // the database (study_sessions), which both windows share, so a round started
 // in the main window carries on here and the other way round. Answers go to
-// the same database. Every write is announced as a data change, and a window
-// that was in the background picks up the other's changes when it comes back
-// (the overlay when the hotkey opens it, the main window when it is focused). Links to the set page or the editor open the main
-// window. Esc or a click elsewhere hides the overlay.
-//
+// the same database. Test is the exception: a test is not saved (TestClient),
+// so the overlay's test is its own. Every write is announced as a data
+// change, and a window that was in the background picks up the other's
+// changes when it comes back (the overlay when the hotkey opens it, the main
+// window when it is focused). Links to the set page or the editor open the
+// main window. Esc or a click elsewhere hides the overlay.
+
 // Showing and hiding are animated here, not by the OS: Rust shows the window
 // with the panel still invisible and sends "overlay-open"; on "overlay-close"
 // the panel plays its exit and, once a frame without it has been painted,
@@ -16,7 +18,9 @@
 //
 // The window is as tall as the panel's content (useFitWindow): Rust zooms it
 // for the screen it is on and never makes it shorter than that, so nothing
-// in the panel has to be scrolled to.
+// in the panel has to be scrolled to. Test is the exception: a paper can be
+// long, so Test keeps one fixed height (setup, paper and score alike) and
+// the paper scrolls inside it.
 
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState } from 'react';
@@ -32,7 +36,9 @@ import { asApiError } from '@/lib/store/errors';
 import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
+import { TestClient } from '@/screens/TestClient';
 import { WriteClient } from '@/screens/WriteClient';
+import { DialogHost } from '@/components/Dialogs';
 import { SetOptions } from '@/components/flashcards/SetOptions';
 import { tabStops } from '@/components/flashcards/StudyHeader';
 
@@ -40,9 +46,10 @@ const MODES: { id: OverlayMode; route: string; label: string; hint: string }[] =
   { id: 'cards', route: 'cards', label: 'Cards', hint: 'Flashcards' },
   { id: 'write', route: 'write', label: 'Write', hint: 'Type the answers' },
   { id: 'learn', route: 'learn', label: 'Learn', hint: 'Multiple choice, then typed' },
+  { id: 'test', route: 'test', label: 'Test', hint: 'A test, marked at the end' },
 ];
 
-const MODE_PATH = /^\/flashcards\/(\d+)\/(cards|write|learn)$/;
+const MODE_PATH = /^\/flashcards\/(\d+)\/(cards|write|learn|test)$/;
 
 /** The .ov padding round the panel, top and bottom together. */
 const FRAME_PAD = 12;
@@ -70,8 +77,16 @@ function useFitWindow(panelRef: React.RefObject<HTMLDivElement | null>) {
       // The panel is as tall as its content until the window holds it back;
       // then the scrolling part says by how much. offsetHeight, not the
       // bounding box: the open animation turns and scales the panel.
+      // A fixed-height screen (Test) scrolls on purpose: that is not asked for.
       const scroller = panel.querySelector<HTMLElement>('.ov__embed, .ov__body');
-      const hidden = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
+      // A fixed one is cut off by the panel instead while the window is
+      // shorter, which the panel's own scrollHeight counts.
+      const fixed = scroller?.classList.contains('ov__embed--fixed');
+      const hidden = !scroller
+        ? 0
+        : fixed
+          ? Math.max(0, panel.scrollHeight - panel.clientHeight)
+          : Math.max(0, scroller.scrollHeight - scroller.clientHeight);
       const h = panel.offsetHeight + hidden + FRAME_PAD + 1;
       if (h === sent) return;
       window.clearTimeout(shrink);
@@ -223,12 +238,13 @@ function OverlayFrame() {
       // Tab goes round what is in the panel and never leaves the page: past
       // the last button WebView2 hands focus to the window frame, the window
       // loses focus, and the overlay hides. The header is not in the round
-      // (Ctrl+1/2/3 switch modes, Esc hides).
+      // (Ctrl+1 to 4 switch modes, Esc hides).
       if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.defaultPrevented) {
         e.preventDefault();
         const panel = panelRef.current;
         if (!panel) return;
-        const stops = tabStops(panel);
+        // An open dialog (Test's "hand in anyway?") keeps Tab to itself.
+        const stops = tabStops(panel.querySelector<HTMLElement>('.dlg') ?? panel);
         if (stops.length === 0) return;
         const at = stops.indexOf(document.activeElement as HTMLElement);
         const step = e.shiftKey ? -1 : 1;
@@ -242,8 +258,11 @@ function OverlayFrame() {
         e.preventDefault();
         return;
       }
-      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3'].includes(e.key)) {
+      if ((e.ctrlKey || e.metaKey) && ['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault();
+        // Not from under an open dialog: its answer would land on a screen
+        // that is gone (a test handed in behind your back).
+        if (panelRef.current?.querySelector('.dlg')) return;
         setView('study');
         setMode(MODES[Number(e.key) - 1].id);
       }
@@ -338,15 +357,18 @@ function OverlayFrame() {
             </button>
           </div>
         ) : (
-          <div className="ov__embed fc-app" key={resync}>
+          <div className={`ov__embed fc-app${pathname.endsWith('/test') ? ' ov__embed--fixed' : ''}`} key={resync}>
             <Routes>
               <Route path="/flashcards/:id/cards" element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />} />
               <Route path="/flashcards/:id/write" element={<WithSetId render={(id) => <WriteClient setId={id} />} />} />
               <Route path="/flashcards/:id/learn" element={<WithSetId render={(id) => <LearnClient setId={id} />} />} />
+              <Route path="/flashcards/:id/test" element={<WithSetId render={(id) => <TestClient setId={id} />} />} />
               <Route path="*" element={null} />
             </Routes>
           </div>
         )}
+        {/* In the panel, so Tab (kept to the panel) reaches its buttons. */}
+        <DialogHost />
       </div>
     </div>
   );

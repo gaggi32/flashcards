@@ -136,7 +136,7 @@ html.overlay body {
   position: relative;
   flex: none;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   padding: 3px;
   border-radius: 10px;
   background: var(--rt-panel-2);
@@ -147,7 +147,7 @@ html.overlay body {
   top: 3px;
   bottom: 3px;
   left: 3px;
-  width: calc((100% - 6px) / 3);
+  width: calc((100% - 6px) / 4);
   border-radius: 7px;
   background: var(--rt-panel);
   box-shadow:
@@ -412,6 +412,100 @@ html.overlay body {
 }
 .ov__embed .rt-section + .rt-section {
   margin-top: 10px;
+}
+
+/* Test: the paper, smaller. Test keeps one height whatever is on it (the
+   window does not grow with the paper, Overlay.tsx), and the paper scrolls
+   under its sticky hand-in bar. */
+.rt-page.fc-page .ov__embed.ov__embed--fixed {
+  flex: none;
+  height: 320px;
+}
+.ov__embed .fc-options--three {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+.ov__embed .fc-test {
+  gap: 8px;
+}
+.ov__embed .fc-tq {
+  gap: 8px;
+  padding: 9px 11px 11px;
+  border-radius: 10px;
+}
+.ov__embed .fc-tq__num,
+.ov__embed .fc-tq__mark {
+  font-size: 11.5px;
+}
+.ov__embed .fc-tq__kind {
+  margin-left: 8px;
+  font-size: 10.5px;
+}
+.ov__embed .fc-tq__pair {
+  gap: 6px;
+}
+.ov__embed .fc-tq__prompt {
+  padding: 7px 10px 8px;
+  gap: 2px;
+}
+.ov__embed .fc-tq__side {
+  font-size: 10px;
+}
+.ov__embed .fc-tq__text {
+  font-size: 15px;
+}
+.ov__embed .fc-tq__choices {
+  gap: 6px;
+}
+.ov__embed .fc-tq .fc-choice {
+  padding: 6px 10px;
+}
+.ov__embed .fc-match {
+  gap: 8px;
+}
+.ov__embed .fc-match__answers,
+.ov__embed .fc-match__prompts {
+  gap: 4px;
+}
+.ov__embed .fc-match__answer,
+.ov__embed .fc-match__prompt {
+  font-size: 13px;
+}
+.ov__embed .fc-match__answer {
+  padding: 5px 9px;
+}
+.ov__embed .fc-match__row {
+  padding: 5px 8px 5px 10px;
+}
+.ov__embed .fc-letter {
+  width: 24px;
+  height: 24px;
+  font-size: 11.5px;
+}
+.ov__embed .fc-test__bar {
+  bottom: 0;
+  /* The second shadow fills the scroller's bottom padding under the bar in
+     the panel's colour, so the questions don't show through below it. */
+  box-shadow:
+    0 6px 18px var(--rt-shadow),
+    0 10px 0 6px var(--rt-paper);
+  gap: 8px;
+  padding: 6px 8px 6px 11px;
+  border-radius: 10px;
+}
+.ov__embed .fc-test__answered {
+  font-size: 12px;
+}
+.ov__embed .fc-testscore__head {
+  gap: 12px;
+}
+.ov__embed .fc-testscore__ring {
+  width: 54px;
+  height: 54px;
+}
+.ov__embed .fc-testscore__ring span {
+  width: 44px;
+  height: 44px;
+  font-size: 14px;
 }
 
 /* ---------- quick add, empty state ---------- */

@@ -350,7 +350,7 @@ export function SettingsScreen() {
           <Switch label="Stay on top of fullscreen apps" on={s.overlayTopmostWatch} onChange={(v) => patch({ overlayTopmostWatch: v })} />
         </Row>
         <p className="rt-small rt-ink-faint set-foot">
-          The overlay runs the same Flashcards, Write and Learn as this window, on the same session: what you do in one carries on in the other. Pick its set in the overlay, above your sets, or on a set&apos;s page.
+          The overlay runs the same Flashcards, Write, Learn and Test as this window. Flashcards, Write and Learn share their session: what you do in one carries on in the other. A test belongs to the window it was started in. Pick its set in the overlay, above your sets, or on a set&apos;s page.
         </p>
       </Section>
 

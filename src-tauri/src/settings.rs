@@ -58,7 +58,7 @@ pub struct Settings {
     // --- study (chosen in the study screens, changed through [`StudyPref`]) ---
     /// The set the overlay studies; None until one is picked.
     pub overlay_set: Option<i64>,
-    /// "cards" | "write" | "learn": the overlay's mode.
+    /// "cards" | "write" | "learn" | "test": the overlay's mode.
     pub overlay_mode: String,
     /// Whether the number keys type the special characters in Write and Learn.
     pub special_keys: bool,
@@ -173,7 +173,7 @@ impl Settings {
             self.ai_model = d.ai_model;
         }
         self.overlay_set = self.overlay_set.filter(|&id| id > 0);
-        self.overlay_mode = one_of(&self.overlay_mode, &["cards", "write", "learn"], "cards");
+        self.overlay_mode = one_of(&self.overlay_mode, &["cards", "write", "learn", "test"], "cards");
         self.cards_first_side = one_of(&self.cards_first_side, &["term", "definition"], "term");
         if !is_version(&self.last_seen_version) {
             self.last_seen_version = String::new();
@@ -385,6 +385,7 @@ mod tests {
         assert!(!s.special_keys);
         assert_eq!(s.cards_first_side, "definition");
         assert_eq!(s.theme, "system");
+        assert_eq!(s.clone().with(pref(r#"{"key":"overlayMode","value":"test"}"#)).overlay_mode, "test");
         assert_eq!(s.with(pref(r#"{"key":"overlaySet","value":null}"#)).overlay_set, None);
 
         let s = Settings::default()

@@ -18,7 +18,7 @@ export type ThemeChoice = 'system' | 'light' | 'dark';
 export type OverlaySize = 'small' | 'normal' | 'large';
 /** See AnswerCheck in flashcards/write.ts. */
 export type AnswerCheckChoice = 'exact' | 'easier';
-export type OverlayMode = 'cards' | 'write' | 'learn';
+export type OverlayMode = 'cards' | 'write' | 'learn' | 'test';
 
 export type Settings = {
   hotkey: string;
