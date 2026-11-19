@@ -22,6 +22,9 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - `src/lib/flashcards/client.ts` — what the screens call, backed by the store.
 - `src/screens/`, `src/components/flashcards/` — the study screens.
 - `src/overlay/` — the hotkey window.
+- `src/styles/` — `tokens.css` (every colour/font for light, dark and both eye-comfort sets; nothing else defines a token), `base.css` (shared `rt-*` pieces), `flashcards.css` (components), `cards.css` (the index-card look), `motion.css` (all motion, the Motion setting's `data-motion` rules).
+- `src/components/motion/` — `CountUp`, `Confetti`, `SetTitle` (view-transition name), `useFlip` (lists glide). Screens slide via `<ViewTransition>` in `App.tsx`; `Link` tags the direction and primes the next screen's data (`lib/app/prime.ts`).
+- `/dev/motion` (`src/screens/MotionLab.tsx`, dev builds only) — every animation on one screen, with replay buttons.
 
 ## Conventions
 - Card text only ever goes into SQL as a bound `?` parameter. `db.rs` refuses ATTACH/VACUUM/PRAGMA from the UI.
@@ -30,6 +33,7 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - Unfinished study rounds live in the `study_sessions` table (one row per set and mode), as card ids plus per-card state in the shapes of `src/lib/flashcards/saved.ts`, not card text (only the answer on screen as typed or picked): loading rebuilds them from the set, dropping cards deleted since. Save through `saveDeck`/`saveWrite`/`saveLearn` in `client.ts` (queued in order, announced as data changes); change a stored shape only with a reader for the old one.
 - Schema changes: add `src-tauri/schema/00N_*.sql`, list it in `db.rs` MIGRATIONS and in `src/lib/store/testDb.ts`. Never edit a shipped step.
 - No `window.confirm/prompt` (WKWebView): use `ask` from `src/components/Dialogs.tsx`.
+- Motion: Settings → Motion is full / calm / off (`data-motion` on <html>). Off stills everything; calm drops `.fx-big` effects and screen slides. Effects run from script ask `motionLevel()` (`lib/app/theme.ts`). Never make input wait for an animation: a new press finishes the running one. Animate with `translate`/`scale` properties where the element's `transform` is written by script (the deck's drag).
 - Identifier `com.gaggi32.flashcards`. Up to 0.1.6 it was `ch.404canvas.flashcards`: on start, `adopt_old_folders` (lib.rs) renames the old data/webview folders, `ai.rs` moves the key to the new credential name, and `src-tauri/nsis-hooks.nsh` copies the installer's old `Software\404canvas\Flashcards` key to `Software\gaggi32\Flashcards` before the first page (NSIS finds the install to uninstall through `Software\<publisher>\<product>`; hooks are read before the template's `!define`s, so names are spelled out there). Keep those until nobody runs 0.1.6. Never change `bundle.publisher` again without the same kind of carry-over.
 - The update check reads `api.github.com/repos/gaggi32/flashcards/releases/latest` (no token), so it needs the repo to be public.
 - Version lives in three places: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. The release job refuses a tag that does not match all three.

@@ -322,7 +322,7 @@ export function SettingsScreen() {
         <IconChevronLeft />
         All sets
       </Link>
-      <div className="rt-pagehead">
+      <div className="rt-pagehead fc-pagehead">
         <h1>settings</h1>
       </div>
       {noteFor('general')}
