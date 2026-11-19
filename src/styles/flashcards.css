@@ -2384,21 +2384,21 @@
   flex-direction: column;
   gap: 12px;
   border: 1px solid var(--fc-line);
-  border-left: 3px solid var(--fc-line-strong);
   border-radius: var(--fc-radius);
   background: var(--rt-panel);
-  box-shadow: 0 1px 2px var(--rt-shadow-soft);
+  box-shadow: var(--lift);
   padding: 14px 16px 16px;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+/* Answered questions are outlined in pen; once marked, green or rust. */
 .fc-tq.is-answered {
-  border-left-color: var(--fc-accent);
+  border-color: color-mix(in srgb, var(--fc-accent) 45%, transparent);
 }
 .fc-tq.is-right {
-  border-left-color: var(--rt-teal);
+  border-color: color-mix(in srgb, var(--rt-teal) 50%, transparent);
 }
 .fc-tq.is-wrong {
-  border-left-color: var(--rt-rust);
+  border-color: color-mix(in srgb, var(--rt-rust) 45%, transparent);
 }
 .fc-tq__head {
   display: flex;
@@ -2414,12 +2414,12 @@
 }
 .fc-tq__kind {
   margin-left: 10px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--rt-panel-2);
-  font-size: 11px;
+  font-family: var(--fc-mono);
+  font-size: 10.5px;
   font-weight: 500;
-  color: var(--rt-ink-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rt-ink-faint);
 }
 .fc-tq__mark {
   display: inline-flex;

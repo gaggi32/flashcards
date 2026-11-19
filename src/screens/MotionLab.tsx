@@ -6,7 +6,7 @@
 import { useRef, useState, type ReactNode } from 'react';
 
 import Link from '@/components/Link';
-import { motionLevel } from '@/lib/app/theme';
+import { motionLevel, previewMotion } from '@/lib/app/theme';
 import type { SetDTO } from '@/lib/flashcards/types';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
@@ -78,7 +78,10 @@ function Switcher() {
           key={m}
           type="button"
           className={`rt-btn rt-btn--sm${motion === m ? ' rt-btn--primary' : ''}`}
-          onClick={() => set('data-motion', m === 'full' ? null : m)}
+          onClick={() => {
+            previewMotion(m);
+            redraw((n) => n + 1);
+          }}
         >
           motion {m}
         </button>

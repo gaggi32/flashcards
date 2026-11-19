@@ -60,6 +60,12 @@ export function applyCachedTheme(): void {
   applyTheme('system', false);
 }
 
+/** The motion lab's preview: this window only, nothing saved or cached. */
+export function previewMotion(motion: MotionChoice): void {
+  current = { ...current, motion };
+  stamp();
+}
+
 /** What the screens may animate right now: the setting, and the system's
  * "reduce motion" on top of it (which counts as off). */
 export function motionLevel(): MotionChoice {
