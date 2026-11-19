@@ -2,7 +2,7 @@
 // the app bar on top and Settings one click away.
 
 import { listen } from '@tauri-apps/api/event';
-import { ViewTransition, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Suspense, ViewTransition, lazy, useEffect, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import Link from '@/components/Link';
@@ -19,12 +19,17 @@ import type { UpdateInfo } from '@/lib/app/native';
 import { DEFAULT_MODEL } from '@/screens/Settings';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
-import { MotionLab } from '@/screens/MotionLab';
 import { SetClient } from '@/screens/SetClient';
 import { SetsClient } from '@/screens/SetsClient';
 import { SettingsScreen } from '@/screens/Settings';
 import { TestClient } from '@/screens/TestClient';
 import { WriteClient } from '@/screens/WriteClient';
+
+// The motion lab exists in development builds only: imported lazily behind
+// import.meta.env.DEV, so a release build leaves it out entirely.
+const MotionLab = import.meta.env.DEV
+  ? lazy(() => import('@/screens/MotionLab').then((m) => ({ default: m.MotionLab })))
+  : null;
 
 /** `:id` → a set id, or the sets list for anything that is not one. */
 function WithSetId({ render }: { render: (id: number) => ReactNode }) {
@@ -162,7 +167,16 @@ export function App() {
                 element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />}
               />
               <Route path="/settings" element={<SettingsScreen />} />
-              {import.meta.env.DEV && <Route path="/dev/motion" element={<MotionLab />} />}
+              {MotionLab && (
+                <Route
+                  path="/dev/motion"
+                  element={
+                    <Suspense fallback={null}>
+                      <MotionLab />
+                    </Suspense>
+                  }
+                />
+              )}
               <Route path="*" element={<Navigate to="/flashcards" replace />} />
             </Routes>
             </PageMotion>
