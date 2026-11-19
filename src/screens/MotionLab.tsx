@@ -8,6 +8,8 @@ import { useState, type ReactNode } from 'react';
 import Link from '@/components/Link';
 import { motionLevel } from '@/lib/app/theme';
 import type { SetDTO } from '@/lib/flashcards/types';
+import { computeDiff } from '@/lib/flashcards/diff';
+import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { Deck } from '@/screens/FlashcardsClient';
 
 /** A made-up set for the specimens; nothing here is saved. */
@@ -100,9 +102,58 @@ function FlipSpecimen() {
   );
 }
 
+/** Write's answer feedback, both ways, replayed on demand. */
+function VerdictSpecimen({ run }: { run: number }) {
+  const [right, setRight] = useState(false);
+  const given = 'la boulongerie';
+  const expected = 'la boulangerie';
+  const diff = computeDiff(given, expected);
+  return (
+    <div key={`${run}-${right}`}>
+      <div className="rt-btnrow" style={{ marginBottom: 14 }}>
+        <button type="button" className="rt-btn rt-btn--sm" onClick={() => setRight(true)}>
+          answer right
+        </button>
+        <button type="button" className="rt-btn rt-btn--sm" onClick={() => setRight(false)}>
+          answer wrong
+        </button>
+      </div>
+      <div>
+        <div className="fc-prompt">
+          <span className="fc-flip__side">definition</span>
+          <div className="fc-prompt__text">die Bäckerei</div>
+        </div>
+        {right ? (
+          <div className="fc-verdict fc-verdict--ok" role="status">
+            <div className="fc-verdict__title">correct</div>
+            <div className="fc-verdict__answer">{expected}</div>
+          </div>
+        ) : (
+          <div className="fc-verdict fc-verdict--miss" role="alert">
+            <div className="fc-verdict__title">incorrect</div>
+            <div className="fc-verdict__line">
+              <span className="fc-verdict__key">you said</span>
+              <span className="fc-verdict__given">
+                <TypedLine parts={diff} />
+              </span>
+            </div>
+            <div className="fc-verdict__line">
+              <span className="fc-verdict__key">correct</span>
+              <span className="fc-verdict__answer">
+                <AnswerLine parts={diff} />
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function MotionLab() {
   const [entrance, setEntrance] = useState(0);
   const [deckRun, setDeckRun] = useState(0);
+  const [verdictRun, setVerdictRun] = useState(0);
   return (
     <main className="lab">
       <Link href="/settings" className="rt-backlink">
@@ -142,6 +193,14 @@ export function MotionLab() {
         onReplay={() => setDeckRun((n) => n + 1)}
       >
         <Deck key={deckRun} set={LAB_SET} saved={null} persist={false} />
+      </Specimen>
+
+      <Specimen
+        title="Answers"
+        note="Write, Learn and Test: right glows green and stamps its title; wrong glows rust, nudges, and draws the correction in."
+        onReplay={() => setVerdictRun((n) => n + 1)}
+      >
+        <VerdictSpecimen run={verdictRun} />
       </Specimen>
     </main>
   );

@@ -6,7 +6,7 @@
 // Each window keeps its own: a test started in the overlay is not the main
 // window's.
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 
 import { ask } from '@/components/Dialogs';
 import Link from '@/components/Link';
@@ -443,7 +443,7 @@ function QuestionCard({
   const label = q.kind === 'matching' && q.cardIds.length > 1 ? `${first}–${first + q.cardIds.length - 1}` : `${first}`;
 
   return (
-    <div className={`fc-tq${state}`} data-question={q.id}>
+    <div className={`fc-tq${state}`} data-question={q.id} style={{ '--q': first } as CSSProperties}>
       <div className="fc-tq__head">
         <span className="fc-tq__num">
           {label} <span className="rt-ink-faint">of {total}</span>

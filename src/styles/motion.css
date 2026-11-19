@@ -475,3 +475,110 @@
 .fc-meter__fill {
   transition: width 0.6s var(--ease-spring);
 }
+
+/* ---------- answers (Write, Learn, Test) ----------
+   Right: the card glows green once and the verdict's title stamps in.
+   Wrong: the card glows rust, the verdict gives a short shake, and the
+   correction draws itself in: what was missing gets its underline, what was
+   wrong its strike-through, one piece after another. */
+@keyframes fx-glow-ok {
+  30% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--rt-teal) 55%, transparent),
+      var(--lift);
+  }
+}
+@keyframes fx-glow-miss {
+  30% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--rt-rust) 55%, transparent),
+      var(--lift);
+  }
+}
+.fc-prompt:has(~ .fc-verdict--ok),
+*:has(> .fc-verdict--ok) > .fc-prompt {
+  animation: fx-glow-ok 0.7s ease-out;
+}
+.fc-prompt:has(~ .fc-verdict--miss),
+*:has(> .fc-verdict--miss) > .fc-prompt {
+  animation: fx-glow-miss 0.7s ease-out;
+}
+@keyframes fx-title-stamp {
+  from {
+    opacity: 0;
+    scale: 1.7;
+  }
+  65% {
+    opacity: 1;
+    scale: 0.94;
+  }
+}
+.fc-verdict__title {
+  display: inline-block;
+  align-self: flex-start;
+  transform-origin: left center;
+  animation: fx-title-stamp 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) 0.05s both;
+}
+@keyframes fx-nudge {
+  20% {
+    translate: -5px 0;
+  }
+  45% {
+    translate: 4px 0;
+  }
+  70% {
+    translate: -2px 0;
+  }
+}
+.fc-verdict--miss {
+  animation:
+    fc-in 0.18s ease-out both,
+    fx-nudge 0.34s ease-in-out 0.12s;
+}
+
+/* The correction, drawn in. The underline and strike are backgrounds so
+   they can grow from the left. */
+@keyframes fx-draw {
+  from {
+    background-size: 0% var(--fx-pen, 2px);
+  }
+}
+.fc-diff-add,
+.fc-diff-rem {
+  --fx-pen: 2px;
+  text-decoration: none;
+  background-repeat: no-repeat;
+  background-size: 100% var(--fx-pen);
+  animation: fx-draw 0.32s var(--ease-out) both;
+  animation-delay: calc(0.25s + min(var(--i, 0), 10) * 0.09s);
+}
+.fc-diff-add {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 100%;
+  padding-bottom: 1px;
+}
+.fc-diff-rem {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0 55%;
+}
+
+/* Learn's multiple choice: the right one pops, a wrong pick shakes. */
+@keyframes fx-pick-pop {
+  40% {
+    scale: 1.025;
+  }
+}
+.fc-choice.is-correct {
+  animation:
+    fc-in 0.18s ease-out both,
+    fx-pick-pop 0.32s var(--ease-spring) 0.05s;
+}
+.fc-choice.is-wrong {
+  animation: fx-nudge 0.34s ease-in-out;
+}
+
+/* Test: once handed in, each question's mark stamps on, top to bottom. */
+.fc-tq__mark {
+  animation: fx-title-stamp 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation-delay: calc(0.15s + min(var(--q, 1), 14) * 0.06s);
+}
