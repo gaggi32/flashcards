@@ -28,6 +28,8 @@ import {
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards/StudyHeader';
 import { ResetButton } from '@/components/flashcards/ResetButton';
+import { CountUp } from '@/components/motion/CountUp';
+import { Confetti } from '@/components/motion/Confetti';
 
 export function FlashcardsClient({ setId }: { setId: number }) {
   const { set, error } = useSet(setId);
@@ -672,6 +674,7 @@ function RoundSummary({
 
   return (
     <div className="fc-panel fc-summary" role="status">
+      {finished && <Confetti />}
       <h2 className="fc-panel__title">
         {finished ? 'you knew every card' : `round ${deck.round} done`}
       </h2>
@@ -679,15 +682,21 @@ function RoundSummary({
       <dl className="fc-stats">
         <div>
           <dt>cards</dt>
-          <dd>{deck.pile.length}</dd>
+          <dd>
+            <CountUp from={0} value={deck.pile.length} />
+          </dd>
         </div>
         <div>
           <dt>knew it</dt>
-          <dd>{known}</dd>
+          <dd>
+            <CountUp from={0} value={known} delay={120} />
+          </dd>
         </div>
         <div>
           <dt>to go again</dt>
-          <dd className={left > 0 ? 'fc-stats__miss' : undefined}>{left}</dd>
+          <dd className={left > 0 ? 'fc-stats__miss' : undefined}>
+            <CountUp from={0} value={left} delay={240} />
+          </dd>
         </div>
       </dl>
 

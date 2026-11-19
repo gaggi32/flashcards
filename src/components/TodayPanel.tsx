@@ -2,7 +2,9 @@
 // where that set stands by learn status, the day streak, and the way in.
 // No dates or daily quotas.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
+
+import { CountUp } from '@/components/motion/CountUp';
 
 import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { showOverlay } from '@/lib/app/native';
@@ -13,33 +15,6 @@ import type { SetSummaryDTO } from '@/lib/flashcards/types';
 import { todayKey } from '@/lib/nutrition/day';
 import { listSets, overview, type Overview } from '@/lib/store/repo';
 
-/** Counts from the last shown value to the new one, so a change visibly moves. */
-export function CountUp({ value }: { value: number }) {
-  const [shown, setShown] = useState(value);
-  const from = useRef(value);
-  useEffect(() => {
-    const start = from.current;
-    if (start === value || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      from.current = value;
-      setShown(value);
-      return;
-    }
-    const t0 = performance.now();
-    let raf = 0;
-    const tick = (t: number) => {
-      const k = Math.min(1, (t - t0) / 600);
-      setShown(Math.round(start + (value - start) * (1 - Math.pow(1 - k, 3))));
-      if (k < 1) raf = requestAnimationFrame(tick);
-      else from.current = value;
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      cancelAnimationFrame(raf);
-      from.current = value;
-    };
-  }, [value]);
-  return <>{shown}</>;
-}
 
 export function TodayPanel({ version }: { version: number }) {
   const { settings } = useSettings();

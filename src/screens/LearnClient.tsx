@@ -54,6 +54,8 @@ import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
 import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards/StudyHeader';
 import { ResetButton } from '@/components/flashcards/ResetButton';
 import { SwitchSides } from '@/components/flashcards/SwitchSides';
+import { CountUp } from '@/components/motion/CountUp';
+import { Confetti } from '@/components/motion/Confetti';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -1012,15 +1014,21 @@ function Checkpoint({
       <dl className="fc-stats">
         <div>
           <dt title="Answered right twice (mastered)">Mastered</dt>
-          <dd className="fc-stats__ok">{mastered}</dd>
+          <dd className="fc-stats__ok">
+            <CountUp from={0} value={mastered} />
+          </dd>
         </div>
         <div>
           <dt title="Answered right once — you'll type these to master them!">Learning</dt>
-          <dd className="fc-stats__learning">{learning}</dd>
+          <dd className="fc-stats__learning">
+            <CountUp from={0} value={learning} delay={120} />
+          </dd>
         </div>
         <div>
           <dt title="Cards left to master">To go</dt>
-          <dd>{remaining}</dd>
+          <dd>
+            <CountUp from={0} value={remaining} delay={240} />
+          </dd>
         </div>
       </dl>
 
@@ -1077,6 +1085,7 @@ function Summary({
 
   return (
     <div className="fc-panel fc-summary" role="status">
+      {finished && <Confetti />}
       <h2 className="fc-panel__title">{finished ? 'all done · mastered!' : 'stopped'}</h2>
 
       <dl className="fc-stats">

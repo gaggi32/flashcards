@@ -47,6 +47,8 @@ import {
 } from '@/lib/flashcards/test';
 import type { SetDTO } from '@/lib/flashcards/types';
 import { answerOf, normalizeAnswer, promptOf, type AnswerCheck, type AnswerWith, type StudyCard } from '@/lib/flashcards/write';
+import { CountUp } from '@/components/motion/CountUp';
+import { Confetti } from '@/components/motion/Confetti';
 
 /** Tests in progress (and the last options), per set, for as long as the app runs. */
 const papers = new Map<number, Test>();
@@ -807,9 +809,12 @@ function Results({
     percent === 100 ? 'every answer right' : percent >= 80 ? 'well done' : percent >= 50 ? 'getting there' : 'keep at it';
   return (
     <div className="fc-panel fc-testscore" role="status">
+      {percent === 100 ? <Confetti /> : percent >= 80 ? <Confetti size="small" /> : null}
       <div className="fc-testscore__head">
         <div className={`fc-testscore__ring${percent === 100 ? ' is-full' : ''}`} style={{ ['--p' as string]: percent }}>
-          <span>{percent}%</span>
+          <span>
+            <CountUp from={0} value={percent} ms={900} />%
+          </span>
         </div>
         <div>
           <h2 className="fc-panel__title">{verdict}</h2>

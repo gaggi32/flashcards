@@ -38,6 +38,8 @@ import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { SpecialKeys, keepFocus } from '@/components/flashcards/SpecialKeys';
 import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards/StudyHeader';
 import { ResetButton } from '@/components/flashcards/ResetButton';
+import { CountUp } from '@/components/motion/CountUp';
+import { Confetti } from '@/components/motion/Confetti';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -654,6 +656,7 @@ function Summary({
 
   return (
     <div className="fc-panel fc-summary" role="status">
+      {finished && <Confetti />}
       <h2 className="fc-panel__title">
         {finished ? 'all cards mastered' : `round ${round.round} done`}
       </h2>
@@ -661,11 +664,15 @@ function Summary({
       <dl className="fc-stats">
         <div>
           <dt>cards</dt>
-          <dd>{round.total}</dd>
+          <dd>
+            <CountUp from={0} value={round.total} />
+          </dd>
         </div>
         <div>
           <dt>missed</dt>
-          <dd className={round.missed > 0 ? 'fc-stats__miss' : undefined}>{round.missed}</dd>
+          <dd className={round.missed > 0 ? 'fc-stats__miss' : undefined}>
+            <CountUp from={0} value={round.missed} delay={120} />
+          </dd>
         </div>
         {round.hinted > 0 && (
           <div>
@@ -675,7 +682,9 @@ function Summary({
         )}
         <div>
           <dt>accuracy</dt>
-          <dd>{round.accuracy}%</dd>
+          <dd>
+            <CountUp from={0} value={round.accuracy} delay={240} />%
+          </dd>
         </div>
       </dl>
 

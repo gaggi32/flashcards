@@ -10,6 +10,8 @@ import { motionLevel } from '@/lib/app/theme';
 import type { SetDTO } from '@/lib/flashcards/types';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
+import { Confetti } from '@/components/motion/Confetti';
+import { CountUp } from '@/components/motion/CountUp';
 import { Deck } from '@/screens/FlashcardsClient';
 
 /** A made-up set for the specimens; nothing here is saved. */
@@ -150,10 +152,68 @@ function VerdictSpecimen({ run }: { run: number }) {
   );
 }
 
+/** The end of a round and a test's score, as the study screens draw them. */
+function ResultsSpecimen({ run }: { run: number }) {
+  const [perfect, setPerfect] = useState(true);
+  const known = perfect ? 6 : 5;
+  const percent = perfect ? 100 : 83;
+  return (
+    <div key={`${run}-${perfect}`}>
+      <div className="rt-btnrow" style={{ marginBottom: 14 }}>
+        <button type="button" className="rt-btn rt-btn--sm" onClick={() => setPerfect(true)}>
+          every card known
+        </button>
+        <button type="button" className="rt-btn rt-btn--sm" onClick={() => setPerfect(false)}>
+          one missed
+        </button>
+      </div>
+      <div className="fc-panel fc-summary" role="status">
+        {perfect && <Confetti seed={run + 1} />}
+        <h2 className="fc-panel__title">{perfect ? 'you knew every card' : 'round 1 done'}</h2>
+        <dl className="fc-stats">
+          <div>
+            <dt>cards</dt>
+            <dd>
+              <CountUp from={0} value={6} />
+            </dd>
+          </div>
+          <div>
+            <dt>knew it</dt>
+            <dd>
+              <CountUp from={0} value={known} delay={120} />
+            </dd>
+          </div>
+          <div>
+            <dt>to go again</dt>
+            <dd className={perfect ? undefined : 'fc-stats__miss'}>
+              <CountUp from={0} value={6 - known} delay={240} />
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div className="fc-panel fc-testscore" role="status">
+        {percent === 100 ? <Confetti seed={run + 7} /> : <Confetti size="small" seed={run + 7} />}
+        <div className="fc-testscore__head">
+          <div className={`fc-testscore__ring${percent === 100 ? ' is-full' : ''}`} style={{ ['--p' as string]: percent }}>
+            <span>
+              <CountUp from={0} value={percent} ms={900} />%
+            </span>
+          </div>
+          <div>
+            <h2 className="fc-panel__title">{percent === 100 ? 'every answer right' : 'well done'}</h2>
+            <p className="rt-small rt-ink-soft">{percent === 100 ? '12' : '10'} of 12 questions right · 3 min</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function MotionLab() {
   const [entrance, setEntrance] = useState(0);
   const [deckRun, setDeckRun] = useState(0);
   const [verdictRun, setVerdictRun] = useState(0);
+  const [resultsRun, setResultsRun] = useState(0);
   return (
     <main className="lab">
       <Link href="/settings" className="rt-backlink">
@@ -201,6 +261,14 @@ export function MotionLab() {
         onReplay={() => setVerdictRun((n) => n + 1)}
       >
         <VerdictSpecimen run={verdictRun} />
+      </Specimen>
+
+      <Specimen
+        title="Results"
+        note="End of a round and a test's score. Confetti only for a set known all the way through or a test above 80% (big at 100%); none in calm, no motion or eye comfort."
+        onReplay={() => setResultsRun((n) => n + 1)}
+      >
+        <ResultsSpecimen run={resultsRun} />
       </Specimen>
     </main>
   );

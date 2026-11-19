@@ -582,3 +582,102 @@
   animation: fx-title-stamp 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) both;
   animation-delay: calc(0.15s + min(var(--q, 1), 14) * 0.06s);
 }
+
+/* ---------- results: end of a round, a checkpoint, a test's score ----------
+   The panel pops in, its title stamps on, the numbers count up (CountUp)
+   and each stat stamps in after the one before. A set known all the way
+   through, or a test with every answer right, gets confetti (Confetti). */
+.fc-summary,
+.fc-checkpoint,
+.fc-testscore {
+  position: relative;
+  animation: fx-end 0.5s var(--ease-spring) both;
+}
+@keyframes fx-end {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+    scale: 0.97;
+  }
+}
+.fc-summary > .fc-panel__title,
+.fc-checkpoint > .fc-panel__title,
+.fc-testscore .fc-panel__title {
+  transform-origin: left center;
+  animation: fx-title-stamp 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) 0.18s both;
+}
+.fc-stats > div {
+  animation: fx-row-stamp 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.fc-stats > div:nth-child(1) {
+  animation-delay: 0.32s;
+}
+.fc-stats > div:nth-child(2) {
+  animation-delay: 0.42s;
+}
+.fc-stats > div:nth-child(3) {
+  animation-delay: 0.52s;
+}
+.fc-stats > div:nth-child(n + 4) {
+  animation-delay: 0.62s;
+}
+@keyframes fx-row-stamp {
+  from {
+    opacity: 0;
+    scale: 1.18;
+  }
+  60% {
+    opacity: 1;
+    scale: 0.985;
+  }
+}
+
+/* The score ring fills to its percentage. */
+@property --p {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+@keyframes fx-ring {
+  from {
+    --p: 0;
+  }
+}
+.fc-testscore__ring {
+  animation: fx-ring 0.9s var(--ease-out) 0.1s both;
+}
+
+/* Confetti: pieces shoot up from the middle of the panel and fall away. */
+.fx-confetti {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.fx-confetti__bit {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 1px;
+  animation-name: fx-confetti;
+  animation-fill-mode: both;
+}
+@keyframes fx-confetti {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.1, 0.75, 0.3, 1);
+  }
+  28% {
+    transform: translate(calc(var(--dx) * 0.65), var(--dy)) rotate(calc(var(--r) * 0.35));
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.45, 0, 0.85, 0.6);
+  }
+  100% {
+    transform: translate(var(--dx), calc(var(--dy) + 560px)) rotate(var(--r));
+    opacity: 0;
+  }
+}
