@@ -1,11 +1,15 @@
-// The hotkey overlay: the main window's own Flashcards, Write, Learn and Test
+// The hotkey overlay: the main window's own Flashcards, Write and Learn
 // screens for the set you pick, in a compact frame, plus a quick-add form.
+// It is for a few quick answers, so it shows little: one header line (the
+// set and mode as one switch, a "⋯" menu, close) and only what a screen needs
+// to answer; the screens' other controls sit in the "⋯" menu (MoreControls),
+// Write and Learn skip their setup screens, and Test (a whole paper) opens
+// in the main window.
 //
 // It is the same session, not a copy: each mode keeps its place per set in
 // the database (study_sessions), which both windows share, so a round started
 // in the main window carries on here and the other way round. Answers go to
-// the same database. Test is the exception: a test is not saved (TestClient),
-// so the overlay's test is its own. Every write is announced as a data
+// the same database. Every write is announced as a data
 // change, and a window that was in the background picks up the other's
 // changes when it comes back (the overlay when the hotkey opens it, the main
 // window when it is focused). Links to the set page or the editor open the
@@ -18,9 +22,8 @@
 //
 // The window is as tall as the panel's content (useFitWindow): Rust zooms it
 // for the screen it is on and never makes it shorter than that, so nothing
-// in the panel has to be scrolled to. Test is the exception: a paper can be
-// long, so Test keeps one fixed height (setup, paper and score alike) and
-// the paper scrolls inside it.
+// in the panel has to be scrolled to. The header's menus open in the panel's
+// flow, under the header, so the window grows to show them.
 
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState } from 'react';
@@ -36,18 +39,20 @@ import { asApiError } from '@/lib/store/errors';
 import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
-import { TestClient } from '@/screens/TestClient';
 import { WriteClient } from '@/screens/WriteClient';
 import { DialogHost } from '@/components/Dialogs';
 import { SetOptions } from '@/components/flashcards/SetOptions';
 import { tabStops } from '@/components/flashcards/StudyHeader';
+import { OverlayContext } from '@/components/flashcards/overlaySlot';
+import { groupByFolder } from '@/lib/flashcards/folders';
 
-const MODES: { id: OverlayMode; route: string; label: string; hint: string }[] = [
-  { id: 'cards', route: 'cards', label: 'Cards', hint: 'Flashcards' },
+/** The modes studied in the overlay. Test (Ctrl+4) opens in the main window. */
+const MODES: { id: Exclude<OverlayMode, 'test'>; route: string; label: string; hint: string }[] = [
+  { id: 'cards', route: 'cards', label: 'Cards', hint: 'Flip a card, mark it' },
   { id: 'write', route: 'write', label: 'Write', hint: 'Type the answers' },
   { id: 'learn', route: 'learn', label: 'Learn', hint: 'Multiple choice, then typed' },
-  { id: 'test', route: 'test', label: 'Test', hint: 'A test, marked at the end' },
 ];
+const SHORTCUT = isMacPlatform() ? '⌘' : 'Ctrl+';
 
 const MODE_PATH = /^\/flashcards\/(\d+)\/(cards|write|learn|test)$/;
 
@@ -77,16 +82,8 @@ function useFitWindow(panelRef: React.RefObject<HTMLDivElement | null>) {
       // The panel is as tall as its content until the window holds it back;
       // then the scrolling part says by how much. offsetHeight, not the
       // bounding box: the open animation turns and scales the panel.
-      // A fixed-height screen (Test) scrolls on purpose: that is not asked for.
       const scroller = panel.querySelector<HTMLElement>('.ov__embed, .ov__body');
-      // A fixed one is cut off by the panel instead while the window is
-      // shorter, which the panel's own scrollHeight counts.
-      const fixed = scroller?.classList.contains('ov__embed--fixed');
-      const hidden = !scroller
-        ? 0
-        : fixed
-          ? Math.max(0, panel.scrollHeight - panel.clientHeight)
-          : Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+      const hidden = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
       const h = panel.offsetHeight + hidden + FRAME_PAD + 1;
       if (h === sent) return;
       window.clearTimeout(shrink);
@@ -131,7 +128,13 @@ function OverlayFrame() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [view, setView] = useState<'study' | 'add'>('study');
-  const [mode, setMode] = usePref('overlayMode');
+  const [savedMode, setMode] = usePref('overlayMode');
+  // A mode saved as Test (by versions that studied it here) studies Cards.
+  const mode = savedMode === 'test' ? 'cards' : savedMode;
+  /** The header menu that is open: the set and mode switch, or "⋯". */
+  const [menu, setMenu] = useState<'switch' | 'more' | null>(null);
+  /** Where the screens put their secondary controls (MoreControls). */
+  const [moreSlot, setMoreSlot] = useState<HTMLElement | null>(null);
   const [chosenSet, setChosenSet] = usePref('overlaySet');
   const [sets, setSets] = useState<SetSummaryDTO[] | null>(null);
   const [resync, setResync] = useState(0);
@@ -168,7 +171,7 @@ function OverlayFrame() {
   useEffect(() => {
     if (pathname === '/') return;
     const m = MODE_PATH.exec(pathname);
-    if (m) {
+    if (m && m[2] !== 'test') {
       const next = m[2] as OverlayMode;
       if (next !== mode) setMode(next);
       return;
@@ -253,7 +256,8 @@ function OverlayFrame() {
         return;
       }
       if (e.key === 'Escape') {
-        if (view === 'add') setView('study');
+        if (menu) setMenu(null);
+        else if (view === 'add') setView('study');
         else void hideOverlay();
         e.preventDefault();
         return;
@@ -261,89 +265,179 @@ function OverlayFrame() {
       if ((e.ctrlKey || e.metaKey) && ['1', '2', '3', '4'].includes(e.key)) {
         e.preventDefault();
         // Not from under an open dialog: its answer would land on a screen
-        // that is gone (a test handed in behind your back).
+        // that is gone.
         if (panelRef.current?.querySelector('.dlg')) return;
+        setMenu(null);
+        if (e.key === '4') {
+          openTest();
+          return;
+        }
         setView('study');
         setMode(MODES[Number(e.key) - 1].id);
       }
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [view, setMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, setMode, menu, setId]);
+
+  /** Test is a whole paper: it opens in the main window, on this set. */
+  function openTest() {
+    setMenu(null);
+    void openMain(setId === null ? '/flashcards' : `/flashcards/${setId}/test`);
+  }
+
+  // A press anywhere else in the panel closes an open menu.
+  useEffect(() => {
+    if (!menu) return;
+    function onDown(e: PointerEvent) {
+      const t = e.target as Element | null;
+      if (t?.closest('.ov__drawer, .ov__switch, .ov__more')) return;
+      setMenu(null);
+    }
+    window.addEventListener('pointerdown', onDown);
+    return () => window.removeEventListener('pointerdown', onDown);
+  }, [menu]);
 
   const hotkey = settings ? formatHotkey(settings.hotkey, isMacPlatform()) : '';
-  const modeIndex = MODES.findIndex((m) => m.id === mode);
+  const currentMode = MODES.find((m) => m.id === mode) ?? MODES[0];
+  const currentSet = sets?.find((s) => s.id === setId) ?? null;
+  const toggle = (which: 'switch' | 'more') => setMenu((m) => (m === which ? null : which));
 
   return (
+    <OverlayContext.Provider value={{ menu: moreSlot }}>
     <div className="rt-page fc-page ov" data-phase={phase}>
       <div className="ov__panel" ref={panelRef} onAnimationEnd={onPanelAnimationEnd}>
         <header className="ov__head" data-tauri-drag-region>
-          <div className="ov__modes" role="tablist" aria-label="Study mode" style={{ ['--i' as string]: modeIndex }}>
-            <span className="ov__modes-pill" aria-hidden="true" />
-            {MODES.map((m, i) => (
-              <button
-                key={m.id}
-                type="button"
-                tabIndex={-1}
-                role="tab"
-                aria-selected={mode === m.id && view === 'study'}
-                className={`ov__mode${mode === m.id ? ' is-on' : ''}`}
-                title={`${m.hint} (${isMacPlatform() ? '⌘' : 'Ctrl+'}${i + 1})`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  setView('study');
-                  setMode(m.id);
-                }}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-          <select
-            className="ov__setpick"
+          {/* The set and the mode, as one switch: what you are studying, and
+              the way to change it. */}
+          <button
+            type="button"
             tabIndex={-1}
-            aria-label="Set to study"
-            value={setId === null ? '' : String(setId)}
-            onChange={(e) => {
-              setChosenSet(Number(e.target.value));
-              setView('study');
-              e.currentTarget.blur();
-            }}
+            className={`ov__switch${menu === 'switch' ? ' is-open' : ''}`}
+            aria-expanded={menu === 'switch'}
+            aria-label="Change set or mode"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => toggle('switch')}
           >
-            <SetOptions sets={sets ?? []} />
-          </select>
+            <span className="ov__switch-set">{view === 'add' ? 'Add a card' : (currentSet?.title ?? 'Pick a set')}</span>
+            {view !== 'add' && <span className="ov__switch-mode">{currentMode.label}</span>}
+            <svg className="ov__switch-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
+              <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
           <span className="ov__spacer" data-tauri-drag-region />
           <button
             type="button"
             tabIndex={-1}
-            className={`ov__icon ov__plus${view === 'add' ? ' is-on' : ''}`}
-            title="Add a card"
+            className={`ov__icon ov__more${menu === 'more' ? ' is-on' : ''}`}
+            title="More"
+            aria-label="More"
+            aria-expanded={menu === 'more'}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setView(view === 'add' ? 'study' : 'add')}
+            onClick={() => toggle('more')}
           >
-            +
-          </button>
-          <button
-            type="button"
-            tabIndex={-1}
-            className="ov__icon"
-            title="Open this in the main window"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => void openMain(setId === null ? '/flashcards' : pathname)}
-          >
-            ⤢
+            <svg width="14" height="4" viewBox="0 0 14 4" aria-hidden="true">
+              <circle cx="2" cy="2" r="1.5" fill="currentColor" />
+              <circle cx="7" cy="2" r="1.5" fill="currentColor" />
+              <circle cx="12" cy="2" r="1.5" fill="currentColor" />
+            </svg>
           </button>
           <button
             type="button"
             tabIndex={-1}
             className="ov__icon"
             title={`Hide (Esc or ${hotkey})`}
+            aria-label="Hide"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => void hideOverlay()}
           >
             ×
           </button>
         </header>
+
+        {/* The header's menus open here, in the panel's flow, so the window
+            grows to show them. The "⋯" one is always mounted: the screens
+            put their own controls in it (MoreControls). */}
+        <div className={`ov__drawer${menu ? ' is-open' : ''}`}>
+          {menu === 'switch' && (
+            <div className="ov__menu ov__menu--switch">
+              <div className="ov__menu-label">Mode</div>
+              <div className="ov__modelist">
+                {MODES.map((m, i) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`ov__menu-item${view === 'study' && mode === m.id ? ' is-on' : ''}`}
+                    onClick={() => {
+                      setView('study');
+                      setMode(m.id);
+                      setMenu(null);
+                    }}
+                  >
+                    <span className="ov__menu-main">{m.label}</span>
+                    <span className="ov__menu-sub">{m.hint}</span>
+                    <span className="ov__menu-key">
+                      {SHORTCUT}
+                      {i + 1}
+                    </span>
+                  </button>
+                ))}
+                <button type="button" className="ov__menu-item" onClick={openTest}>
+                  <span className="ov__menu-main">Test ↗</span>
+                  <span className="ov__menu-sub">A whole paper, in the main window</span>
+                  <span className="ov__menu-key">{SHORTCUT}4</span>
+                </button>
+              </div>
+              <div className="ov__menu-label">Set</div>
+              <div className="ov__setlist">
+                {groupByFolder(sets ?? []).map((g) => (
+                  <div key={g.folder ?? ' loose'} className="ov__setgroup">
+                    {g.folder !== null && <div className="ov__setfolder">{g.folder}</div>}
+                    {g.sets.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`ov__menu-item ov__setitem${s.id === setId ? ' is-on' : ''}`}
+                        onClick={() => {
+                          setChosenSet(s.id);
+                          setView('study');
+                          setMenu(null);
+                        }}
+                      >
+                        <span className="ov__menu-main">{s.title}</span>
+                        <span className="ov__menu-count">{s.cardCount}</span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="ov__menu ov__menu--more" hidden={menu !== 'more'}>
+            <div className="ov__menu-slot" ref={setMoreSlot} />
+            <button
+              type="button"
+              className="ov__menu-item"
+              onClick={() => {
+                setView(view === 'add' ? 'study' : 'add');
+                setMenu(null);
+              }}
+            >
+              <span className="ov__menu-main">{view === 'add' ? 'Back to studying' : 'Add a card'}</span>
+            </button>
+            <button
+              type="button"
+              className="ov__menu-item"
+              onClick={() => {
+                setMenu(null);
+                void openMain(setId === null ? '/flashcards' : pathname);
+              }}
+            >
+              <span className="ov__menu-main">Open in the main window</span>
+            </button>
+          </div>
+        </div>
 
         {view === 'add' ? (
           <QuickAdd onDone={() => setView('study')} preferSet={setId} />
@@ -357,12 +451,11 @@ function OverlayFrame() {
             </button>
           </div>
         ) : (
-          <div className={`ov__embed fc-app${pathname.endsWith('/test') ? ' ov__embed--fixed' : ''}`} key={resync}>
+          <div className="ov__embed fc-app" key={resync}>
             <Routes>
               <Route path="/flashcards/:id/cards" element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />} />
               <Route path="/flashcards/:id/write" element={<WithSetId render={(id) => <WriteClient setId={id} />} />} />
               <Route path="/flashcards/:id/learn" element={<WithSetId render={(id) => <LearnClient setId={id} />} />} />
-              <Route path="/flashcards/:id/test" element={<WithSetId render={(id) => <TestClient setId={id} />} />} />
               <Route path="*" element={null} />
             </Routes>
           </div>
@@ -371,6 +464,7 @@ function OverlayFrame() {
         <DialogHost />
       </div>
     </div>
+    </OverlayContext.Provider>
   );
 }
 

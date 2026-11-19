@@ -40,6 +40,7 @@ import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards
 import { ResetButton } from '@/components/flashcards/ResetButton';
 import { CountUp } from '@/components/motion/CountUp';
 import { Confetti } from '@/components/motion/Confetti';
+import { MoreControls, useInOverlay } from '@/components/flashcards/overlaySlot';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -141,6 +142,17 @@ function WriteMode({ set }: { set: SetDTO }) {
     rememberSide(set.id, 'write', next.answerWith);
   }, [session, set.id]);
 
+  // The overlay is for a quick round and has no setup screen: whenever Write
+  // would show it (first open, after a reset), a round starts at once on the
+  // side last used. A saved round has already carried on above.
+  const inOverlay = useInOverlay();
+  useEffect(() => {
+    if (!inOverlay || !loaded || session || loadError || set.cards.length === 0) return;
+    begin();
+    // begin reads the current side and shuffle; run once when loading is done.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inOverlay, loaded, session, loadError, set.cards.length]);
+
   function resumeSaved() {
     if (savedSession) {
       setSession(savedSession);
@@ -166,6 +178,11 @@ function WriteMode({ set }: { set: SetDTO }) {
         <div className="fc-skel" style={{ height: 220 }} />
       </div>
     );
+  }
+
+  if (!session && inOverlay && set.cards.length > 0) {
+    // Starting by itself (the effect above): nothing to show for a frame.
+    return null;
   }
 
   if (!session) {
@@ -423,12 +440,14 @@ function Play({
           {progress.missed}
         </span>
         <span className="fc-writebar__stat">{progress.remaining} left</span>
-        <SwitchSides answerWith={session.answerWith} enabled={step.kind === 'ask'} onSwitch={onSwitchSides} />
-        <ResetButton
-          question="reset write?"
-          title="Start Write over: back to the start screen to pick the side, every card asked again, scores cleared"
-          onReset={onReset}
-        />
+        <MoreControls>
+          <SwitchSides answerWith={session.answerWith} enabled={step.kind === 'ask'} onSwitch={onSwitchSides} />
+          <ResetButton
+            question="reset write?"
+            title="Start Write over: back to the start screen to pick the side, every card asked again, scores cleared"
+            onReset={onReset}
+          />
+        </MoreControls>
       </div>
 
       <div className="fc-progress">

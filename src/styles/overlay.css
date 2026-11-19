@@ -122,104 +122,82 @@ html.overlay body {
   }
 }
 
-/* ---------- header ---------- */
+/* ---------- header ----------
+   One line: the set and mode as one switch, then "⋯" and close. The rest
+   of the bar is a drag handle for the window. */
 .ov__head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 6px 6px 6px 8px;
   border-bottom: 1px solid var(--fc-line);
   user-select: none;
   cursor: grab;
 }
-.ov__modes {
-  position: relative;
-  flex: none;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding: 3px;
-  border-radius: var(--fc-radius);
-  background: var(--rt-panel-2);
-  cursor: default;
-}
-.ov__modes-pill {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: 3px;
-  width: calc((100% - 6px) / 4);
-  border-radius: var(--fc-radius-sm);
-  background: var(--rt-panel);
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.18),
-    inset 0 0 0 1px var(--fc-line);
-  transform: translateX(calc(var(--i, 0) * 100%));
-  transition: transform 0.3s var(--ease-spring);
-}
-.ov__mode {
-  position: relative;
+.ov__switch {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
   min-width: 0;
-  padding: 3px 8px;
-  border: none;
+  max-width: 78%;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--fc-radius-sm);
   background: none;
-  color: var(--rt-ink-soft);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-.ov__mode:hover,
-.ov__mode.is-on {
   color: var(--rt-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
-.ov__mode.is-on {
-  font-weight: 600;
+.ov__switch:hover,
+.ov__switch.is-open {
+  background: var(--rt-panel-2);
+  border-color: var(--fc-line);
 }
-.ov__setpick {
-  flex: 1 1 auto;
+.ov__switch-set {
   min-width: 0;
-  max-width: 170px;
-  padding: 3px 22px 3px 8px;
-  border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius-sm);
-  background: var(--rt-panel)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E")
-    no-repeat right 7px center;
-  color: var(--rt-ink);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
-  appearance: none;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
+  font-family: var(--fc-serif);
+  font-size: 15px;
+  font-weight: 500;
 }
-.ov__setpick:hover {
-  border-color: var(--rt-ink-faint);
+.ov__switch-mode {
+  flex: none;
+  font-family: var(--fc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rt-ink-faint);
 }
-.ov__setpick:focus-visible {
-  border-color: var(--fc-accent);
-  box-shadow: 0 0 0 3px var(--fc-accent-soft);
-  outline: none;
+.ov__switch-chev {
+  flex: none;
+  align-self: center;
+  color: var(--rt-ink-faint);
+  transition: rotate 0.2s var(--ease-out);
 }
-.ov__setpick optgroup,
-.ov__setpick option {
-  background: var(--rt-panel);
-  color: var(--rt-ink);
+.ov__switch.is-open .ov__switch-chev {
+  rotate: 180deg;
 }
 .ov__spacer {
   flex: 1;
 }
 .ov__icon {
   flex: none;
-  width: 24px;
-  height: 24px;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
   border: none;
   border-radius: var(--fc-radius-sm);
   background: none;
   color: var(--rt-ink-soft);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
   cursor: pointer;
   transition:
@@ -235,8 +213,154 @@ html.overlay body {
 .ov__icon:active {
   transform: scale(0.9);
 }
-.ov__plus.is-on {
-  transform: rotate(45deg);
+
+/* ---------- the header's menus ----------
+   They open in the panel's flow, under the header, so the window grows to
+   show them; nothing floats outside the window to be cut off. */
+.ov__drawer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s var(--ease-out);
+}
+.ov__drawer.is-open {
+  grid-template-rows: 1fr;
+  border-bottom: 1px solid var(--fc-line);
+}
+.ov__drawer > * {
+  min-height: 0;
+  overflow: hidden;
+}
+.ov__menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px;
+  background: var(--rt-panel-2);
+}
+.ov__menu[hidden] {
+  display: none;
+}
+.ov__menu-label {
+  padding: 6px 8px 3px;
+  font-family: var(--fc-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rt-ink-faint);
+}
+.ov__menu-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--fc-radius-sm);
+  background: none;
+  color: var(--rt-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ov__menu-item:hover {
+  background: var(--rt-panel);
+}
+.ov__menu-item.is-on {
+  background: var(--rt-panel);
+  box-shadow: inset 0 0 0 1px var(--fc-line-strong);
+}
+.ov__menu-main {
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov__menu-sub {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--rt-ink-faint);
+}
+.ov__menu-key,
+.ov__menu-count {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--fc-mono);
+  font-size: 10.5px;
+  color: var(--rt-ink-faint);
+}
+.ov__setlist {
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.ov__setfolder {
+  padding: 6px 8px 2px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
+}
+.ov__setgroup + .ov__setgroup {
+  margin-top: 2px;
+}
+/* The screens' own controls in "⋯" (MoreControls), drawn as menu rows. */
+.ov__menu-slot:empty {
+  display: none;
+}
+.ov__menu-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--fc-line);
+}
+.rt-page.fc-page .ov__menu-slot .rt-btn,
+.rt-page.fc-page .ov__menu-slot .rt-linkbtn,
+.ov__menu-slot .fc-reset {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 0;
+  padding: 6px 8px;
+  border: none;
+  border-radius: var(--fc-radius-sm);
+  background: none;
+  box-shadow: none;
+  color: var(--rt-ink);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+}
+.rt-page.fc-page .ov__menu-slot .rt-btn:hover:not(:disabled),
+.rt-page.fc-page .ov__menu-slot .rt-linkbtn:hover:not(:disabled) {
+  background: var(--rt-panel);
+  color: var(--rt-ink);
+}
+.rt-page.fc-page .ov__menu-slot .fc-toggle.is-on {
+  border: none;
+  background: none;
+  color: var(--rt-ink);
+}
+.ov__menu-slot .fc-reset--ask {
+  flex-wrap: wrap;
+}
+/* Reset is the one that throws work away: last in the list. */
+.ov__menu-slot .fc-reset {
+  order: 9;
+}
+/* "reset" reads as a menu entry like the others. */
+.ov__menu-slot button.fc-reset {
+  text-transform: capitalize;
 }
 
 /* ---------- the embedded study screen, compact ----------
@@ -408,100 +532,6 @@ html.overlay body {
   margin-top: 10px;
 }
 
-/* Test: the paper, smaller. Test keeps one height whatever is on it (the
-   window does not grow with the paper, Overlay.tsx), and the paper scrolls
-   under its sticky hand-in bar. */
-.rt-page.fc-page .ov__embed.ov__embed--fixed {
-  flex: none;
-  height: 320px;
-}
-.ov__embed .fc-options--three {
-  grid-template-columns: repeat(3, 1fr) !important;
-}
-.ov__embed .fc-test {
-  gap: 8px;
-}
-.ov__embed .fc-tq {
-  gap: 8px;
-  padding: 9px 11px 11px;
-  border-radius: var(--fc-radius);
-}
-.ov__embed .fc-tq__num,
-.ov__embed .fc-tq__mark {
-  font-size: 11.5px;
-}
-.ov__embed .fc-tq__kind {
-  margin-left: 8px;
-  font-size: 10.5px;
-}
-.ov__embed .fc-tq__pair {
-  gap: 6px;
-}
-.ov__embed .fc-tq__prompt {
-  padding: 7px 10px 8px;
-  gap: 2px;
-}
-.ov__embed .fc-tq__side {
-  font-size: 10px;
-}
-.ov__embed .fc-tq__text {
-  font-size: 15px;
-}
-.ov__embed .fc-tq__choices {
-  gap: 6px;
-}
-.ov__embed .fc-tq .fc-choice {
-  padding: 6px 10px;
-}
-.ov__embed .fc-match {
-  gap: 8px;
-}
-.ov__embed .fc-match__answers,
-.ov__embed .fc-match__prompts {
-  gap: 4px;
-}
-.ov__embed .fc-match__answer,
-.ov__embed .fc-match__prompt {
-  font-size: 13px;
-}
-.ov__embed .fc-match__answer {
-  padding: 5px 9px;
-}
-.ov__embed .fc-match__row {
-  padding: 5px 8px 5px 10px;
-}
-.ov__embed .fc-letter {
-  width: 24px;
-  height: 24px;
-  font-size: 11.5px;
-}
-.ov__embed .fc-test__bar {
-  bottom: 0;
-  /* The second shadow fills the scroller's bottom padding under the bar in
-     the panel's colour, so the questions don't show through below it. */
-  box-shadow:
-    0 6px 18px var(--rt-shadow),
-    0 10px 0 6px var(--rt-paper);
-  gap: 8px;
-  padding: 6px 8px 6px 11px;
-  border-radius: var(--fc-radius);
-}
-.ov__embed .fc-test__answered {
-  font-size: 12px;
-}
-.ov__embed .fc-testscore__head {
-  gap: 12px;
-}
-.ov__embed .fc-testscore__ring {
-  width: 54px;
-  height: 54px;
-}
-.ov__embed .fc-testscore__ring span {
-  width: 44px;
-  height: 44px;
-  font-size: 14px;
-}
-
 /* ---------- quick add, empty state ---------- */
 .ov__body {
   flex: 1;
@@ -630,9 +660,16 @@ html.overlay body {
   display: none;
 }
 
-/* A PDF is made from the main window only (save_pdf refuses the overlay). */
-.ov__embed .fc-test__pdfrow,
-.ov__embed .fc-test__pdf,
-.ov__embed .fc-test__pdfnote {
+/* Only what you need to answer: Cards' shuffle and side toggles live in "⋯",
+   and Write answers with Enter (the label says so) instead of a button. */
+.ov__embed .fc-deckbar {
   display: none;
+}
+.ov__embed .fc-answer .rt-btnrow > button[type='submit'] {
+  display: none;
+}
+.ov__embed .fc-answer .rt-field__label::after {
+  content: ' · Enter ↵';
+  color: var(--rt-ink-faint);
+  font-weight: 400;
 }

@@ -56,6 +56,7 @@ import { ResetButton } from '@/components/flashcards/ResetButton';
 import { SwitchSides } from '@/components/flashcards/SwitchSides';
 import { CountUp } from '@/components/motion/CountUp';
 import { Confetti } from '@/components/motion/Confetti';
+import { MoreControls, useInOverlay } from '@/components/flashcards/overlaySlot';
 
 /** How long "correct" stays up before the next card, unless Enter comes first. */
 const CORRECT_PAUSE_MS = 900;
@@ -176,6 +177,19 @@ function LearnMode({ set }: { set: SetDTO }) {
     saveLearn(set.id, session);
   }, [session, set.id, today]);
 
+  // The overlay is for a quick round: no setup screen, Learn starts at once on
+  // the side last used, after every load (a reset included). A saved session
+  // has already carried on in load().
+  const inOverlay = useInOverlay();
+  const startedFor = useRef<Today | null>(null);
+  useEffect(() => {
+    if (!inOverlay || !today || session || startedFor.current === today || today.queue.length === 0) return;
+    startedFor.current = today;
+    clearSession(set.id, 'learn');
+    rememberSide(set.id, 'learn', answerWith);
+    setSession(startLearn(sessionOrder(today.queue), set.cards, answerWith));
+  }, [inOverlay, today, session, answerWith, set]);
+
   // The summary's learned count has to come from the server: the reviews just
   // saved have moved it.
   const onSummary = session?.step.kind === 'summary';
@@ -210,6 +224,11 @@ function LearnMode({ set }: { set: SetDTO }) {
         <div className="fc-skel" style={{ height: 220 }} />
       </div>
     );
+  }
+
+  if (!session && inOverlay && today.queue.length > 0) {
+    // Starting by itself (the effect above): nothing to show for a frame.
+    return null;
   }
 
   if (!session) {
@@ -618,8 +637,10 @@ function Play({
             stop
           </button>
         )}
-        <SwitchSides answerWith={answerWith} enabled={step.kind === 'ask'} onSwitch={onSwitchSides} />
-        <ResetButton question="reset learn progress?" title={LEARN_RESET_TITLE} onReset={onReset} />
+        <MoreControls>
+          <SwitchSides answerWith={answerWith} enabled={step.kind === 'ask'} onSwitch={onSwitchSides} />
+          <ResetButton question="reset learn progress?" title={LEARN_RESET_TITLE} onReset={onReset} />
+        </MoreControls>
       </div>
 
       <div className="fc-progress">

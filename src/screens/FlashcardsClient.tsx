@@ -31,6 +31,7 @@ import { StudyArea, StudyHeader, enterIsForFocus } from '@/components/flashcards
 import { ResetButton } from '@/components/flashcards/ResetButton';
 import { CountUp } from '@/components/motion/CountUp';
 import { Confetti } from '@/components/motion/Confetti';
+import { MoreControls } from '@/components/flashcards/overlaySlot';
 
 export function FlashcardsClient({ setId }: { setId: number }) {
   const { set, error } = useSet(setId);
@@ -489,11 +490,13 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
               <span key={missed}>{missed}</span>
             </span>
           </span>
-          <ResetButton
-            question="reset round?"
-            title="Start the cards over from the first one, with no marks"
-            onReset={restart}
-          />
+          <MoreControls>
+            <ResetButton
+              question="reset round?"
+              title="Start the cards over from the first one, with no marks"
+              onReset={restart}
+            />
+          </MoreControls>
         </span>
       </div>
 
@@ -596,23 +599,25 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
       </div>
 
       <div className="fc-deckbar">
-        <button
-          type="button"
-          className={`rt-btn rt-btn--sm fc-toggle${deck.shuffled ? ' is-on' : ''}`}
-          aria-pressed={deck.shuffled}
-          onClick={() => setDeck((d) => toggleShuffle(d))}
-        >
-          <IconShuffle size={15} />
-          Shuffle {deck.shuffled ? 'on' : 'off'}
-        </button>
-        <button
-          type="button"
-          className="rt-btn rt-btn--sm fc-toggle is-on"
-          onClick={toggleFirstSide}
-          title="Switch whether term or definition is shown first"
-        >
-          {firstSide === 'term' ? 'Front: term' : 'Front: definition'}
-        </button>
+        <MoreControls>
+          <button
+            type="button"
+            className={`rt-btn rt-btn--sm fc-toggle${deck.shuffled ? ' is-on' : ''}`}
+            aria-pressed={deck.shuffled}
+            onClick={() => setDeck((d) => toggleShuffle(d))}
+          >
+            <IconShuffle size={15} />
+            Shuffle {deck.shuffled ? 'on' : 'off'}
+          </button>
+          <button
+            type="button"
+            className="rt-btn rt-btn--sm fc-toggle is-on"
+            onClick={toggleFirstSide}
+            title="Switch whether term or definition is shown first"
+          >
+            {firstSide === 'term' ? 'Front: term' : 'Front: definition'}
+          </button>
+        </MoreControls>
         <span className="fc-keys rt-small">
           <span className="fc-keys__keys">
             <span className="rt-kbd">enter</span> or <span className="rt-kbd">space</span> flip ·{' '}
