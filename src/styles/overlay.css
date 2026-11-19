@@ -195,9 +195,12 @@ html.overlay body {
   cursor: pointer;
   transition: border-color 0.15s ease;
 }
-.ov__setpick:hover,
+.ov__setpick:hover {
+  border-color: var(--rt-ink-faint);
+}
 .ov__setpick:focus-visible {
   border-color: var(--fc-accent);
+  box-shadow: 0 0 0 3px var(--fc-accent-soft);
   outline: none;
 }
 .ov__setpick optgroup,

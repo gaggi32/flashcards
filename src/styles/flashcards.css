@@ -40,6 +40,29 @@
   outline: 2px solid var(--fc-accent);
   outline-offset: 2px;
 }
+/* A field shows focus as its own border and glow (.rt-input, .fc-search),
+   so it gets no second ring around it. */
+.fc-page input:not([type='checkbox']):not([type='radio']):focus-visible,
+.fc-page textarea:focus-visible,
+.fc-page select:focus-visible {
+  outline: none;
+}
+/* Everything you can press says so. */
+.fc-page button:not(:disabled),
+.fc-page select:not(:disabled),
+.fc-page summary,
+.fc-page a[href],
+.fc-page [role='button'],
+.fc-page [role='tab'],
+.fc-page input[type='checkbox']:not(:disabled),
+.fc-page input[type='radio']:not(:disabled),
+.fc-page label:has(> input[type='checkbox'], > input[type='radio']) {
+  cursor: pointer;
+}
+.fc-page button:disabled,
+.fc-page select:disabled {
+  cursor: default;
+}
 
 /* Links inside running text. Anything with a class of its own — buttons,
    tabs, the mode cards — is a component and styled below. */
@@ -462,15 +485,13 @@
   transition: border-color 0.15s ease;
 }
 .rt-page.fc-page .fc-mode:hover {
-  border-color: var(--fc-accent);
+  border-color: var(--fc-line-strong);
 }
 .fc-mode__icon {
   margin-bottom: 10px;
   color: var(--rt-ink-soft);
 }
-.rt-page.fc-page .fc-mode:hover .fc-mode__icon {
-  color: var(--fc-accent);
-}
+
 .fc-mode__name {
   font-size: 15.5px;
   font-weight: 600;
@@ -1199,8 +1220,8 @@
   touch-action: manipulation;
 }
 .fc-choice:hover:not(:disabled) {
-  border-color: var(--fc-accent);
-  background: var(--fc-accent-soft);
+  border-color: var(--rt-ink-faint);
+  background: var(--rt-panel-2);
 }
 .fc-choice:disabled {
   cursor: default;
@@ -1391,8 +1412,8 @@
     color 0.15s ease;
 }
 .fc-addrow:hover {
-  border-color: var(--fc-accent);
-  color: var(--fc-accent);
+  border-color: var(--rt-ink-faint);
+  color: var(--rt-ink);
 }
 /* Stays in reach at the bottom of a long set — above the home indicator,
    when installed on a phone. */
@@ -1942,7 +1963,7 @@
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .rt-page.fc-page .fc-row:hover {
-  border-color: var(--fc-accent);
+  border-color: var(--fc-line-strong);
   background: var(--rt-panel);
   color: var(--rt-ink);
 }
@@ -1953,7 +1974,7 @@
   color: var(--rt-ink-faint);
 }
 .fc-row:hover > svg {
-  color: var(--fc-accent);
+  color: var(--rt-ink);
 }
 
 /* The count, stacked over its unit, in a soft accent square. */
@@ -2092,6 +2113,7 @@
 }
 .fc-search:focus-within {
   border-color: var(--fc-accent);
+  box-shadow: 0 0 0 3px var(--fc-accent-soft);
 }
 .fc-search input {
   flex: 1;
@@ -2589,7 +2611,7 @@
     background-color 0.15s ease;
 }
 .fc-letter:hover:not(:has(input:disabled)) {
-  border-color: var(--fc-accent);
+  border-color: var(--rt-ink-faint);
 }
 .fc-letter:focus-within {
   outline: 2px solid var(--fc-accent);

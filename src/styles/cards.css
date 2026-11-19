@@ -92,6 +92,14 @@
   letter-spacing: -0.01em;
 }
 
+/* ---------- cards with words on them ----------
+   The study card and the prompt keep the red line and the typed label but
+   no ruled lines: words of any length, centred, read badly across rules. */
+.fc-flip__face,
+.fc-prompt {
+  --card-rule: transparent;
+}
+
 /* ---------- the study card (Flashcards) ---------- */
 .fc-flip {
   border-radius: 4px;
@@ -179,11 +187,23 @@
   line-height: 1.45;
 }
 
-/* ---------- the overlay's cards: a tighter ruling for a small window ---------- */
+/* ---------- the overlay's cards: a smaller header strip for a small window ---------- */
 .ov__embed .fc-flip__face,
 .ov__embed .fc-prompt {
-  --red-at: 26px;
-  --rule-gap: 22px;
+  --red-at: 24px;
+}
+/* The words always start below the red line (overlay.css sets tighter
+   padding; this outranks it). */
+.ov .ov__embed .fc-flip__face,
+.ov .ov__embed .fc-prompt {
+  padding-top: calc(var(--red-at) + 12px);
+}
+/* While a correction shows, the prompt shrinks to a reminder: no header
+   strip, so no red line through its words. */
+.ov .ov__embed .fc-prompt:has(~ .fc-verdict),
+.ov .ov__embed *:has(> .fc-verdict) > .fc-prompt {
+  padding-top: 8px;
+  background-image: none;
 }
 .ov__embed .fc-flip__side {
   top: 7px;
@@ -376,4 +396,21 @@
 }
 .fc-mode__name {
   font-size: 16px;
+}
+
+/* A folder in focus from the keyboard: the ring follows its outline, tab
+   included, instead of a rectangle that cuts the tab off. */
+.rt-page.fc-page .fc-row--folder:focus-visible {
+  outline: none;
+  border-color: var(--fc-accent);
+  box-shadow:
+    0 0 0 1px var(--fc-accent),
+    var(--lift);
+}
+.rt-page.fc-page .fc-row--folder:focus-visible::before {
+  border-color: var(--fc-accent);
+  box-shadow:
+    -1px 0 0 0 var(--fc-accent),
+    1px 0 0 0 var(--fc-accent),
+    0 -1px 0 0 var(--fc-accent);
 }
