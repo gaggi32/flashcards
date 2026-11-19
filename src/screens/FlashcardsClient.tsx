@@ -3,6 +3,7 @@ import Link from '@/components/Link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { usePref } from '@/lib/app/prefs';
+import { motionLevel } from '@/lib/app/theme';
 import { clearSession, errorMessage, loadDeck, saveDeck } from '@/lib/flashcards/client';
 import {
   currentId,
@@ -77,12 +78,10 @@ function isSideways(dx: number, dy: number): boolean {
 /** How far a drag has to go to count, as a share of the card's width (or a fast flick). */
 const SWIPE_SHARE = 0.28;
 const FLICK_PX_PER_MS = 0.6;
-/** The card's flight off screen before the next one appears. */
-const FLY_MS = 180;
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+/** A mark made with a button or key: the stamp lands on the card first. */
+const STAMP_MS = 170;
+/** Then the card is thrown off to its pile, and the next one is dealt. */
+const THROW_MS = 360;
 
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -140,7 +139,8 @@ function SavedDeck({ set }: { set: SetDTO }) {
   return <Deck set={set} saved={saved.deck} />;
 }
 
-function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
+/** The deck for one set. `persist={false}` (the motion lab) keeps the round to itself. */
+export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckState | null; persist?: boolean }) {
   const cards = set.cards;
   const byId = useMemo(() => new Map(cards.map((card) => [card.id, card])), [cards]);
   const allIds = useCallback(() => cards.map((card) => card.id), [cards]);
@@ -148,11 +148,18 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
   const [deck, setDeck] = useState<DeckState>(() => saved ?? startDeck(allIds(), false));
   const [flipped, setFlipped] = useState(false);
   const [firstSide, setFirstSide] = usePref('cardsFirstSide');
+  // Motion only, none of it saved: the stamp on the card being marked, the
+  // stack behind it moving up while it flies, how the shown card arrived
+  // (dealt after a mark, or slid in by prev / next) and the flip's lift.
+  const [stamp, setStamp] = useState<Mark | null>(null);
+  const [advancing, setAdvancing] = useState(false);
+  const [arrival, setArrival] = useState<{ how: 'dealt' | 'next' | 'prev'; n: number } | null>(null);
+  const [lifts, setLifts] = useState(0);
 
   // Kept on every change, without waiting for it.
   useEffect(() => {
-    saveDeck(set.id, deck);
-  }, [deck, set.id]);
+    if (persist) saveDeck(set.id, deck);
+  }, [deck, set.id, persist]);
 
   const toggleFirstSide = useCallback(() => {
     setFirstSide(firstSide === 'term' ? 'definition' : 'term');
@@ -167,14 +174,21 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
   const go = useCallback((delta: -1 | 1) => {
     setDeck((d) => move(d, delta));
     setFlipped(false);
+    setLifts(0);
+    setArrival((a) => ({ how: delta > 0 ? 'next' : 'prev', n: (a?.n ?? 0) + 1 }));
   }, []);
 
-  const flip = useCallback(() => setFlipped((f) => !f), []);
+  const flip = useCallback(() => {
+    setFlipped((f) => !f);
+    setLifts((n) => n + 1);
+  }, []);
 
   /** "Knew it" or "didn't know": noted, and on to the next card. */
   const markCard = useCallback((value: Mark) => {
     setDeck((d) => mark(d, value));
     setFlipped(false);
+    setLifts(0);
+    setArrival((a) => ({ how: 'dealt', n: (a?.n ?? 0) + 1 }));
   }, []);
 
   // Swiping the card sorts it, as a pile of paper cards would be sorted: drag
@@ -202,7 +216,10 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
     active: boolean;
   } | null>(null);
   const swiped = useRef(false);
-  const flying = useRef(false);
+  /** The mark on its way, and its timers: a new mark finishes it at once. */
+  const flying = useRef<{ value: Mark; timers: number[] } | null>(null);
+  /** A mark made while another card was still in the air: the next card's. */
+  const pending = useRef<Mark | null>(null);
 
   function paint(dx: number, settle: boolean) {
     const el = cardRef.current;
@@ -211,6 +228,7 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
     const share = Math.max(-1, Math.min(1, dx / (width * SWIPE_SHARE)));
     el.style.transition = settle ? 'transform 0.2s ease' : 'none';
     el.style.transform = dx === 0 ? '' : `translateX(${dx}px) rotate(${dx / 28}deg)`;
+    el.style.opacity = '';
     el.style.setProperty('--swipe-ok', String(Math.max(0, share)));
     el.style.setProperty('--swipe-miss', String(Math.max(0, -share)));
   }
@@ -237,7 +255,13 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
 
   function onPointerDown(e: React.PointerEvent) {
     swiped.current = false;
-    if (flying.current || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (flying.current) {
+      // A press while a card is still in the air lands it; this press
+      // belonged to that card, so it starts nothing on the next one.
+      landFlight();
+      return;
+    }
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, dx: 0, active: false };
   }
 
@@ -282,27 +306,76 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
     fling(d.dx > 0 ? 'known' : 'missed');
   }
 
-  /** Sends the card off to its pile, green or red, then records it. Swipes and the 1 / 2 keys both land here. */
+  /**
+   * Sends the card off to its pile, then records it. Swipes, the mark
+   * buttons and the 1 / 2 keys all land here. A mark from a button or key
+   * first stamps the card (a swipe has shown its stamp all along), the card
+   * takes the hit, then flies off with a spin while the stack behind moves up
+   * and the next card is dealt. Nothing waits for it: a mark made meanwhile
+   * lands the flying one at once and goes to the next card.
+   */
   function fling(value: Mark) {
-    if (flying.current) return;
-    if (prefersReducedMotion()) {
+    if (flying.current) {
+      landFlight();
+      pending.current = value;
+      return;
+    }
+    if (motionLevel() === 'off') {
       paint(0, false);
       markCard(value);
       return;
     }
-    flying.current = true;
-    paint((value === 'known' ? 1 : -1) * window.innerWidth, true);
-    window.setTimeout(() => {
-      flying.current = false;
-      // The next card mounts fresh (the button is keyed by card), so there is
-      // nothing to reset — unless this was the last card and the same
-      // element stays up for the summary's sake.
-      paint(0, false);
-      markCard(value);
-    }, FLY_MS);
+    const el = cardRef.current;
+    const dragged = !!el && el.style.transform !== '';
+    const flight = { value, timers: [] as number[] };
+    flying.current = flight;
+    if (!dragged) setStamp(value);
+    const wait = dragged ? 0 : STAMP_MS;
+    flight.timers.push(
+      window.setTimeout(() => {
+        const card = cardRef.current;
+        if (card) {
+          const dir = value === 'known' ? 1 : -1;
+          card.style.transition = `transform ${THROW_MS}ms cubic-bezier(0.5, 0, 0.75, 0.3), opacity ${THROW_MS}ms ease-in`;
+          card.style.transform = `translate(${dir * 120}%, -28px) rotate(${dir * 16}deg)`;
+          card.style.opacity = '0';
+        }
+        setAdvancing(true);
+      }, wait),
+      window.setTimeout(landFlight, wait + THROW_MS),
+    );
+  }
+  /** The flying card reaches its pile: recorded, and the next one is up. */
+  function landFlight() {
+    const flight = flying.current;
+    if (!flight) return;
+    flight.timers.forEach((t) => window.clearTimeout(t));
+    flying.current = null;
+    setStamp(null);
+    setAdvancing(false);
+    // The next card mounts fresh (the button is keyed by card), so there is
+    // nothing to reset — unless this was the last card and the same element
+    // stays up for the summary's sake.
+    paint(0, false);
+    markCard(flight.value);
   }
   const flingRef = useRef(fling);
   flingRef.current = fling;
+
+  // A mark made while the last card was still in the air belongs to this one.
+  useEffect(() => {
+    const value = pending.current;
+    if (value === null) return;
+    pending.current = null;
+    flingRef.current(value);
+  }, [deck.index, deck.round]);
+
+  useEffect(
+    () => () => {
+      flying.current?.timers.forEach((t) => window.clearTimeout(t));
+    },
+    [],
+  );
 
   function onPointerCancel() {
     if (drag.current?.active) paint(0, true);
@@ -318,7 +391,7 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
   }
 
   function restart() {
-    clearSession(set.id, 'cards');
+    if (persist) clearSession(set.id, 'cards');
     setDeck((d) => startDeck(allIds(), d.shuffled));
     setFlipped(false);
   }
@@ -391,13 +464,22 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
           />
         </div>
         <span className="fc-deck__tally">
+          {/* Keyed by the count: a new number rolls in, and its mark pops. */}
           <span className="fc-writebar__stat--ok" title="Knew it">
-            <IconCheck size={14} />
-            {known}
+            <span key={known} className={known ? 'fx-pop-icon' : undefined}>
+              <IconCheck size={14} />
+            </span>
+            <span className="fx-roll">
+              <span key={known}>{known}</span>
+            </span>
           </span>
           <span className="fc-writebar__stat--miss" title="Didn't know">
-            <IconClose size={14} />
-            {missed}
+            <span key={missed} className={missed ? 'fx-pop-icon' : undefined}>
+              <IconClose size={14} />
+            </span>
+            <span className="fx-roll">
+              <span key={missed}>{missed}</span>
+            </span>
           </span>
           <ResetButton
             question="reset round?"
@@ -407,13 +489,26 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
         </span>
       </div>
 
+      {/* The cards still to come lie under this one, a little askew; while a
+          marked card flies off they move up a place. */}
+      <div
+        className={`fc-stack${advancing ? ' is-advancing' : ''}${
+          arrival?.how === 'dealt' ? ` is-dealt-${arrival.n % 2 ? 'a' : 'b'}` : ''
+        }`}
+      >
+        {deck.index + 2 < total && <span className="fc-stack__back is-2" aria-hidden="true" />}
+        {deck.index + 1 < total && <span className="fc-stack__back is-1" aria-hidden="true" />}
       {/* Keyed by card: a new card mounts face-up rather than animating back
           from the previous card's answer, which would flash this one's. */}
       <button
         key={`${card.id}-${firstSide}`}
         ref={claimTouch}
         type="button"
-        className={`fc-flip${flipped ? ' is-flipped' : ''}`}
+        className={`fc-flip${flipped ? ' is-flipped' : ''}${stamp ? ` is-stamped is-stamped--${stamp}` : ''}${
+          lifts ? ` is-lift-${lifts % 2 ? 'a' : 'b'}` : ''
+        }${arrival && arrival.how !== 'dealt' ? ` is-from-${arrival.how}` : ''}${
+          arrival?.how === 'dealt' ? ' is-dealt' : ''
+        }`}
         onClick={onCardClick}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -442,6 +537,7 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
           didn&apos;t know
         </span>
       </button>
+      </div>
 
       {/* Pressed when coming back to a card that already has that mark. */}
       <div className="fc-marks">
@@ -449,7 +545,7 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
           type="button"
           className={`rt-btn fc-mark fc-mark--miss${cardMark === 'missed' ? ' is-on' : ''}`}
           aria-pressed={cardMark === 'missed'}
-          onClick={() => markCard('missed')}
+          onClick={() => flingRef.current('missed')}
         >
           <IconClose />
           Didn&apos;t know
@@ -458,7 +554,7 @@ function Deck({ set, saved }: { set: SetDTO; saved: DeckState | null }) {
           type="button"
           className={`rt-btn fc-mark fc-mark--ok${cardMark === 'known' ? ' is-on' : ''}`}
           aria-pressed={cardMark === 'known'}
-          onClick={() => markCard('known')}
+          onClick={() => flingRef.current('known')}
         >
           <IconCheck />
           Knew it

@@ -7,6 +7,29 @@ import { useState, type ReactNode } from 'react';
 
 import Link from '@/components/Link';
 import { motionLevel } from '@/lib/app/theme';
+import type { SetDTO } from '@/lib/flashcards/types';
+import { Deck } from '@/screens/FlashcardsClient';
+
+/** A made-up set for the specimens; nothing here is saved. */
+export const LAB_SET: SetDTO = {
+  id: -1,
+  folder: null,
+  isPublic: false,
+  isOwner: true,
+  authorName: null,
+  title: 'Unité 4 – En ville',
+  description: null,
+  createdAt: '2026-11-19T00:00:00Z',
+  cardCount: 6,
+  cards: [
+    ['la boulangerie', 'die Bäckerei'],
+    ['le carrefour', 'die Kreuzung'],
+    ['la mairie', 'das Rathaus'],
+    ['le trottoir', 'das Trottoir'],
+    ['la gare routière', 'der Busbahnhof'],
+    ["l'épicerie", 'das Lebensmittelgeschäft'],
+  ].map(([term, definition], i) => ({ id: -(i + 1), term, definition, position: i })),
+};
 
 function Specimen({ title, note, children, onReplay }: { title: string; note: string; children: ReactNode; onReplay?: () => void }) {
   return (
@@ -79,6 +102,7 @@ function FlipSpecimen() {
 
 export function MotionLab() {
   const [entrance, setEntrance] = useState(0);
+  const [deckRun, setDeckRun] = useState(0);
   return (
     <main className="lab">
       <Link href="/settings" className="rt-backlink">
@@ -110,6 +134,14 @@ export function MotionLab() {
 
       <Specimen title="Card flip" note="Click the card.">
         <FlipSpecimen />
+      </Specimen>
+
+      <Specimen
+        title="The deck"
+        note="The real Flashcards deck on a made-up set. Mark cards with the buttons or 1 / 2: the stamp lands, the card flies to its pile, the stack moves up. Press fast: nothing waits. Prev / next slide; space flips with a lift."
+        onReplay={() => setDeckRun((n) => n + 1)}
+      >
+        <Deck key={deckRun} set={LAB_SET} saved={null} persist={false} />
       </Specimen>
     </main>
   );

@@ -23,6 +23,7 @@
 /* ---------- a ruled index card ---------- */
 .fc-flip__face,
 .fc-prompt,
+.fc-stack__back,
 .rt-page.fc-page .fc-row--set {
   --red-at: 44px;
   --rule-gap: 30px;
@@ -94,6 +95,13 @@
 .fc-prompt {
   --red-at: 40px;
   padding-top: 52px;
+}
+/* The stamp sits below the red line, clear of the side label. */
+.fc-swipehint {
+  top: 62px;
+}
+.ov__embed .fc-swipehint {
+  top: 30px;
 }
 /* Which side is up, typed small above the red line. */
 .fc-flip__side {

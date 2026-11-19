@@ -279,8 +279,7 @@
   box-shadow:
     inset 0 0 0 calc(var(--swipe-ok, 0) * 3px) var(--rt-teal),
     inset 0 0 0 calc(var(--swipe-miss, 0) * 3px) var(--rt-rust),
-    0 1px 2px var(--rt-shadow-soft),
-    0 10px 28px var(--rt-shadow-soft);
+    var(--lift);
 }
 .fc-flip .fc-flip__face::after {
   content: '';
@@ -308,4 +307,171 @@
 }
 .lab__stage {
   padding: 18px 8px 8px;
+}
+
+/* ---------- the deck (Flashcards mode) ----------
+   The cards still to come lie under the shown one, a little askew. A mark
+   stamps the card, it takes the hit (a small squash), then flies to its pile
+   while the stack moves up a place and the next card is dealt: a blank card
+   rises into place, a new one slides in at the back, the word inks in.
+   Individual `translate` / `scale` properties are used so none of this fights
+   the drag, which writes `transform` on the card. */
+.fc-stack {
+  position: relative;
+}
+.fc-stack > .fc-flip {
+  z-index: 1;
+}
+.fc-stack__back {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--fc-line);
+  border-radius: 6px;
+  box-shadow: var(--lift);
+  pointer-events: none;
+}
+.fc-stack__back.is-1 {
+  transform: translate(-5px, 7px) rotate(-1deg);
+}
+.fc-stack__back.is-2 {
+  transform: translate(7px, 12px) rotate(1.4deg);
+}
+.fc-stack.is-advancing .fc-stack__back {
+  transition: transform 0.36s var(--ease-out);
+}
+.fc-stack.is-advancing .fc-stack__back.is-1 {
+  transform: none;
+}
+.fc-stack.is-advancing .fc-stack__back.is-2 {
+  transform: translate(-5px, 7px) rotate(-1deg);
+}
+@keyframes fx-settle-a {
+  from {
+    opacity: 0;
+    transform: translate(12px, 22px) rotate(2.4deg);
+  }
+}
+@keyframes fx-settle-b {
+  from {
+    opacity: 0;
+    transform: translate(12px, 22px) rotate(2.4deg);
+  }
+}
+.fc-stack.is-dealt-a .fc-stack__back.is-2 {
+  animation: fx-settle-a 0.42s var(--ease-out) both;
+}
+.fc-stack.is-dealt-b .fc-stack__back.is-2 {
+  animation: fx-settle-b 0.42s var(--ease-out) both;
+}
+
+/* The word on a freshly dealt card inks in. */
+@keyframes fx-ink {
+  from {
+    opacity: 0;
+    translate: 0 7px;
+    filter: blur(2px);
+  }
+}
+.fc-flip.is-dealt .fc-flip__face--front .fc-flip__text {
+  animation: fx-ink 0.32s var(--ease-out) both;
+}
+
+/* Prev / next: the card slides in from the side it came from. */
+@keyframes fx-from-next {
+  from {
+    opacity: 0;
+    translate: 34px 0;
+  }
+}
+@keyframes fx-from-prev {
+  from {
+    opacity: 0;
+    translate: -34px 0;
+  }
+}
+.fc-flip.is-from-next {
+  animation: fx-from-next 0.26s var(--ease-out) both;
+}
+.fc-flip.is-from-prev {
+  animation: fx-from-prev 0.26s var(--ease-out) both;
+}
+
+/* A flip lifts the card off the table on its way round. */
+@keyframes fx-lift-a {
+  45% {
+    translate: 0 -12px;
+    scale: 1.025;
+  }
+}
+@keyframes fx-lift-b {
+  45% {
+    translate: 0 -12px;
+    scale: 1.025;
+  }
+}
+.fc-flip.is-lift-a {
+  animation: fx-lift-a 0.5s var(--ease-out);
+}
+.fc-flip.is-lift-b {
+  animation: fx-lift-b 0.5s var(--ease-out);
+}
+
+/* The stamp lands, and the card takes the hit. */
+@keyframes fx-stamp-in {
+  from {
+    opacity: 0;
+    scale: 2.3;
+  }
+  70% {
+    opacity: 1;
+    scale: 0.93;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+@keyframes fx-thud {
+  50% {
+    scale: 0.982;
+  }
+}
+.fc-flip.is-stamped {
+  animation: fx-thud 0.2s ease 0.1s;
+}
+.fc-flip.is-stamped--known .fc-swipehint--ok,
+.fc-flip.is-stamped--missed .fc-swipehint--miss {
+  opacity: 1;
+  animation: fx-stamp-in 0.2s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* Counters roll to their new number; the mark beside them pops. */
+.fx-roll {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+.fx-roll > * {
+  display: inline-block;
+  animation: fx-roll 0.34s var(--ease-spring) both;
+}
+@keyframes fx-roll {
+  from {
+    opacity: 0;
+    translate: 0 85%;
+  }
+}
+.fx-pop-icon {
+  display: inline-block;
+  animation: fx-pop-icon 0.36s var(--ease-spring);
+}
+@keyframes fx-pop-icon {
+  40% {
+    scale: 1.4;
+  }
+}
+
+/* Progress bars spring to their new length. */
+.fc-meter__fill {
+  transition: width 0.6s var(--ease-spring);
 }
