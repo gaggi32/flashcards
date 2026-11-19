@@ -766,3 +766,40 @@
     animation: none;
   }
 }
+
+/* ---------- the overlay: the same motion, scaled to its small window ---------- */
+.ov__embed .fc-stack__back.is-1 {
+  transform: translate(-3px, 4px) rotate(-0.8deg);
+}
+.ov__embed .fc-stack__back.is-2 {
+  transform: translate(4px, 7px) rotate(1deg);
+}
+.ov__embed .fc-stack.is-advancing .fc-stack__back.is-2 {
+  transform: translate(-3px, 4px) rotate(-0.8deg);
+}
+.ov__embed .fc-swipehint {
+  padding: 3px 8px;
+  font-size: 11px;
+  border-width: 1.5px;
+}
+.ov__embed .fx-confetti {
+  scale: 0.55;
+}
+@keyframes fx-lift-small-a {
+  45% {
+    translate: 0 -6px;
+    scale: 1.015;
+  }
+}
+@keyframes fx-lift-small-b {
+  45% {
+    translate: 0 -6px;
+    scale: 1.015;
+  }
+}
+.ov__embed .fc-flip.is-lift-a {
+  animation-name: fx-lift-small-a;
+}
+.ov__embed .fc-flip.is-lift-b {
+  animation-name: fx-lift-small-b;
+}
