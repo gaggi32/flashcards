@@ -2,7 +2,7 @@
 // the app bar on top and Settings one click away.
 
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { ViewTransition, useEffect, useRef, useState, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 
 import Link from '@/components/Link';
@@ -123,10 +123,18 @@ function PageMotion({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('focus', onFocus);
   }, [version]);
 
+  // Moving between screens is a view transition (Link tags its direction):
+  // the old screen slides off, the new one in from the side it lies on, and
+  // a set's title travels from its card to the set's page and on into study.
   return (
-    <div key={`${pathname}#${resync}`} className="fx-page">
-      {children}
-    </div>
+    <ViewTransition
+      key={`${pathname}#${resync}`}
+      default="none"
+      enter={{ 'nav-forward': 'vt-in-forward', 'nav-back': 'vt-in-back', default: 'vt-in' }}
+      exit={{ 'nav-forward': 'vt-out-forward', 'nav-back': 'vt-out-back', default: 'vt-out' }}
+    >
+      <div className="fx-page">{children}</div>
+    </ViewTransition>
   );
 }
 

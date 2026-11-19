@@ -681,3 +681,88 @@
     opacity: 0;
   }
 }
+
+/* ---------- moving between screens (view transitions) ----------
+   App.tsx wraps each screen in a <ViewTransition>; Link tags the move as
+   forward (deeper) or back. The old screen drifts off and fades, the new one
+   comes in from the side it lies on. A set's title travels between screens
+   (SetTitle). The rest of the window (the app bar) stays put. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(*) {
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes vt-off-left {
+  to {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+}
+@keyframes vt-off-right {
+  to {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+@keyframes vt-on-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+}
+@keyframes vt-on-left {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+::view-transition-old(.vt-out-forward) {
+  animation: vt-off-left 0.15s ease-in both;
+}
+::view-transition-new(.vt-in-forward) {
+  animation: vt-on-right 0.34s var(--ease-out) 0.06s both;
+}
+::view-transition-old(.vt-out-back) {
+  animation: vt-off-right 0.15s ease-in both;
+}
+::view-transition-new(.vt-in-back) {
+  animation: vt-on-left 0.34s var(--ease-out) 0.06s both;
+}
+::view-transition-old(.vt-out) {
+  animation: vt-fade-out 0.16s ease-in both;
+}
+::view-transition-new(.vt-in) {
+  animation: vt-fade-in 0.3s var(--ease-out) 0.04s both;
+}
+/* The title travelling between screens: a touch slower, and both snapshots
+   scale with the group rather than cross-fading as two different sizes. */
+::view-transition-group(.vt-morph) {
+  animation-duration: 0.44s;
+  z-index: 2;
+}
+::view-transition-old(.vt-morph),
+::view-transition-new(.vt-morph) {
+  height: 100%;
+  object-fit: fill;
+}
+/* With screens sliding, the old per-screen rise would be a second
+   entrance on top: only calm keeps it (calm has no slides). */
+@supports (view-transition-class: a) {
+  :root:not([data-motion]) .fx-page {
+    animation: none;
+  }
+}

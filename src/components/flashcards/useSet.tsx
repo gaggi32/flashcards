@@ -2,17 +2,23 @@
 import Link from '@/components/Link';
 import { useEffect, useState } from 'react';
 
+import { forget, primed } from '@/lib/app/prime';
 import { ApiError, fetchSet } from '@/lib/flashcards/client';
 import type { SetDTO } from '@/lib/flashcards/types';
 
-/** One set with its cards, fetched on mount. `set` stays null until it lands. */
+/**
+ * One set with its cards, fetched on mount. `set` stays null until it lands,
+ * unless the link that led here read it already (lib/app/prime.ts).
+ */
 export function useSet(id: number) {
-  const [set, setSet] = useState<SetDTO | null>(null);
+  const [set, setSet] = useState<SetDTO | null>(() => primed(`set:${id}`));
   const [error, setError] = useState<ApiError | null>(null);
 
   useEffect(() => {
     let live = true;
-    setSet(null);
+    const had = primed(`set:${id}`);
+    forget(`set:${id}`);
+    if (!had) setSet(null);
     setError(null);
     fetchSet(id)
       .then((res) => {

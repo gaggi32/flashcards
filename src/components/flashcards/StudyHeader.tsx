@@ -4,6 +4,7 @@ import Link from '@/components/Link';
 
 import type { SetDTO } from '@/lib/flashcards/types';
 import { IconChevronLeft } from './FlashcardIcons';
+import { SetTitle } from '@/components/motion/SetTitle';
 
 type Mode = 'cards' | 'write' | 'learn' | 'test';
 
@@ -23,7 +24,9 @@ export function StudyHeader({ set, mode }: { set: SetDTO; mode: Mode }) {
         Back to set
       </Link>
       <div className="fc-studyhead">
-        <h1 className="fc-studyhead__title">{set.title}</h1>
+        <SetTitle setId={set.id}>
+          <h1 className="fc-studyhead__title">{set.title}</h1>
+        </SetTitle>
         <nav className="fc-tabs" aria-label="Study mode">
           {MODES.map((m) => (
             <Link

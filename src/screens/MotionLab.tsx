@@ -3,7 +3,7 @@
 // looked at without studying a round to reach it. The pieces here are the
 // real components and classes the study screens use.
 
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 
 import Link from '@/components/Link';
 import { motionLevel } from '@/lib/app/theme';
@@ -13,6 +13,7 @@ import { AnswerLine, TypedLine } from '@/components/flashcards/AnswerDiff';
 import { Confetti } from '@/components/motion/Confetti';
 import { CountUp } from '@/components/motion/CountUp';
 import { Deck } from '@/screens/FlashcardsClient';
+import { useFlip } from '@/components/motion/useFlip';
 
 /** A made-up set for the specimens; nothing here is saved. */
 export const LAB_SET: SetDTO = {
@@ -209,8 +210,29 @@ function ResultsSpecimen({ run }: { run: number }) {
   );
 }
 
+const WORDS = ['la mairie', 'le carrefour', 'la gare', 'le trottoir', "l'épicerie", 'la boulangerie'];
+
+/** A list that gets shuffled and trimmed on each press, to watch the glide. */
+function ListSpecimen({ run }: { run: number }) {
+  const list = useRef<HTMLDivElement>(null);
+  useFlip(list);
+  const words = WORDS.map((w, i) => ({ w, k: (i * 7 + run * 5) % 11 }))
+    .sort((a, b) => a.k - b.k)
+    .slice(0, run % 2 ? 5 : 6)
+    .map((x) => x.w);
+  return (
+    <div className="fc-terms" ref={list}>
+      {words.map((w) => (
+        <div key={w} data-flip={w} className="fc-term">
+          <span className="fc-term__term">{w}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function MotionLab() {
-  const [entrance, setEntrance] = useState(0);
+  const [listRun, setListRun] = useState(0);
   const [deckRun, setDeckRun] = useState(0);
   const [verdictRun, setVerdictRun] = useState(0);
   const [resultsRun, setResultsRun] = useState(0);
@@ -228,19 +250,19 @@ export function MotionLab() {
       </p>
       <Switcher />
 
-      <Specimen title="Page entrance" note="Each screen rises in as it arrives." onReplay={() => setEntrance((n) => n + 1)}>
-        <div key={entrance} className="fx-page">
-          <div className="fc-terms">
-            <div className="fc-term">
-              <span className="fc-term__term">la mairie</span>
-              <span className="fc-term__def">das Rathaus</span>
-            </div>
-            <div className="fc-term">
-              <span className="fc-term__term">le carrefour</span>
-              <span className="fc-term__def">die Kreuzung</span>
-            </div>
-          </div>
+      <Specimen
+        title="Moving between screens"
+        note="Screens slide in from the side they lie on (deeper from the right, back from the left) and a set's title travels from its card to its page and into study. In calm the screens rise in instead."
+      >
+        <div className="rt-btnrow">
+          <Link href="/flashcards" className="rt-btn rt-btn--sm">
+            go to your sets
+          </Link>
         </div>
+      </Specimen>
+
+      <Specimen title="Lists" note="When items are added, removed or moved, the rest glide to their new places." onReplay={() => setListRun((n) => n + 1)}>
+        <ListSpecimen run={listRun} />
       </Specimen>
 
       <Specimen title="Card flip" note="Click the card.">

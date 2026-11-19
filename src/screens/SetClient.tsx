@@ -19,6 +19,7 @@ import {
 import { OrganizeSet } from '@/components/flashcards/OrganizeSet';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { formatCreated, plural } from '@/lib/flashcards/format';
+import { SetTitle } from '@/components/motion/SetTitle';
 
 export function SetClient({ setId }: { setId: number }) {
   const router = useRouter();
@@ -85,7 +86,9 @@ export function SetClient({ setId }: { setId: number }) {
       </Link>
 
       <div className="rt-pagehead">
-        <h1>{set.title}</h1>
+        <SetTitle setId={set.id}>
+          <h1>{set.title}</h1>
+        </SetTitle>
       </div>
 
       <div className="rt-metarow">

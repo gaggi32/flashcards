@@ -10,6 +10,7 @@ import { addSetsFromText } from '@/components/SetFileDrop';
 import { clearOwnDrag, dragSetFile, ownDraggedSet, prepareSetFile } from '@/lib/app/setDrag';
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
+import { forget, primed } from '@/lib/app/prime';
 import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder, updateSet } from '@/lib/flashcards/client';
 import { plural } from '@/lib/flashcards/format';
 import { LIMITS, type SetSummaryDTO } from '@/lib/flashcards/types';
@@ -23,6 +24,8 @@ import {
   IconPlus,
   IconSearch,
 } from '@/components/flashcards/FlashcardIcons';
+import { SetTitle } from '@/components/motion/SetTitle';
+import { useFlip } from '@/components/motion/useFlip';
 
 type Folder = { name: string; sets: number; cards: number };
 
@@ -41,9 +44,9 @@ const SEARCH_FROM = 6;
  */
 export function SetsClient() {
   const router = useRouter();
-  const [sets, setSets] = useState<SetSummaryDTO[] | null>(null);
+  const [sets, setSets] = useState<SetSummaryDTO[] | null>(() => primed('sets')?.sets ?? null);
   // Every folder by name, the empty ones too (sets only name the full ones).
-  const [folderNames, setFolderNames] = useState<string[]>([]);
+  const [folderNames, setFolderNames] = useState<string[]>(() => primed('sets')?.folders ?? []);
   const [error, setError] = useState<string | null>(null);
   // In the URL (?folder=), so coming back from a set opens the same folder.
   const [params, setParams] = useSearchParams();
@@ -55,8 +58,13 @@ export function SetsClient() {
   const [dropOn, setDropOn] = useState<string | null>(null);
   // Re-read when the overlay (the other window) studies or adds cards.
   const version = useDataVersion();
+  const folderList = useRef<HTMLDivElement>(null);
+  const setList = useRef<HTMLDivElement>(null);
+  useFlip(folderList);
+  useFlip(setList);
 
   useEffect(() => {
+    forget('sets');
     Promise.all([fetchSets(), fetchFolders()])
       .then(([res, f]) => {
         setFolderNames(f.folders);
@@ -294,10 +302,11 @@ export function SetsClient() {
               folders.length > 0 && (
                 <>
                   <div className="rt-label">folders</div>
-                  <div className="fc-list">
+                  <div className="fc-list" ref={folderList}>
                     {folders.map((f) => (
                       <button
                         key={f.name}
+                        data-flip={f.name}
                         type="button"
                         className={`fc-row fc-row--folder${dropOn === f.name ? ' fc-dropon' : ''}`}
                         onClick={() => setFolder(f.name)}
@@ -327,7 +336,7 @@ export function SetsClient() {
             )}
 
             {visible.length > 0 ? (
-              <div className="fc-list">
+              <div className="fc-list" ref={setList}>
                 {visible.map((set) => (
                   <SetRow
                     key={set.id}
@@ -459,7 +468,9 @@ function SetRow({
       }}
     >
       <span className="fc-row__body">
-        <span className="fc-row__name">{set.title}</span>
+        <SetTitle setId={set.id}>
+          <span className="fc-row__name">{set.title}</span>
+        </SetTitle>
         <span className="fc-row__meta">
           <span className="fc-row__terms">{plural(set.cardCount, 'term')}</span>
           {sub && (

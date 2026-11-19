@@ -29,6 +29,7 @@ import {
 import { GeneratePanel, type GeneratedReceipt } from './GeneratePanel';
 import { ImportPanel } from './ImportPanel';
 import { SetLoadState, useSet } from './useSet';
+import { useFlip } from '@/components/motion/useFlip';
 
 type Row = { key: string; id: number | null; term: string; definition: string };
 /** The one tool open above the rows, if any. */
@@ -119,6 +120,8 @@ function EditorForm({
 
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
+  const rowList = useRef<HTMLOListElement>(null);
+  useFlip(rowList);
   const [rows, setRows] = useState<Row[]>(() =>
     initial && initial.cards.length > 0
       ? initial.cards.map((card) => makeRow(card))
@@ -420,9 +423,9 @@ function EditorForm({
           </div>
         )}
 
-        <ol className="fc-editrows">
+        <ol className="fc-editrows" ref={rowList}>
           {rows.map((row, i) => (
-            <li key={row.key} className="fc-editrow">
+            <li key={row.key} data-flip={row.key} className="fc-editrow">
               <div className="fc-editrow__head">
                 <span className="fc-editrow__num">{i + 1}</span>
                 <span className="fc-editrow__spacer" />
