@@ -407,12 +407,7 @@ function SearchBox({
   );
 }
 
-/** A set is drawn as a stack of index cards: one, two or three deep. */
-function stackOf(cards: number): 1 | 2 | 3 {
-  return cards >= 30 ? 3 : cards >= 10 ? 2 : 1;
-}
-
-/** A set's index card: its title above the red line, the count below. */
+/** The badge carries the count, so the title gets the whole width beside it. */
 function SetRow({
   set,
   showFolder = false,
@@ -433,7 +428,7 @@ function SetRow({
   return (
     <Link
       href={`/flashcards/${set.id}`}
-      className={`fc-row fc-row--set fc-row--stack${stackOf(set.cardCount)}`}
+      className="fc-row"
       draggable={false}
       title="Open the set, or drag it onto a folder, the desktop or another app"
       onPointerDown={(e) => {
@@ -467,19 +462,24 @@ function SetRow({
         press.current = null;
       }}
     >
+      <span className="fc-row__badge" aria-label={plural(set.cardCount, 'term')}>
+        <span className="fc-row__count">{set.cardCount}</span>
+        <span className="fc-row__unit" aria-hidden="true">
+          {set.cardCount === 1 ? 'term' : 'terms'}
+        </span>
+      </span>
       <span className="fc-row__body">
         <SetTitle setId={set.id}>
           <span className="fc-row__name">{set.title}</span>
         </SetTitle>
-        <span className="fc-row__meta">
-          <span className="fc-row__terms">{plural(set.cardCount, 'term')}</span>
-          {sub && (
+        {sub && (
+          <span className="fc-row__meta">
             <span className="fc-row__desc">
               {folder && <IconFolder size={13} />}
               {sub}
             </span>
-          )}
-        </span>
+          </span>
+        )}
       </span>
       <IconChevronRight />
     </Link>

@@ -22,7 +22,7 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - `src/lib/flashcards/client.ts` — what the screens call, backed by the store.
 - `src/screens/`, `src/components/flashcards/` — the study screens.
 - `src/overlay/` — the hotkey window: Cards, Write and Learn (Test opens in the main window). One header line (mode tabs, the set as a button, "⋯", close; the set list and "⋯" are popovers); screens put their extra controls in "⋯" with `MoreControls` (`components/flashcards/overlaySlot.tsx`) and skip their setup screens there (`useInOverlay`).
-- `src/styles/` — `tokens.css` (every colour/font for light, dark and both eye-comfort sets; nothing else defines a token), `base.css` (shared `rt-*` pieces), `flashcards.css` (components), `cards.css` (the index-card look), `motion.css` (all motion, the Motion setting's `data-motion` rules).
+- `src/styles/` — `tokens.css` (every colour/font for light, dark and both eye-comfort sets; nothing else defines a token), `base.css` (shared `rt-*` pieces), `flashcards.css` (components), `motion.css` (all motion, the Motion setting's `data-motion` rules).
 - `src/components/motion/` — `CountUp`, `Confetti`, `SetTitle` (view-transition name), `useFlip` (lists glide). Screens slide via `<ViewTransition>` in `App.tsx`; `Link` tags the direction and primes the next screen's data (`lib/app/prime.ts`).
 - `/dev/motion` (`src/screens/MotionLab.tsx`, dev builds only) — every animation on one screen, with replay buttons.
 

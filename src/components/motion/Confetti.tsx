@@ -14,7 +14,7 @@ function rnd(k: number): number {
   return x - Math.floor(x);
 }
 
-const INKS = ['var(--fc-accent)', 'var(--rt-teal)', 'var(--rt-gold)', 'var(--rt-rust)', 'var(--card-red)'];
+const INKS = ['var(--fc-accent)', 'var(--rt-teal)', 'var(--rt-gold)', 'var(--rt-rust)', 'var(--rt-ink-faint)'];
 
 export function Confetti({ size = 'big', seed = 1 }: { size?: 'big' | 'small'; seed?: number }) {
   const pieces = useMemo(() => {

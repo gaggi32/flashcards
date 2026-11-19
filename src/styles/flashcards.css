@@ -117,7 +117,7 @@
   margin-left: -6px;
   padding: 4px 8px 4px 2px;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: none;
   color: var(--rt-ink-soft);
   font-size: 14px;
@@ -171,16 +171,13 @@
 .fc-page .rt-section {
   margin-top: 30px;
 }
-/* Section labels are typed, like the labels on a card. */
 .fc-page .rt-label {
   display: block;
   margin-bottom: 10px;
-  font-family: var(--fc-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rt-ink-faint);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rt-ink-soft);
 }
 .fc-page .rt-label::first-letter {
   text-transform: uppercase;
@@ -196,7 +193,7 @@
 .rt-page.fc-page .rt-btn {
   display: inline-block;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: var(--fc-radius-sm);
   background: var(--rt-panel);
   color: var(--rt-ink);
   box-shadow: none;
@@ -252,7 +249,7 @@
   color: var(--rt-rust);
 }
 .rt-page.fc-page .rt-btn--sm {
-  border-radius: var(--fc-radius);
+  border-radius: 8px;
   padding: 6px 12px;
   font-size: 13.5px;
 }
@@ -297,7 +294,7 @@
 }
 .fc-page .rt-input {
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: var(--fc-radius-sm);
   background: var(--rt-panel);
   box-shadow: none;
   font-size: 15px;
@@ -341,7 +338,7 @@
 }
 .fc-page .rt-empty {
   border: 1px dashed var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   padding: 26px 20px;
   font-size: 14px;
 }
@@ -485,13 +482,18 @@
   transition: border-color 0.15s ease;
 }
 .rt-page.fc-page .fc-mode:hover {
-  border-color: var(--fc-line-strong);
+  border-color: var(--rt-ink-faint);
 }
 .fc-mode__icon {
-  margin-bottom: 10px;
-  color: var(--rt-ink-soft);
+  width: 36px;
+  height: 36px;
+  margin-bottom: 8px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
 }
-
 .fc-mode__name {
   font-size: 15.5px;
   font-weight: 600;
@@ -565,15 +567,14 @@
 .fc-tabs {
   display: flex;
   gap: 2px;
-  border-radius: var(--fc-radius);
+  border-radius: var(--fc-radius-sm);
   background: var(--rt-panel-2);
-  box-shadow: inset 0 0 0 1px var(--fc-line);
   padding: 3px;
 }
 .rt-page.fc-page .fc-tab {
   display: block;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: none;
   color: var(--rt-ink-soft);
   padding: 5px 13px;
@@ -596,9 +597,7 @@
 .rt-page.fc-page .fc-tab.is-active {
   background: var(--rt-panel);
   color: var(--rt-ink);
-  box-shadow:
-    0 0 0 1px var(--fc-line-strong),
-    0 1px 2px var(--rt-shadow);
+  box-shadow: 0 1px 2px var(--rt-shadow);
 }
 
 /* ---------- progress ---------- */
@@ -637,7 +636,7 @@
   width: 100%;
   padding: 0;
   border: none;
-  border-radius: var(--fc-radius);
+  border-radius: 18px;
   background: none;
   color: inherit;
   font: inherit;
@@ -668,7 +667,7 @@
   gap: 6px;
   padding: 6px 12px;
   border: 2px solid currentColor;
-  border-radius: var(--fc-radius);
+  border-radius: 10px;
   background: var(--rt-panel);
   font-size: 14px;
   font-weight: 600;
@@ -712,7 +711,7 @@
   gap: 10px;
   padding: 44px 28px 36px;
   border: 1px solid var(--fc-line);
-  border-radius: var(--fc-radius);
+  border-radius: 18px;
   background: var(--rt-panel);
   box-shadow:
     0 1px 2px var(--rt-shadow-soft),
@@ -838,7 +837,7 @@
 }
 .rt-page.fc-page .fc-toggle.is-on {
   border-color: var(--fc-accent);
-  background: var(--rt-panel);
+  background: var(--fc-accent-soft);
   color: var(--fc-accent);
 }
 .fc-endnote {
@@ -917,7 +916,7 @@
   min-height: 160px;
   padding: 44px 28px 32px;
   border: 1px solid var(--fc-line);
-  border-radius: var(--fc-radius);
+  border-radius: 18px;
   background: var(--rt-panel);
   box-shadow:
     0 1px 2px var(--rt-shadow-soft),
@@ -940,7 +939,7 @@
   margin-top: 16px;
   padding: 13px 16px;
   border: 1px solid var(--fc-line);
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   animation: fc-in 0.18s ease-out both;
 }
 .fc-verdict .rt-btnrow {
@@ -1031,17 +1030,17 @@
 /* setup */
 /* Narrower than the column, so it is centred in it rather than left hanging. */
 .fc-setup {
-  max-width: none;
+  max-width: 640px;
+  margin-inline: auto;
 }
 .fc-resume-banner {
   display: flex;
   align-items: center;
   gap: 12px;
   justify-content: space-between;
-  background: var(--rt-panel);
+  background: var(--fc-accent-soft);
   border: 1px solid var(--fc-accent);
-  border-radius: var(--fc-radius);
-  box-shadow: var(--lift);
+  border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 16px;
   font-size: 14px;
@@ -1061,7 +1060,7 @@
   flex-direction: column;
   gap: 2px;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   background: var(--rt-panel);
   padding: 12px 14px;
   cursor: pointer;
@@ -1074,32 +1073,7 @@
 }
 .fc-option.is-active {
   border-color: var(--fc-accent);
-  box-shadow: inset 0 0 0 1px var(--fc-accent);
-  background: var(--rt-panel);
-}
-/* The chosen one carries a check in its corner. */
-.fc-option.is-active::before,
-.fc-option.is-active::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-}
-.fc-option.is-active::before {
-  top: 10px;
-  right: 10px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--fc-accent);
-}
-.fc-option.is-active::after {
-  top: 13px;
-  right: 15.5px;
-  width: 4px;
-  height: 8px;
-  border: solid var(--rt-hl);
-  border-width: 0 2px 2px 0;
-  rotate: 45deg;
+  background: var(--fc-accent-soft);
 }
 .fc-option:focus-within {
   outline: 2px solid var(--fc-accent);
@@ -1121,10 +1095,7 @@
   text-transform: uppercase;
 }
 .fc-option.is-active .fc-option__title {
-  color: var(--rt-ink);
-}
-.fc-option__title {
-  padding-right: 22px;
+  color: var(--fc-accent);
 }
 .fc-option__sub {
   font-size: 13px;
@@ -1169,9 +1140,8 @@
   text-transform: uppercase;
 }
 .fc-stats dd {
-  font-family: var(--fc-serif);
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 600;
   line-height: 1.25;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -1204,7 +1174,7 @@
   gap: 12px;
   width: 100%;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   background: var(--rt-panel);
   padding: 11px 14px;
   color: var(--rt-ink);
@@ -1370,7 +1340,7 @@
   display: grid;
   place-items: center;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: none;
   color: var(--rt-ink-faint);
   padding: 0;
@@ -1556,7 +1526,7 @@
   flex-direction: column;
   gap: 12px;
   border: 1px dashed var(--fc-line-strong);
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   background: var(--rt-panel-2);
   padding: 12px;
   transition:
@@ -1814,7 +1784,7 @@
   height: 36px;
   padding: 0 9px;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: var(--rt-panel);
   color: var(--rt-ink);
   font: inherit;
@@ -1844,7 +1814,7 @@
 .fc-key--setting {
   margin-left: auto;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: var(--rt-panel);
   color: var(--rt-ink-soft);
   font-size: 12px;
@@ -1873,14 +1843,15 @@
 }
 .fc-checkpoint__badge {
   display: inline-block;
-  padding: 0;
-  font-family: var(--fc-mono);
+  padding: 3px 9px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--rt-ink-faint);
-  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  color: var(--fc-accent);
+  background: var(--fc-accent-soft);
+  border-radius: 6px;
+  margin-bottom: 10px;
 }
 .fc-stats__ok {
   color: var(--rt-teal);
@@ -1899,7 +1870,7 @@
   gap: 4px;
   padding: 4px;
   margin-top: 14px;
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   background: var(--rt-panel-2);
   border: 1px solid var(--fc-line);
 }
@@ -1909,7 +1880,7 @@
   gap: 7px;
   padding: 7px 14px;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 9px;
   background: none;
   color: var(--rt-ink-soft);
   font: inherit;
@@ -1963,7 +1934,7 @@
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 .rt-page.fc-page .fc-row:hover {
-  border-color: var(--fc-line-strong);
+  border-color: var(--rt-ink-faint);
   background: var(--rt-panel);
   color: var(--rt-ink);
 }
@@ -1990,6 +1961,18 @@
   background: var(--fc-accent-soft);
   color: var(--fc-accent);
   line-height: 1;
+}
+.fc-row__count {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fc-row__unit {
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
 }
 /* A folder reads as a different kind of thing: outlined, not filled. */
 .fc-row--folder .fc-row__badge {
@@ -2078,11 +2061,7 @@
   outline: 2px dashed color-mix(in srgb, var(--fc-accent) 55%, transparent);
 }
 .fc-page .rt-label .fc-label-hint {
-  font-family: var(--fc-font);
-  font-size: 12.5px;
   font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
   color: var(--rt-ink-faint);
 }
 .fc-crumbs__here {
@@ -2148,7 +2127,7 @@
   position: absolute;
   inset: 0;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: var(--rt-panel);
 }
 .fc-emptystate__art span:nth-child(1) {
@@ -2179,7 +2158,7 @@
 }
 .fc-organize__card.is-public {
   border-color: var(--fc-accent);
-  box-shadow: inset 0 0 0 1px var(--fc-accent), var(--lift);
+  background: linear-gradient(var(--fc-accent-soft), var(--rt-panel) 75%);
 }
 .fc-organize__head {
   display: flex;
@@ -2190,7 +2169,11 @@
   flex: none;
   display: grid;
   place-items: center;
-  color: var(--rt-ink-soft);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--fc-radius-sm);
+  background: var(--fc-accent-soft);
+  color: var(--fc-accent);
 }
 .fc-organize__title {
   font-size: 15px;
@@ -2214,15 +2197,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 1px 8px;
-  border: 1px solid var(--fc-accent);
-  border-radius: var(--fc-radius-sm);
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--fc-accent-soft);
   color: var(--fc-accent);
-  font-family: var(--fc-mono);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12.5px;
+  font-weight: 600;
 }
 
 /* "What's new": after an update, and an update's notes in Settings */
@@ -2278,7 +2258,7 @@
   gap: 8px;
   width: 100%;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
   background: none;
   padding: 6px 6px 6px 2px;
   color: var(--rt-ink);
@@ -2406,21 +2386,21 @@
   flex-direction: column;
   gap: 12px;
   border: 1px solid var(--fc-line);
+  border-left: 3px solid var(--fc-line-strong);
   border-radius: var(--fc-radius);
   background: var(--rt-panel);
-  box-shadow: var(--lift);
+  box-shadow: 0 1px 2px var(--rt-shadow-soft);
   padding: 14px 16px 16px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
-/* Answered questions are outlined in pen; once marked, green or rust. */
 .fc-tq.is-answered {
-  border-color: color-mix(in srgb, var(--fc-accent) 45%, transparent);
+  border-left-color: var(--fc-accent);
 }
 .fc-tq.is-right {
-  border-color: color-mix(in srgb, var(--rt-teal) 50%, transparent);
+  border-left-color: var(--rt-teal);
 }
 .fc-tq.is-wrong {
-  border-color: color-mix(in srgb, var(--rt-rust) 45%, transparent);
+  border-left-color: var(--rt-rust);
 }
 .fc-tq__head {
   display: flex;
@@ -2436,12 +2416,12 @@
 }
 .fc-tq__kind {
   margin-left: 10px;
-  font-family: var(--fc-mono);
-  font-size: 10.5px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--rt-panel-2);
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rt-ink-faint);
+  color: var(--rt-ink-soft);
 }
 .fc-tq__mark {
   display: inline-flex;
@@ -2600,7 +2580,7 @@
   width: 28px;
   height: 28px;
   border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius-sm);
+  border-radius: 7px;
   background: var(--rt-panel);
   font-size: 12.5px;
   font-weight: 600;

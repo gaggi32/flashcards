@@ -22,7 +22,7 @@ html.overlay body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
   background: var(--rt-paper);
   border: 1px solid var(--fc-line-strong, rgba(0, 0, 0, 0.18));
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -192,7 +192,7 @@ html.overlay body {
   height: 28px;
   padding: 0 8px 0 10px;
   border: none;
-  border-radius: var(--fc-radius);
+  border-radius: 8px;
   background: none;
   color: var(--rt-ink-soft);
   font: inherit;
@@ -229,7 +229,7 @@ html.overlay body {
   width: 28px;
   height: 28px;
   border: none;
-  border-radius: var(--fc-radius);
+  border-radius: 8px;
   background: none;
   color: var(--rt-ink-faint);
   cursor: pointer;
@@ -405,7 +405,7 @@ html.overlay body {
 .rt-page.fc-page .ov__embed .rt-btn {
   padding: 5px 10px;
   font-size: 12.5px;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
 }
 .rt-page.fc-page .ov__embed .rt-input {
   padding: 7px 10px;
@@ -427,7 +427,7 @@ html.overlay body {
 }
 .ov__embed .fc-flip__face {
   padding: 18px 14px 14px;
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
 }
 .ov__embed .fc-flip__side {
   font-size: 10px;
@@ -447,7 +447,7 @@ html.overlay body {
 .ov__embed .fc-prompt {
   min-height: 84px;
   padding: 16px 14px 12px;
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
 }
 .ov__embed .fc-prompt__text {
   font-size: 18px;
@@ -495,7 +495,7 @@ html.overlay body {
   gap: 8px;
   padding: 6px 9px;
   font-size: 12.5px;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 8px;
 }
 .ov__embed .fc-learn__actions {
   margin-top: 8px;
@@ -509,7 +509,7 @@ html.overlay body {
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  border-radius: var(--fc-radius);
+  border-radius: 12px;
 }
 .ov__embed .fc-panel__title {
   font-size: 12px;
@@ -688,4 +688,20 @@ html.overlay body {
   content: ' · Enter ↵';
   color: var(--rt-ink-faint);
   font-weight: 400;
+}
+/* The stamp, smaller for the small card. */
+.ov__embed .fc-swipehint {
+  top: 8px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  border-width: 1.5px;
+}
+/* The side label sits in the top strip; the words start below it, so two
+   lines of a long prompt never run into it. */
+.ov__embed .fc-prompt {
+  padding-top: 28px;
+}
+.ov__embed .fc-prompt .fc-flip__side {
+  top: 8px;
+  left: 12px;
 }
