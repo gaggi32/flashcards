@@ -326,7 +326,8 @@
   position: absolute;
   inset: 0;
   border: 1px solid var(--fc-line);
-  border-radius: 6px;
+  border-radius: 4px;
+  background: var(--rt-panel);
   box-shadow: var(--lift);
   pointer-events: none;
 }
@@ -731,16 +732,16 @@
   }
 }
 ::view-transition-old(.vt-out-forward) {
-  animation: vt-off-left 0.15s ease-in both;
+  animation: vt-off-left 0.12s ease-in both;
 }
 ::view-transition-new(.vt-in-forward) {
-  animation: vt-on-right 0.34s var(--ease-out) 0.06s both;
+  animation: vt-on-right 0.34s var(--ease-out) 0.1s both;
 }
 ::view-transition-old(.vt-out-back) {
-  animation: vt-off-right 0.15s ease-in both;
+  animation: vt-off-right 0.12s ease-in both;
 }
 ::view-transition-new(.vt-in-back) {
-  animation: vt-on-left 0.34s var(--ease-out) 0.06s both;
+  animation: vt-on-left 0.34s var(--ease-out) 0.1s both;
 }
 ::view-transition-old(.vt-out) {
   animation: vt-fade-out 0.16s ease-in both;
@@ -762,7 +763,11 @@
 /* With screens sliding, the old per-screen rise would be a second
    entrance on top: only calm keeps it (calm has no slides). */
 @supports (view-transition-class: a) {
-  :root:not([data-motion]) .fx-page {
+  :root:not([data-motion]) .fx-page,
+  :root:not([data-motion]) .fc-list > *,
+  :root:not([data-motion]) .fc-terms > *,
+  :root:not([data-motion]) .fc-modes > *,
+  :root:not([data-motion]) .set-section {
     animation: none;
   }
 }
@@ -802,4 +807,16 @@
 }
 .ov__embed .fc-flip.is-lift-b {
   animation-name: fx-lift-small-b;
+}
+
+/* A loading placeholder only shows when the wait is long enough to notice:
+   local data usually lands first, and a grey block flashing for a frame
+   reads as a glitch. */
+@keyframes fx-late {
+  from {
+    opacity: 0;
+  }
+}
+.fc-loading {
+  animation: fx-late 0.2s ease 0.3s both;
 }

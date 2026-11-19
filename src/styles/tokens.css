@@ -57,11 +57,11 @@
   --fc-line: rgba(var(--rt-ink-rgb), 0.09);
   --fc-line-strong: rgba(var(--rt-ink-rgb), 0.17);
   --fc-track: rgba(var(--rt-ink-rgb), 0.08);
-  --fc-radius: 8px;
-  --fc-radius-sm: 6px;
+  --fc-radius: 6px;
+  --fc-radius-sm: 4px;
   --font-serif: 'Newsreader';
   --fc-serif: var(--font-serif), 'Iowan Old Style', Georgia, serif;
-  --card-rule: rgba(74, 112, 170, 0.15);
+  --card-rule: rgba(74, 112, 170, 0.13);
   --card-red: rgba(196, 72, 52, 0.45);
   --card-edge: #d9cfbc;
   --desk-dot: rgba(36, 32, 27, 0.055);
@@ -97,7 +97,7 @@
 
   --fc-accent: #9db6dc;
   --fc-accent-soft: #232b38;
-  --card-rule: rgba(130, 165, 220, 0.12);
+  --card-rule: rgba(130, 165, 220, 0.1);
   --card-red: rgba(224, 121, 89, 0.4);
   --card-edge: #38322a;
   --desk-dot: rgba(236, 228, 211, 0.04);

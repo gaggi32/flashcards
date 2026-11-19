@@ -1,10 +1,19 @@
 /* ---------------------------------------------------------------------------
-   The index-card look. Cards are what you study, so they are drawn as real
-   index cards: a red header line, faint ruled lines, the text in a serif.
-   Everything around them stays plain sans and quiet. The page is a desk with
-   a faint dot grid (none in eye comfort). Colours: tokens.css.
+   The index-card look. Three kinds of surface, and nothing else:
 
-   A ruled surface takes two knobs:
+     the desk        the page: warm ground with a faint dot grid (flat in
+                     eye comfort)
+     index cards     what you study and what you make: the study card, the
+                     prompt in Write and Learn, a set in the list, a card in
+                     the editor. A red header line with the label above it,
+                     faint ruled lines below, the words in the serif.
+     paper           everything else (panels, tiles, options, the term list):
+                     plain sheets with a hairline and a soft lift.
+
+   Corners: --fc-radius on paper and controls, 4px on index cards. Labels
+   on cards and sections are typed (mono, small caps). Colours: tokens.css.
+
+   A ruled card takes two knobs:
      --red-at    how far down the red header line sits
      --rule-gap  the distance between the ruled lines below it
    --------------------------------------------------------------------------- */
@@ -20,21 +29,21 @@
   background-image: none;
 }
 
-/* ---------- a ruled index card ---------- */
+/* ---------- index cards ---------- */
 .fc-flip__face,
 .fc-prompt,
-.fc-stack__back,
-.rt-page.fc-page .fc-row--set {
+.rt-page.fc-page .fc-row--set,
+.fc-editrow {
   --red-at: 44px;
-  --rule-gap: 30px;
+  --rule-gap: 32px;
   background-color: var(--rt-panel);
   background-image:
     linear-gradient(
       to bottom,
       transparent var(--red-at),
       var(--card-red) var(--red-at),
-      var(--card-red) calc(var(--red-at) + 2px),
-      transparent calc(var(--red-at) + 2px)
+      var(--card-red) calc(var(--red-at) + 1.5px),
+      transparent calc(var(--red-at) + 1.5px)
     ),
     linear-gradient(var(--rt-panel), var(--rt-panel)),
     repeating-linear-gradient(
@@ -52,10 +61,13 @@
   background-position:
     0 0,
     0 0,
-    0 calc(var(--red-at) + 2px);
+    0 calc(var(--red-at) + 1.5px);
   background-repeat: no-repeat, no-repeat, repeat;
   /* A card that scrolls inside itself (the overlay) takes its lines along. */
   background-attachment: local;
+  border: 1px solid var(--fc-line);
+  border-radius: 4px;
+  box-shadow: var(--lift);
 }
 
 /* ---------- headings ---------- */
@@ -80,32 +92,17 @@
   letter-spacing: -0.01em;
 }
 
-/* ---------- study cards ---------- */
+/* ---------- the study card (Flashcards) ---------- */
 .fc-flip {
-  border-radius: 6px;
-}
-.fc-flip__face,
-.fc-prompt {
-  border-radius: 6px;
-  box-shadow: var(--lift);
+  border-radius: 4px;
 }
 .fc-flip__face {
-  padding-top: 56px;
+  --rule-gap: 36px;
+  padding: 60px 32px 32px;
 }
-.fc-prompt {
-  --red-at: 40px;
-  padding-top: 52px;
-}
-/* The stamp sits below the red line, clear of the side label. */
-.fc-swipehint {
-  top: 62px;
-}
-.ov__embed .fc-swipehint {
-  top: 30px;
-}
-/* Which side is up, typed small above the red line. */
+/* Typed labels in the header strip, above the red line. */
 .fc-flip__side {
-  top: 14px;
+  top: 16px;
   left: 20px;
   font-family: var(--fc-mono);
   font-size: 11px;
@@ -119,18 +116,12 @@
   letter-spacing: -0.005em;
 }
 .fc-flip__text {
-  font-size: clamp(26px, 4.6vw, 38px);
+  font-size: clamp(28px, 4.6vw, 40px);
   line-height: 1.25;
-}
-.fc-prompt__text {
-  font-size: clamp(22px, 3.6vw, 30px);
-  line-height: 1.3;
 }
 .fc-flip__text--sm {
   font-size: clamp(19px, 2.8vw, 24px);
-}
-.fc-prompt__text--sm {
-  font-size: clamp(18px, 2.6vw, 22px);
+  line-height: 1.4;
 }
 /* Long text reads as running text: the sans, left-aligned, plain. */
 .fc-flip__text--xs,
@@ -138,50 +129,129 @@
   font-family: var(--fc-font);
   font-size: 15px;
   font-weight: 400;
+  line-height: 1.6;
 }
 /* The answer side is written in pen. */
 .fc-flip__face--back .fc-flip__text:not(.fc-flip__text--xs) {
   color: var(--fc-accent);
   font-style: italic;
 }
+.fc-flip__face--back .fc-flip__side {
+  color: var(--fc-accent);
+}
 
-/* The overlay's cards are small: a tighter ruling to match. */
+/* The stamp lands in the header strip, top right, clear of the words and
+   of the side label; it is the same rubber stamp whichever way it went. */
+.fc-swipehint {
+  top: 9px;
+  padding: 3px 10px;
+  border-width: 2px;
+  border-radius: 4px;
+  font-family: var(--fc-mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+.fc-swipehint--ok,
+.fc-swipehint--miss {
+  left: auto;
+  right: 16px;
+}
+.fc-swipehint--ok {
+  rotate: -4deg;
+}
+.fc-swipehint--miss {
+  rotate: 4deg;
+}
+
+/* ---------- the prompt card (Write, Learn) ---------- */
+.fc-prompt {
+  --red-at: 40px;
+  min-height: 150px;
+  padding: 56px 28px 28px;
+}
+.fc-prompt__text {
+  font-size: clamp(22px, 3.6vw, 30px);
+  line-height: 1.3;
+}
+.fc-prompt__text--sm {
+  font-size: clamp(18px, 2.6vw, 22px);
+  line-height: 1.45;
+}
+
+/* ---------- the overlay's cards: a tighter ruling for a small window ---------- */
 .ov__embed .fc-flip__face,
 .ov__embed .fc-prompt {
-  --red-at: 24px;
+  --red-at: 26px;
   --rule-gap: 22px;
-  border-radius: 5px;
 }
 .ov__embed .fc-flip__side {
-  top: 6px;
+  top: 7px;
   left: 12px;
   font-size: 9.5px;
 }
-.ov__embed .fc-flip__text {
-  font-size: 21px;
-}
-.ov__embed .fc-prompt__text {
-  font-size: 19px;
+.ov__embed .fc-swipehint {
+  top: 3px;
+  right: 8px;
+  padding: 1px 6px;
+  font-size: 9.5px;
+  border-width: 1.5px;
 }
 
-/* ---------- the sets: index cards in a stack ---------- */
+/* ---------- the sets: index cards, stacked by size ---------- */
 .fc-list {
-  gap: 18px 16px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 22px 18px;
 }
 .rt-page.fc-page .fc-row--set {
-  --red-at: 40px;
-  --rule-gap: 26px;
-  align-items: flex-start;
-  min-height: 96px;
-  padding: 8px 12px 10px 16px;
-  border: 1px solid var(--fc-line);
-  border-radius: 4px;
-  box-shadow: var(--lift);
+  --red-at: 46px;
+  --rule-gap: 28px;
+  position: relative;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  min-height: 128px;
+  padding: 10px 16px 12px;
 }
 .rt-page.fc-page .fc-row--set:hover,
 .rt-page.fc-page .fc-row--set:active {
   background-color: var(--rt-panel);
   border-color: var(--fc-line-strong);
+}
+.fc-row--set .fc-row__body {
+  gap: 0;
+}
+.fc-row--set .fc-row__name {
+  display: block;
+  font-family: var(--fc-serif);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 28px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fc-row--set .fc-row__meta {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin-top: 14px;
+  font-size: 12.5px;
+  line-height: 28px;
+}
+.fc-row--set .fc-row__desc {
+  flex: none;
+  max-width: 100%;
+}
+.fc-row__terms {
+  flex: none;
+  font-family: var(--fc-mono);
+  font-size: 12px;
+  color: var(--rt-ink-soft);
+}
+/* The whole card is the link: no arrow needed. */
+.fc-row--set > svg {
+  display: none;
 }
 /* Bigger sets are thicker stacks: an edge per card under the top one. */
 .rt-page.fc-page .fc-row--stack2 {
@@ -215,39 +285,15 @@
     0 8px 0 -1px var(--rt-panel),
     0 8px 0 0 var(--card-edge);
 }
-.fc-row--set .fc-row__body {
-  gap: 0;
-}
-.fc-row--set .fc-row__name {
-  display: block;
-  font-family: var(--fc-serif);
-  font-size: 20px;
-  font-weight: 500;
-  line-height: 30px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.fc-row--set .fc-row__meta {
-  margin-top: 12px;
-  font-size: 12.5px;
-}
-.fc-row__terms {
-  flex: none;
-  font-family: var(--fc-mono);
-  font-size: 12px;
-  color: var(--rt-ink-soft);
-}
-.fc-row--set > svg {
-  margin-top: 6px;
-}
 
-/* A folder: a card with a tab on top. */
+/* A folder: a paper sleeve with a tab on top. */
 .rt-page.fc-page .fc-row--folder {
   position: relative;
   margin-top: 10px;
-  border-radius: 0 6px 6px 6px;
-  background: color-mix(in srgb, var(--rt-gold) 9%, var(--rt-panel));
+  min-height: 72px;
+  border-color: var(--fc-line-strong);
+  border-radius: 0 var(--fc-radius) var(--fc-radius) var(--fc-radius);
+  background: var(--rt-panel-2);
   box-shadow: var(--lift);
 }
 .rt-page.fc-page .fc-row--folder::before {
@@ -259,16 +305,19 @@
   height: 10px;
   border: 1px solid var(--fc-line-strong);
   border-bottom: none;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--fc-radius) var(--fc-radius) 0 0;
   background: inherit;
 }
 .rt-page.fc-page .fc-row--folder:hover {
-  background: color-mix(in srgb, var(--rt-gold) 9%, var(--rt-panel));
+  background: var(--rt-panel-2);
   box-shadow: var(--lift-hi);
 }
 .fc-row--folder .fc-row__badge {
-  border-color: color-mix(in srgb, var(--rt-gold) 50%, transparent);
-  color: color-mix(in srgb, var(--rt-gold) 75%, var(--rt-ink));
+  background: none;
+  border: none;
+  width: auto;
+  height: auto;
+  color: var(--rt-ink-soft);
 }
 .fc-row--folder .fc-row__name {
   font-family: var(--fc-serif);
@@ -281,22 +330,49 @@
   background: var(--fc-accent-soft);
 }
 
-/* ---------- today ---------- */
+/* ---------- the editor: each card is an index card ---------- */
+.fc-editrow {
+  --red-at: 40px;
+  --rule-gap: 9999px;
+}
+.fc-editrow:focus-within {
+  border-color: var(--fc-line-strong);
+  box-shadow: var(--lift-hi);
+}
+.fc-editrow__head {
+  min-height: 40px;
+  padding: 2px 8px 0 16px;
+}
+.fc-editrow__num {
+  font-family: var(--fc-mono);
+  font-size: 12px;
+  font-weight: 500;
+}
+.fc-editrow__fields {
+  padding-top: 12px;
+}
+.fc-editrow__label {
+  font-family: var(--fc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- paper ---------- */
+.fc-panel,
+.rt-page.fc-page .fc-mode,
+.fc-terms,
+.today,
+.fc-option {
+  box-shadow: var(--lift);
+}
 .today {
   border-radius: var(--fc-radius);
-  box-shadow: var(--lift);
 }
 .today__num {
   font-family: var(--fc-serif);
   font-size: 32px;
   font-weight: 500;
-}
-
-/* ---------- panels and tiles: the same paper, plainer ---------- */
-.fc-panel,
-.rt-page.fc-page .fc-mode,
-.fc-terms {
-  box-shadow: var(--lift);
 }
 .fc-mode__name {
   font-size: 16px;

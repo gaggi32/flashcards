@@ -18,7 +18,7 @@
   box-shadow: none;
   background: none;
   color: var(--rt-ink-soft);
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
   padding: 4px 6px;
   margin-left: -6px;
 }
@@ -38,7 +38,7 @@
 /* ---------- today ---------- */
 .today {
   border: 1px solid var(--fc-line, rgba(0, 0, 0, 0.1));
-  border-radius: 14px;
+  border-radius: var(--fc-radius);
   background: var(--rt-panel);
   padding: 14px 16px 12px;
 }
@@ -105,7 +105,6 @@
 }
 .today__streak.is-lit .today__num {
   color: var(--rt-rust);
-  text-shadow: 0 0 14px color-mix(in srgb, var(--rt-rust) 45%, transparent);
 }
 .today__go {
   margin-left: auto;
@@ -223,7 +222,7 @@
 .dlg {
   width: min(440px, 100%);
   padding: 18px;
-  border-radius: 14px;
+  border-radius: var(--fc-radius);
   background: var(--rt-panel);
   color: var(--rt-ink);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.3);
@@ -272,7 +271,7 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
   border: none;
   color: var(--rt-ink-soft);
   text-decoration: none;

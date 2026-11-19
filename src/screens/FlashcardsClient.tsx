@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { usePref } from '@/lib/app/prefs';
 import { motionLevel } from '@/lib/app/theme';
+import { forget, primed } from '@/lib/app/prime';
 import { clearSession, errorMessage, loadDeck, saveDeck } from '@/lib/flashcards/client';
 import {
   currentId,
@@ -100,12 +101,17 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * round meanwhile would save over it.
  */
 function SavedDeck({ set }: { set: SetDTO }) {
-  const [saved, setSaved] = useState<{ deck: DeckState | null } | null>(null);
+  const [saved, setSaved] = useState<{ deck: DeckState | null } | null>(() => primed(`deck:${set.id}`));
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    // Read by the link that led here: shown at once, and not read again
+    // (the round could only have changed through this screen since).
+    const had = primed(`deck:${set.id}`);
+    forget(`deck:${set.id}`);
+    if (had && attempt === 0) return;
     setSaved(null);
     setError(null);
     loadDeck(

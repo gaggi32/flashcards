@@ -5,18 +5,28 @@
 // content, and a set's title would have nothing to travel to.
 //
 // Link starts the read and waits for it briefly (local data takes a few
-// milliseconds); the screen takes what is there on its first render and
-// reads afresh anyway, so a stale or missing entry costs nothing.
+// milliseconds); the screen takes what is there on its first render
+// instead of reading it again, and reads it itself when nothing is there.
 
-import { fetchFolders, fetchSet, fetchSets } from '@/lib/flashcards/client';
+import { fetchFolders, fetchSet, fetchSets, loadDeck } from '@/lib/flashcards/client';
+import type { Deck } from '@/lib/flashcards/deck';
 import type { SetDTO, SetSummaryDTO } from '@/lib/flashcards/types';
 
-type Primed = { sets: { sets: SetSummaryDTO[]; folders: string[] } } & Record<`set:${number}`, SetDTO>;
+type Primed = { sets: { sets: SetSummaryDTO[]; folders: string[] } } & Record<`set:${number}`, SetDTO> &
+  Record<`deck:${number}`, { deck: Deck | null }>;
 
-const store = new Map<string, unknown>();
+/** An entry is only for the move that read it: older than this, it is not used. */
+const FRESH_MS = 2000;
+const store = new Map<string, { at: number; value: unknown }>();
 
 export function primed<K extends keyof Primed>(key: K): Primed[K] | null {
-  return (store.get(key) as Primed[K] | undefined) ?? null;
+  const hit = store.get(key);
+  if (!hit || performance.now() - hit.at > FRESH_MS) return null;
+  return hit.value as Primed[K];
+}
+
+function put(key: keyof Primed, value: unknown): void {
+  store.set(key, { at: performance.now(), value });
 }
 
 export function forget(key: keyof Primed): void {
@@ -29,14 +39,19 @@ export async function primeFor(path: string, waitMs = 250): Promise<void> {
   let read: Promise<void> | null = null;
   if (route === '/flashcards') {
     read = Promise.all([fetchSets(), fetchFolders()]).then(([s, f]) => {
-      store.set('sets', { sets: s.sets, folders: f.folders });
+      put('sets', { sets: s.sets, folders: f.folders });
     });
   } else {
     const m = /^\/flashcards\/(\d{1,15})(\/(cards|write|learn|test))?$/.exec(route);
     if (m) {
       const id = Number(m[1]);
-      read = fetchSet(id).then((res) => {
-        store.set(`set:${id}`, res.set);
+      read = fetchSet(id).then(async (res) => {
+        put(`set:${id}`, res.set);
+        // Flashcards also picks up its saved round before it shows.
+        if (m[3] === 'cards') {
+          const deck = await loadDeck(id, res.set.cards.map((card) => card.id));
+          put(`deck:${id}`, { deck });
+        }
       });
     }
   }

@@ -16,9 +16,12 @@ export function useSet(id: number) {
 
   useEffect(() => {
     let live = true;
+    // Read a moment ago by the link that led here: nothing to read again
+    // (and a second, equal set would restart the screens built on it).
     const had = primed(`set:${id}`);
     forget(`set:${id}`);
-    if (!had) setSet(null);
+    if (had) return;
+    setSet(null);
     setError(null);
     fetchSet(id)
       .then((res) => {

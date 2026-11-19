@@ -22,7 +22,7 @@ html.overlay body {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
+  border-radius: var(--fc-radius);
   background: var(--rt-paper);
   border: 1px solid var(--fc-line-strong, rgba(0, 0, 0, 0.18));
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -138,7 +138,7 @@ html.overlay body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   padding: 3px;
-  border-radius: 10px;
+  border-radius: var(--fc-radius);
   background: var(--rt-panel-2);
   cursor: default;
 }
@@ -148,7 +148,7 @@ html.overlay body {
   bottom: 3px;
   left: 3px;
   width: calc((100% - 6px) / 4);
-  border-radius: 7px;
+  border-radius: var(--fc-radius-sm);
   background: var(--rt-panel);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.18),
@@ -182,7 +182,7 @@ html.overlay body {
   max-width: 170px;
   padding: 3px 22px 3px 8px;
   border: 1px solid var(--fc-line-strong);
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
   background: var(--rt-panel)
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E")
     no-repeat right 7px center;
@@ -213,7 +213,7 @@ html.overlay body {
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
   background: none;
   color: var(--rt-ink-soft);
   font-size: 15px;
@@ -266,7 +266,7 @@ html.overlay body {
 .rt-page.fc-page .ov__embed .rt-btn {
   padding: 5px 10px;
   font-size: 12.5px;
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
 }
 .rt-page.fc-page .ov__embed .rt-input {
   padding: 7px 10px;
@@ -288,7 +288,7 @@ html.overlay body {
 }
 .ov__embed .fc-flip__face {
   padding: 18px 14px 14px;
-  border-radius: 12px;
+  border-radius: var(--fc-radius);
 }
 .ov__embed .fc-flip__side {
   font-size: 10px;
@@ -308,7 +308,7 @@ html.overlay body {
 .ov__embed .fc-prompt {
   min-height: 84px;
   padding: 16px 14px 12px;
-  border-radius: 12px;
+  border-radius: var(--fc-radius);
 }
 .ov__embed .fc-prompt__text {
   font-size: 18px;
@@ -356,7 +356,7 @@ html.overlay body {
   gap: 8px;
   padding: 6px 9px;
   font-size: 12.5px;
-  border-radius: 8px;
+  border-radius: var(--fc-radius-sm);
 }
 .ov__embed .fc-learn__actions {
   margin-top: 8px;
@@ -370,7 +370,7 @@ html.overlay body {
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 8px;
-  border-radius: 12px;
+  border-radius: var(--fc-radius);
 }
 .ov__embed .fc-panel__title {
   font-size: 12px;
@@ -421,7 +421,7 @@ html.overlay body {
 .ov__embed .fc-tq {
   gap: 8px;
   padding: 9px 11px 11px;
-  border-radius: 10px;
+  border-radius: var(--fc-radius);
 }
 .ov__embed .fc-tq__num,
 .ov__embed .fc-tq__mark {
@@ -481,7 +481,7 @@ html.overlay body {
     0 10px 0 6px var(--rt-paper);
   gap: 8px;
   padding: 6px 8px 6px 11px;
-  border-radius: 10px;
+  border-radius: var(--fc-radius);
 }
 .ov__embed .fc-test__answered {
   font-size: 12px;
