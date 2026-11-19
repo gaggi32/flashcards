@@ -123,244 +123,256 @@ html.overlay body {
 }
 
 /* ---------- header ----------
-   One line: the set and mode as one switch, then "⋯" and close. The rest
-   of the bar is a drag handle for the window. */
+   The modes as plain tabs on the left; on the right the set (a quiet
+   button), "⋯" and close. The empty middle drags the window. */
+.ov__panel {
+  position: relative;
+}
 .ov__head {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 6px 6px 8px;
+  gap: 2px;
+  height: 40px;
+  padding: 0 6px 0 6px;
   border-bottom: 1px solid var(--fc-line);
   user-select: none;
   cursor: grab;
 }
-.ov__switch {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  min-width: 0;
-  max-width: 78%;
-  padding: 4px 8px;
-  border: 1px solid transparent;
-  border-radius: var(--fc-radius-sm);
+.ov__tabs {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  cursor: default;
+}
+.ov__tab {
+  position: relative;
+  padding: 0 9px;
+  border: none;
   background: none;
-  color: var(--rt-ink);
+  color: var(--rt-ink-faint);
   font: inherit;
-  text-align: left;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.ov__tab:hover {
+  color: var(--rt-ink);
+}
+.ov__tab.is-on {
+  color: var(--rt-ink);
+  font-weight: 600;
+}
+/* The current mode is underlined, sitting on the header's bottom line. */
+.ov__tab::after {
+  content: '';
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--fc-accent);
+  scale: 0 1;
+  transition: scale 0.22s var(--ease-out);
+}
+.ov__tab.is-on::after {
+  scale: 1 1;
+}
+.ov__spacer {
+  flex: 1;
+  align-self: stretch;
+}
+.ov__setbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 170px;
+  height: 28px;
+  padding: 0 8px 0 10px;
+  border: none;
+  border-radius: var(--fc-radius);
+  background: none;
+  color: var(--rt-ink-soft);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    color 0.15s ease;
 }
-.ov__switch:hover,
-.ov__switch.is-open {
+.ov__setbtn:hover,
+.ov__setbtn.is-open {
   background: var(--rt-panel-2);
-  border-color: var(--fc-line);
+  color: var(--rt-ink);
 }
-.ov__switch-set {
+.ov__setbtn-name {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-family: var(--fc-serif);
-  font-size: 15px;
-  font-weight: 500;
 }
-.ov__switch-mode {
+.ov__setbtn svg {
   flex: none;
-  font-family: var(--fc-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rt-ink-faint);
-}
-.ov__switch-chev {
-  flex: none;
-  align-self: center;
   color: var(--rt-ink-faint);
   transition: rotate 0.2s var(--ease-out);
 }
-.ov__switch.is-open .ov__switch-chev {
+.ov__setbtn.is-open svg {
   rotate: 180deg;
-}
-.ov__spacer {
-  flex: 1;
 }
 .ov__icon {
   flex: none;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: var(--fc-radius);
   background: none;
-  color: var(--rt-ink-soft);
-  font-size: 16px;
-  line-height: 1;
+  color: var(--rt-ink-faint);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.2s var(--ease-spring);
+    color 0.15s ease;
 }
 .ov__icon:hover,
 .ov__icon.is-on {
   background: var(--rt-panel-2);
   color: var(--rt-ink);
 }
-.ov__icon:active {
-  transform: scale(0.9);
-}
 
 /* ---------- the header's menus ----------
-   They open in the panel's flow, under the header, so the window grows to
-   show them; nothing floats outside the window to be cut off. */
-.ov__drawer {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.22s var(--ease-out);
+   Small popovers under the header's right end. They float over the study
+   screen, so nothing under them moves; they never reach past the window. */
+@keyframes ov-pop {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+    scale: 0.98;
+  }
 }
-.ov__drawer.is-open {
-  grid-template-rows: 1fr;
-  border-bottom: 1px solid var(--fc-line);
-}
-.ov__drawer > * {
-  min-height: 0;
-  overflow: hidden;
-}
-.ov__menu {
+.ov__pop {
+  position: absolute;
+  z-index: 20;
+  top: 42px;
+  right: 8px;
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding: 6px;
-  background: var(--rt-panel-2);
-}
-.ov__menu[hidden] {
-  display: none;
-}
-.ov__menu-label {
-  padding: 6px 8px 3px;
-  font-family: var(--fc-mono);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--rt-ink-faint);
-}
-.ov__menu-item {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: none;
-  border-radius: var(--fc-radius-sm);
-  background: none;
-  color: var(--rt-ink);
-  font: inherit;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-}
-.ov__menu-item:hover {
-  background: var(--rt-panel);
-}
-.ov__menu-item.is-on {
-  background: var(--rt-panel);
-  box-shadow: inset 0 0 0 1px var(--fc-line-strong);
-}
-.ov__menu-main {
-  font-weight: 500;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.ov__menu-sub {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  font-size: 12px;
-  color: var(--rt-ink-faint);
-}
-.ov__menu-key,
-.ov__menu-count {
-  flex: none;
-  margin-left: auto;
-  font-family: var(--fc-mono);
-  font-size: 10.5px;
-  color: var(--rt-ink-faint);
-}
-.ov__setlist {
-  max-height: 168px;
+  width: 248px;
+  max-height: 340px;
   overflow-y: auto;
   scrollbar-width: thin;
+  box-sizing: border-box;
+  padding: 5px;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 10px;
+  background: var(--rt-panel);
+  box-shadow: var(--lift-hi);
+  transform-origin: top right;
+  animation: ov-pop 0.16s var(--ease-out) both;
 }
-.ov__setfolder {
-  padding: 6px 8px 2px;
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--rt-ink-soft);
-}
-.ov__setgroup + .ov__setgroup {
-  margin-top: 2px;
-}
-/* The screens' own controls in "⋯" (MoreControls), drawn as menu rows. */
-.ov__menu-slot:empty {
+.ov__pop[hidden] {
   display: none;
 }
-.ov__menu-slot {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding-bottom: 5px;
-  margin-bottom: 5px;
-  border-bottom: 1px solid var(--fc-line);
+.ov__poplabel {
+  padding: 7px 9px 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--rt-ink-faint);
 }
-.rt-page.fc-page .ov__menu-slot .rt-btn,
-.rt-page.fc-page .ov__menu-slot .rt-linkbtn,
-.ov__menu-slot .fc-reset {
+.ov__popgroup + .ov__popgroup {
+  margin-top: 3px;
+  padding-top: 3px;
+  border-top: 1px solid var(--fc-line);
+}
+.ov__popitem,
+.rt-page.fc-page .ov__popslot .rt-btn,
+.rt-page.fc-page .ov__popslot .rt-linkbtn,
+.ov__popslot .fc-reset {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
   width: 100%;
-  min-height: 0;
-  padding: 6px 8px;
+  min-height: 30px;
+  box-sizing: border-box;
+  padding: 0 9px;
   border: none;
-  border-radius: var(--fc-radius-sm);
+  border-radius: 6px;
   background: none;
   box-shadow: none;
   color: var(--rt-ink);
+  font: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 400;
   text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
-.rt-page.fc-page .ov__menu-slot .rt-btn:hover:not(:disabled),
-.rt-page.fc-page .ov__menu-slot .rt-linkbtn:hover:not(:disabled) {
-  background: var(--rt-panel);
+.ov__popitem:hover,
+.rt-page.fc-page .ov__popslot .rt-btn:hover:not(:disabled),
+.rt-page.fc-page .ov__popslot .rt-linkbtn:hover:not(:disabled) {
+  background: var(--rt-panel-2);
   color: var(--rt-ink);
 }
-.rt-page.fc-page .ov__menu-slot .fc-toggle.is-on {
+.ov__popitem.is-on {
+  font-weight: 600;
+}
+/* The set you are studying carries a dot. */
+.ov__popitem.is-on::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-left: -1px;
+  border-radius: 50%;
+  background: var(--fc-accent);
+}
+.ov__popitem-main {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ov__popitem-side {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--rt-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+/* The screen's own controls (MoreControls) come first, set off by a line. */
+.ov__popslot {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ov__popslot:empty {
+  display: none;
+}
+.ov__popslot:not(:empty) {
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--fc-line);
+}
+.rt-page.fc-page .ov__popslot .fc-toggle.is-on {
   border: none;
   background: none;
   color: var(--rt-ink);
 }
-.ov__menu-slot .fc-reset--ask {
-  flex-wrap: wrap;
-}
-/* Reset is the one that throws work away: last in the list. */
-.ov__menu-slot .fc-reset {
+.ov__popslot .fc-reset {
   order: 9;
+  color: var(--rt-rust);
 }
-/* "reset" reads as a menu entry like the others. */
-.ov__menu-slot button.fc-reset {
+.ov__popslot button.fc-reset {
   text-transform: capitalize;
+}
+.ov__popslot .fc-reset--ask {
+  flex-wrap: wrap;
+  cursor: default;
 }
 
 /* ---------- the embedded study screen, compact ----------
@@ -660,9 +672,13 @@ html.overlay body {
   display: none;
 }
 
-/* Only what you need to answer: Cards' shuffle and side toggles live in "⋯",
-   and Write answers with Enter (the label says so) instead of a button. */
-.ov__embed .fc-deckbar {
+/* Only what you need to answer. Cards' shuffle and side toggles live in
+   "⋯"; the cards waiting under the shown one are left out (too busy at this
+   size); Write answers with Enter (the label says so) instead of a button,
+   and its bar keeps the counts, not the round number. */
+.ov__embed .fc-deckbar,
+.ov__embed .fc-stack__back,
+.ov__embed .fc-writebar__round {
   display: none;
 }
 .ov__embed .fc-answer .rt-btnrow > button[type='submit'] {

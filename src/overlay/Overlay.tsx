@@ -82,6 +82,11 @@ function useFitWindow(panelRef: React.RefObject<HTMLDivElement | null>) {
       // The panel is as tall as its content until the window holds it back;
       // then the scrolling part says by how much. offsetHeight, not the
       // bounding box: the open animation turns and scales the panel.
+      // An open header menu floats over the screen; on a short screen the
+      // panel grows to hold it (the window follows), so it is never cut off.
+      const pop = panel.querySelector<HTMLElement>('.ov__pop:not([hidden])');
+      const popNeed = pop ? pop.offsetTop + pop.scrollHeight + 10 : 0;
+      panel.style.minHeight = popNeed ? `${popNeed}px` : '';
       const scroller = panel.querySelector<HTMLElement>('.ov__embed, .ov__body');
       const hidden = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
       const h = panel.offsetHeight + hidden + FRAME_PAD + 1;
@@ -132,7 +137,7 @@ function OverlayFrame() {
   // A mode saved as Test (by versions that studied it here) studies Cards.
   const mode = savedMode === 'test' ? 'cards' : savedMode;
   /** The header menu that is open: the set and mode switch, or "⋯". */
-  const [menu, setMenu] = useState<'switch' | 'more' | null>(null);
+  const [menu, setMenu] = useState<'set' | 'more' | null>(null);
   /** Where the screens put their secondary controls (MoreControls). */
   const [moreSlot, setMoreSlot] = useState<HTMLElement | null>(null);
   const [chosenSet, setChosenSet] = usePref('overlaySet');
@@ -292,7 +297,7 @@ function OverlayFrame() {
     if (!menu) return;
     function onDown(e: PointerEvent) {
       const t = e.target as Element | null;
-      if (t?.closest('.ov__drawer, .ov__switch, .ov__more')) return;
+      if (t?.closest('.ov__pop, .ov__setbtn, .ov__more')) return;
       setMenu(null);
     }
     window.addEventListener('pointerdown', onDown);
@@ -300,33 +305,52 @@ function OverlayFrame() {
   }, [menu]);
 
   const hotkey = settings ? formatHotkey(settings.hotkey, isMacPlatform()) : '';
-  const currentMode = MODES.find((m) => m.id === mode) ?? MODES[0];
   const currentSet = sets?.find((s) => s.id === setId) ?? null;
-  const toggle = (which: 'switch' | 'more') => setMenu((m) => (m === which ? null : which));
+  const toggle = (which: 'set' | 'more') => setMenu((m) => (m === which ? null : which));
 
   return (
     <OverlayContext.Provider value={{ menu: moreSlot }}>
     <div className="rt-page fc-page ov" data-phase={phase}>
       <div className="ov__panel" ref={panelRef} onAnimationEnd={onPanelAnimationEnd}>
         <header className="ov__head" data-tauri-drag-region>
-          {/* The set and the mode, as one switch: what you are studying, and
-              the way to change it. */}
+          {/* The modes as plain tabs: one click, and Ctrl+1 to 3. */}
+          <div className="ov__tabs" role="tablist" aria-label="Study mode">
+            {MODES.map((m, i) => (
+              <button
+                key={m.id}
+                type="button"
+                tabIndex={-1}
+                role="tab"
+                aria-selected={view === 'study' && mode === m.id}
+                className={`ov__tab${view === 'study' && mode === m.id ? ' is-on' : ''}`}
+                title={`${m.hint} (${SHORTCUT}${i + 1})`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setView('study');
+                  setMode(m.id);
+                  setMenu(null);
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <span className="ov__spacer" data-tauri-drag-region />
           <button
             type="button"
             tabIndex={-1}
-            className={`ov__switch${menu === 'switch' ? ' is-open' : ''}`}
-            aria-expanded={menu === 'switch'}
-            aria-label="Change set or mode"
+            className={`ov__setbtn${menu === 'set' ? ' is-open' : ''}`}
+            aria-expanded={menu === 'set'}
+            aria-haspopup="menu"
+            title="Study another set"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => toggle('switch')}
+            onClick={() => toggle('set')}
           >
-            <span className="ov__switch-set">{view === 'add' ? 'Add a card' : (currentSet?.title ?? 'Pick a set')}</span>
-            {view !== 'add' && <span className="ov__switch-mode">{currentMode.label}</span>}
-            <svg className="ov__switch-chev" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true">
+            <span className="ov__setbtn-name">{currentSet?.title ?? 'Pick a set'}</span>
+            <svg width="9" height="6" viewBox="0 0 10 6" aria-hidden="true">
               <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span className="ov__spacer" data-tauri-drag-region />
           <button
             type="button"
             tabIndex={-1}
@@ -334,13 +358,14 @@ function OverlayFrame() {
             title="More"
             aria-label="More"
             aria-expanded={menu === 'more'}
+            aria-haspopup="menu"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => toggle('more')}
           >
             <svg width="14" height="4" viewBox="0 0 14 4" aria-hidden="true">
-              <circle cx="2" cy="2" r="1.5" fill="currentColor" />
-              <circle cx="7" cy="2" r="1.5" fill="currentColor" />
-              <circle cx="12" cy="2" r="1.5" fill="currentColor" />
+              <circle cx="2" cy="2" r="1.4" fill="currentColor" />
+              <circle cx="7" cy="2" r="1.4" fill="currentColor" />
+              <circle cx="12" cy="2" r="1.4" fill="currentColor" />
             </svg>
           </button>
           <button
@@ -352,91 +377,72 @@ function OverlayFrame() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => void hideOverlay()}
           >
-            ×
+            <svg width="11" height="11" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+            </svg>
           </button>
         </header>
 
-        {/* The header's menus open here, in the panel's flow, so the window
-            grows to show them. The "⋯" one is always mounted: the screens
-            put their own controls in it (MoreControls). */}
-        <div className={`ov__drawer${menu ? ' is-open' : ''}`}>
-          {menu === 'switch' && (
-            <div className="ov__menu ov__menu--switch">
-              <div className="ov__menu-label">Mode</div>
-              <div className="ov__modelist">
-                {MODES.map((m, i) => (
+        {/* The header's menus float over the panel, under their button: the
+            page under them stays where it is. The "⋯" one is always mounted
+            (hidden when closed): the screens put their own controls in it. */}
+        {menu === 'set' && (
+          <div className="ov__pop ov__pop--set" role="menu" aria-label="Sets">
+            {groupByFolder(sets ?? []).map((g) => (
+              <div key={g.folder ?? ' loose'} className="ov__popgroup">
+                {g.folder !== null && <div className="ov__poplabel">{g.folder}</div>}
+                {g.sets.map((s) => (
                   <button
-                    key={m.id}
+                    key={s.id}
                     type="button"
-                    className={`ov__menu-item${view === 'study' && mode === m.id ? ' is-on' : ''}`}
+                    role="menuitemradio"
+                    aria-checked={s.id === setId}
+                    className={`ov__popitem${s.id === setId ? ' is-on' : ''}`}
                     onClick={() => {
+                      setChosenSet(s.id);
                       setView('study');
-                      setMode(m.id);
                       setMenu(null);
                     }}
                   >
-                    <span className="ov__menu-main">{m.label}</span>
-                    <span className="ov__menu-sub">{m.hint}</span>
-                    <span className="ov__menu-key">
-                      {SHORTCUT}
-                      {i + 1}
-                    </span>
+                    <span className="ov__popitem-main">{s.title}</span>
+                    <span className="ov__popitem-side">{s.cardCount}</span>
                   </button>
                 ))}
-                <button type="button" className="ov__menu-item" onClick={openTest}>
-                  <span className="ov__menu-main">Test ↗</span>
-                  <span className="ov__menu-sub">A whole paper, in the main window</span>
-                  <span className="ov__menu-key">{SHORTCUT}4</span>
-                </button>
               </div>
-              <div className="ov__menu-label">Set</div>
-              <div className="ov__setlist">
-                {groupByFolder(sets ?? []).map((g) => (
-                  <div key={g.folder ?? ' loose'} className="ov__setgroup">
-                    {g.folder !== null && <div className="ov__setfolder">{g.folder}</div>}
-                    {g.sets.map((s) => (
-                      <button
-                        key={s.id}
-                        type="button"
-                        className={`ov__menu-item ov__setitem${s.id === setId ? ' is-on' : ''}`}
-                        onClick={() => {
-                          setChosenSet(s.id);
-                          setView('study');
-                          setMenu(null);
-                        }}
-                      >
-                        <span className="ov__menu-main">{s.title}</span>
-                        <span className="ov__menu-count">{s.cardCount}</span>
-                      </button>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="ov__menu ov__menu--more" hidden={menu !== 'more'}>
-            <div className="ov__menu-slot" ref={setMoreSlot} />
-            <button
-              type="button"
-              className="ov__menu-item"
-              onClick={() => {
-                setView(view === 'add' ? 'study' : 'add');
-                setMenu(null);
-              }}
-            >
-              <span className="ov__menu-main">{view === 'add' ? 'Back to studying' : 'Add a card'}</span>
-            </button>
-            <button
-              type="button"
-              className="ov__menu-item"
-              onClick={() => {
-                setMenu(null);
-                void openMain(setId === null ? '/flashcards' : pathname);
-              }}
-            >
-              <span className="ov__menu-main">Open in the main window</span>
-            </button>
+            ))}
           </div>
+        )}
+        <div className="ov__pop ov__pop--more" role="menu" aria-label="More" hidden={menu !== 'more'}>
+          <div className="ov__popslot" ref={setMoreSlot} />
+          <button
+            type="button"
+            role="menuitem"
+            className="ov__popitem"
+            onClick={() => {
+              setView(view === 'add' ? 'study' : 'add');
+              setMenu(null);
+            }}
+          >
+            <span className="ov__popitem-main">{view === 'add' ? 'Back to studying' : 'Add a card'}</span>
+          </button>
+          <button type="button" role="menuitem" className="ov__popitem" onClick={openTest}>
+            <span className="ov__popitem-main">Take a test</span>
+            <span className="ov__popitem-side">
+              {SHORTCUT}4 ↗
+            </span>
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className="ov__popitem"
+            onClick={() => {
+              setMenu(null);
+              void openMain(setId === null ? '/flashcards' : pathname);
+            }}
+          >
+            <span className="ov__popitem-main">Open in the main window</span>
+            <span className="ov__popitem-side">↗</span>
+          </button>
         </div>
 
         {view === 'add' ? (
