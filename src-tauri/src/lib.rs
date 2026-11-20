@@ -1190,6 +1190,14 @@ fn sync_login_item(app: &AppHandle, stored: Option<bool>) -> bool {
     want
 }
 
+/// Whether a start shows the main window. The login item starts the app in the
+/// tray ("--hidden"), except the first time a new version runs: an update
+/// restarts the app with the old process's arguments, so an app that had been
+/// started at sign-in would come back hidden and look as if it had not opened.
+fn shows_window_at_start(hidden: bool, last_run: &str, running: &str) -> bool {
+    !hidden || last_run != running
+}
+
 // ---- run ----------------------------------------------------------------------
 
 pub fn run() {
@@ -1284,8 +1292,11 @@ pub fn run() {
 
             let mut prefs = settings::load(&handle);
             let want = sync_login_item(&handle, prefs.autostart);
-            if prefs.autostart != Some(want) {
+            let running = handle.package_info().version.to_string();
+            let show = shows_window_at_start(std::env::args().any(|a| a == AUTOSTART_FLAG), &prefs.last_run_version, &running);
+            if prefs.autostart != Some(want) || prefs.last_run_version != running {
                 prefs.autostart = Some(want);
+                prefs.last_run_version = running;
                 let _ = settings::store(&handle, &prefs);
             }
             let topmost = Arc::new(AtomicBool::new(prefs.overlay_topmost_watch));
@@ -1313,7 +1324,7 @@ pub fn run() {
                 let _ = register_hotkey(&handle, settings::DEFAULT_HOTKEY);
             }
 
-            if !std::env::args().any(|a| a == AUTOSTART_FLAG) {
+            if show {
                 show_main(&handle);
             }
             Ok(())
@@ -1333,6 +1344,18 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_start_after_an_update_shows_the_window_even_from_the_login_item() {
+        // Opened by hand: always.
+        assert!(shows_window_at_start(false, "1.7.0", "1.7.0"));
+        // At sign-in, same version as last time: stays in the tray.
+        assert!(!shows_window_at_start(true, "1.7.0", "1.7.0"));
+        // Restarted by the updater with the old "--hidden": shows, once.
+        assert!(shows_window_at_start(true, "1.7.0", "1.7.1"));
+        // From a version that did not keep this yet.
+        assert!(shows_window_at_start(true, "", "1.7.1"));
+    }
 
     #[test]
     fn an_update_lists_every_version_it_brings_newest_first() {

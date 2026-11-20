@@ -57,6 +57,8 @@ export type Settings = {
   sessionsCarriedOver: boolean;
   /** The version whose What's new was last seen; "" on a first start. */
   lastSeenVersion: string;
+  /** The version that started last (Rust keeps it: it decides whether a start shows the window). */
+  lastRunVersion: string;
 };
 
 export type StudyPrefs = Pick<Settings, 'overlaySet' | 'overlayMode' | 'specialKeys' | 'cardsFirstSide'>;

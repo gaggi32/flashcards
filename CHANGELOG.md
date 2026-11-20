@@ -2,6 +2,10 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.7.1] — 2026-11-20
+### Fixed
+- After an update the window opens again, instead of the app staying in the tray when it had been started at sign-in.
+
 ## [1.7.0] — 2026-11-20
 ### Added
 - A Motion setting under Settings → Look: full, calm or off. Calm keeps the small feedback and leaves out the bigger effects; off stills everything.

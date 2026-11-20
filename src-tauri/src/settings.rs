@@ -78,6 +78,11 @@ pub struct Settings {
     /// The version whose "What's new" the user has seen (or that was first
     /// installed): the card shows what came after it. Empty on a first start.
     pub last_seen_version: String,
+    /// The version that started last. A start from the login item stays in the
+    /// tray, but the first start of a new version shows the window: after an
+    /// update the installer starts the app with the arguments the old one had,
+    /// which is the login item's "--hidden" when it was started at sign-in.
+    pub last_run_version: String,
 }
 
 impl Default for Settings {
@@ -108,6 +113,7 @@ impl Default for Settings {
             local_prefs_adopted: false,
             sessions_carried_over: false,
             last_seen_version: String::new(),
+            last_run_version: String::new(),
         }
     }
 }
@@ -183,6 +189,9 @@ impl Settings {
         if !is_version(&self.last_seen_version) {
             self.last_seen_version = String::new();
         }
+        if !is_version(&self.last_run_version) {
+            self.last_run_version = String::new();
+        }
         self
     }
 
@@ -197,6 +206,7 @@ impl Settings {
         self.local_prefs_adopted = prev.local_prefs_adopted;
         self.sessions_carried_over = prev.sessions_carried_over;
         self.last_seen_version = prev.last_seen_version.clone();
+        self.last_run_version = prev.last_run_version.clone();
     }
 
     pub fn with(mut self, pref: StudyPref) -> Self {
@@ -432,6 +442,7 @@ mod tests {
             local_prefs_adopted: true,
             sessions_carried_over: true,
             last_seen_version: "0.1.19".into(),
+            last_run_version: "0.1.19".into(),
             autostart: Some(true),
             ..Settings::default()
         };
