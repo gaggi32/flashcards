@@ -2,6 +2,22 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.7.0] — 2026-11-20
+### Added
+- A Motion setting under Settings → Look: full, calm or off. Calm keeps the small feedback and leaves out the bigger effects; off stills everything.
+- Cards mode deals from a stack: the cards still to come peek out under the shown one, a mark stamps the card and throws it to its pile, and the next word inks in. A swiped card flies on the way you threw it, at your speed.
+- Answers land with feedback in Write, Learn and Test: a right answer glows green; a wrong one glows rust and its correction draws itself in. A handed-in test marks its questions one by one.
+- Results count up at the end of a round and on a test's score, and a set known all the way through or a test of 80% and up gets confetti (full motion only, not in eye comfort).
+- Screens slide into each other, a set's title travels from the library into the set, and lists glide when sets come, go or move.
+### Changed
+- The library shows each set as a little deck: its first term face up on a pile as thick as the set, with how many terms you've learned and when you last studied it. Folders are open folders with a card standing in them for each set.
+- The overlay's header is one line: the modes as tabs, the set as a button (its list grouped by folder), a "⋯" menu with the screen's other controls (shuffle, which side first, reset, add a card), open in the main window, and close.
+- In the overlay, Write and Learn start straight away instead of showing their setup, and Write answers with Enter.
+- Hovering a set, a study mode or an answer outlines it in grey instead of blue.
+### Fixed
+- A field shows focus once, not as its border and a second ring around it.
+- Every button, link, tab and checkbox shows the hand pointer.
+
 ## [1.6.1] — 2026-11-18
 ### Fixed
 - In a test, Shift+Tab out of a written answer goes back to the previous question again, instead of losing its place and jumping to "hand in". The character buttons above the answer box (é, ñ …) are no longer Tab stops; click them or use the number keys.
