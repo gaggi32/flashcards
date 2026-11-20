@@ -28,6 +28,19 @@ export type SetSummaryDTO = {
   cardCount: number;
   /** Whether the hotkey overlay draws cards from this set. */
   inOverlay?: boolean;
+  /** What the library shows of a set at a glance. Sent by the set list only. */
+  glance?: SetGlance;
+};
+
+export type SetGlance = {
+  /** Cards answered right enough times in a row to count as learned. */
+  learned: number;
+  /** Cards answered at least once, not yet learned. */
+  learning: number;
+  /** When the set was last studied in any mode (ISO), or null if never. */
+  studiedAt: string | null;
+  /** The first few terms, in set order. */
+  peek: string[];
 };
 
 export type SetDTO = SetSummaryDTO & { cards: CardDTO[] };

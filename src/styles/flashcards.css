@@ -452,16 +452,6 @@
   min-width: 0;
 }
 
-/* ---------- dashboard rows ---------- */
-.fc-row__desc {
-  margin-top: 6px;
-  font-size: 13.5px;
-  color: var(--rt-ink-soft);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
 
 /* ---------- set page: mode picker ---------- */
 .fc-modes {
@@ -1899,99 +1889,55 @@
   box-shadow: 0 1px 3px var(--rt-shadow);
 }
 
-/* Sets and folders are rows: a badge on the left (the term count, or a
-   folder), the name with room to wrap, a chevron. One column on a phone, two
-   side by side once there is room for both titles. */
+/* Sets and folders are little things lying on the table, the picture on
+   top and the name and a line about it underneath: a set as a deck (its first
+   card face up on a pile as thick as the set), a folder as a folder with its
+   sets' cards sticking out. As many to a row as fit, two on a phone. */
 .fc-list {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-}
-@media (min-width: 640px) {
-  .fc-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  /* Four across the page; never fewer than two, however narrow. */
+  grid-template-columns: repeat(auto-fill, minmax(min(165px, calc(50% - 8px)), 1fr));
+  gap: 20px 16px;
 }
 .fc-page .rt-label.fc-label-gap {
-  margin-top: 22px;
+  margin-top: 26px;
 }
 
-.rt-page.fc-page .fc-row {
+.rt-page.fc-page .fc-tile {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  padding: 10px 12px 10px 10px;
-  border: 1px solid var(--fc-line-strong);
-  border-radius: var(--fc-radius);
-  background: var(--rt-panel);
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--rt-ink);
   font: inherit;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.rt-page.fc-page .fc-row:hover {
-  border-color: var(--rt-ink-faint);
-  background: var(--rt-panel);
-  color: var(--rt-ink);
+/* The ring goes round the picture, not round the whole tile. */
+.rt-page.fc-page .fc-tile:focus-visible {
+  outline: none;
 }
-.rt-page.fc-page .fc-row:active {
-  background: var(--rt-panel-2);
+.fc-tile:focus-visible .fc-mini__card {
+  outline: 2px solid var(--fc-accent);
+  outline-offset: 2px;
 }
-.fc-row > svg {
-  color: var(--rt-ink-faint);
+.fc-tile:focus-visible .fc-folder__front path {
+  stroke: var(--fc-accent);
+  stroke-width: 2px;
 }
-.fc-row:hover > svg {
-  color: var(--rt-ink);
-}
-
-/* The count, stacked over its unit, in a soft accent square. */
-.fc-row__badge {
-  flex: none;
+.fc-tile__info {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 46px;
-  height: 46px;
-  border-radius: var(--fc-radius-sm);
-  background: var(--fc-accent-soft);
-  color: var(--fc-accent);
-  line-height: 1;
-}
-.fc-row__count {
-  font-size: 16px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.fc-row__unit {
-  margin-top: 3px;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  opacity: 0.85;
-}
-/* A folder reads as a different kind of thing: outlined, not filled. */
-.fc-row--folder .fc-row__badge {
-  background: none;
-  border: 1px solid color-mix(in srgb, var(--fc-accent) 45%, transparent);
-}
-.rt-page.fc-page .fc-row--folder {
-  background: color-mix(in srgb, var(--fc-accent-soft) 45%, var(--rt-panel));
-}
-
-.fc-row__body {
-  flex: 1;
+  gap: 2px;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+  padding: 0 2px;
 }
-.fc-row__name {
-  font-size: 15px;
+.fc-tile__name {
+  font-size: 14.5px;
   font-weight: 600;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -2000,27 +1946,147 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.fc-row__meta {
+.fc-tile__facts {
   display: flex;
   align-items: center;
-  gap: 4px 10px;
+  gap: 4px;
   min-width: 0;
   font-size: 12.5px;
   color: var(--rt-ink-faint);
   font-variant-numeric: tabular-nums;
 }
-.fc-row__desc {
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.fc-row__desc svg {
+.fc-tile__facts svg {
   flex: none;
+}
+
+/* A set: the deck. Room on the right and below for the pile. */
+.fc-mini {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  margin: 0 9px 9px 0;
+}
+.fc-mini__card,
+.fc-mini__under {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: var(--fc-radius);
+  background: var(--rt-panel);
+}
+/* Each card lower in the pile sits a little further down and askew. */
+.fc-mini__under {
+  translate: calc(var(--k) * 3px) calc(var(--k) * 3px);
+  rotate: calc(var(--k) * 0.9deg);
+  background: var(--rt-panel-2);
+}
+.fc-mini__card {
+  display: grid;
+  place-items: center;
+  padding: 20px 12px 14px;
+  box-shadow: var(--lift);
+}
+.fc-mini__side {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rt-ink-faint);
+}
+.fc-mini__text {
+  max-width: 100%;
+  font-size: 16px;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fc-mini__text.is-long {
+  font-size: 13px;
+  -webkit-line-clamp: 3;
+}
+.fc-mini.is-empty .fc-mini__card {
+  border-style: dashed;
+  background: none;
+  box-shadow: none;
+}
+.fc-mini.is-empty .fc-mini__side {
+  display: none;
+}
+
+/* A folder lying open: the back with its tab, a card standing in it for
+   each set (up to three, each a little lower and askew, like sheets dropped
+   in) and the front pocket, the same material as the back. Drawn in SVG so
+   the tab runs into the back in one line. */
+.fc-folder {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  margin: 0 9px 9px 0;
+}
+.fc-folder svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.fc-folder path {
+  stroke: var(--fc-line-strong);
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
+}
+.fc-folder__back path {
+  fill: var(--rt-panel-2);
+}
+.fc-folder__front {
+  z-index: 1;
+  filter: drop-shadow(0 -1px 3px var(--rt-shadow-soft));
+}
+/* The front is the same material as the back, a shade lighter where the
+   light falls on it. */
+.fc-folder__front path {
+  fill: color-mix(in srgb, var(--rt-panel-2) 70%, var(--rt-panel));
+}
+/* --k is the card's place, 0 at the back to 2 at the front: sheets nearly
+   as wide as the folder, each a little lower and turned by its own small
+   amount, standing well out of the pocket. */
+.fc-folder__card {
+  position: absolute;
+  top: calc(19% + var(--k) * 5%);
+  left: calc(7% + var(--k) * 1%);
+  width: 84%;
+  height: 60%;
+  border: 1px solid var(--fc-line-strong);
+  border-radius: 7px;
+  background: var(--rt-panel);
+  rotate: calc((var(--k) - 1) * -1.6deg);
+}
+.fc-folder__card.is-empty {
+  border-style: dashed;
+  background: none;
+  rotate: 0deg;
+}
+
+/* A set being dragged over a folder lights the folder's pocket up. */
+.fc-tile--folder.fc-dropon .fc-folder__front path {
+  stroke: var(--fc-accent);
+  stroke-width: 2px;
+  fill: var(--fc-accent-soft);
+}
+
+/* While the library loads: blank tiles in the same shape. */
+.fc-skel--tile {
+  aspect-ratio: 16 / 10;
+  margin: 0 9px 46px 0;
+  border-radius: var(--fc-radius);
 }
 
 .fc-crumbs {
@@ -2045,13 +2111,7 @@
   color: var(--rt-ink);
 }
 
-/* A set being dragged over a folder (or over "My sets", to take it out). */
-.rt-page.fc-page .fc-row.fc-dropon,
-.rt-page.fc-page .fc-row.fc-dropon:hover {
-  border-color: var(--fc-accent);
-  background: var(--fc-accent-soft);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--fc-accent) 35%, transparent);
-}
+/* A set being dragged over "My sets", to take it out of the folder. */
 .fc-crumbs__back.fc-dropon {
   margin: -4px -8px;
   padding: 4px 8px;

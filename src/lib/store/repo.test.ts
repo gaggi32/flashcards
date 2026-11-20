@@ -144,6 +144,19 @@ describe('learning', () => {
     expect((await repo.overview(TODAY, other.set.id)).fresh).toBe(2);
   });
 
+  it('lists each set with its learn counts, when it was studied and its first terms', async () => {
+    const { set, cards } = await setWith(6);
+    const empty = { set: await repo.createSet({ title: 'Empty', description: '', folder: null }) };
+    await repo.reviewCard(cards[1].id, 1, TODAY, null); // learning
+    await repo.reviewCard(cards[2].id, 5, TODAY, null);
+    await repo.reviewCard(cards[2].id, 5, TODAY, 1); // learned
+    const list = await repo.listSets();
+    const glance = list.find((s) => s.id === set.id)?.glance;
+    expect(glance).toMatchObject({ learned: 1, learning: 1, peek: ['t0', 't1', 't2', 't3'] });
+    expect(glance?.studiedAt).toEqual(expect.any(String));
+    expect(list.find((s) => s.id === empty.set.id)?.glance).toEqual({ learned: 0, learning: 0, studiedAt: null, peek: [] });
+  });
+
   it('counts a streak that ends today or yesterday', () => {
     expect(repo.streakFrom(['2026-11-10', '2026-11-09', '2026-11-07'], TODAY)).toBe(2);
     expect(repo.streakFrom(['2026-11-09', '2026-11-08'], TODAY)).toBe(2);

@@ -3,7 +3,7 @@ import { ask } from '@/components/Dialogs';
 import Link from '@/components/Link';
 import { importFile } from '@/lib/app/native';
 import { useRouter } from '@/lib/app/router';
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router';
 
 import { addSetsFromText } from '@/components/SetFileDrop';
@@ -12,11 +12,10 @@ import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
 import { forget, primed } from '@/lib/app/prime';
 import { createFolder, errorMessage, fetchFolders, fetchSets, renameFolder, updateSet } from '@/lib/flashcards/client';
-import { plural } from '@/lib/flashcards/format';
+import { plural, studiedAgo } from '@/lib/flashcards/format';
 import { LIMITS, type SetSummaryDTO } from '@/lib/flashcards/types';
 import {
   IconChevronLeft,
-  IconChevronRight,
   IconFolder,
   IconFolderPlus,
   IconGenerate,
@@ -262,9 +261,9 @@ export function SetsClient() {
 
         {sets === null && !error && (
           <div className="fc-list" aria-busy="true">
-            <div className="fc-skel" style={{ height: 68 }} />
-            <div className="fc-skel" style={{ height: 68 }} />
-            <div className="fc-skel" style={{ height: 68 }} />
+            <div className="fc-skel fc-skel--tile" />
+            <div className="fc-skel fc-skel--tile" />
+            <div className="fc-skel fc-skel--tile" />
           </div>
         )}
 
@@ -308,20 +307,17 @@ export function SetsClient() {
                         key={f.name}
                         data-flip={f.name}
                         type="button"
-                        className={`fc-row fc-row--folder${dropOn === f.name ? ' fc-dropon' : ''}`}
+                        className={`fc-tile fc-tile--folder${dropOn === f.name ? ' fc-dropon' : ''}`}
                         onClick={() => setFolder(f.name)}
                         {...dropTarget(f.name, f.name)}
                       >
-                        <span className="fc-row__badge" aria-hidden="true">
-                          <IconFolder size={20} />
-                        </span>
-                        <span className="fc-row__body">
-                          <span className="fc-row__name">{f.name}</span>
-                          <span className="fc-row__meta">
-                            {plural(f.sets, 'set')} · {plural(f.cards, 'term')}
+                        <FolderPicture sets={f.sets} />
+                        <span className="fc-tile__info">
+                          <span className="fc-tile__name">{f.name}</span>
+                          <span className="fc-tile__facts">
+                            {f.sets === 0 ? 'no sets yet' : `${plural(f.sets, 'set')} · ${plural(f.cards, 'term')}`}
                           </span>
                         </span>
-                        <IconChevronRight />
                       </button>
                     ))}
                   </div>
@@ -407,30 +403,37 @@ function SearchBox({
   );
 }
 
-/** The badge carries the count, so the title gets the whole width beside it. */
+/**
+ * A set as a little deck lying on the table: its first card face up, on a
+ * pile as thick as the set, with the name and a line about it underneath.
+ * Hovering lifts the top card off the pile.
+ */
 function SetRow({
   set,
   showFolder = false,
   onDragDone,
 }: {
   set: SetSummaryDTO;
-  /** While searching, where each hit is filed stands in for its description. */
+  /** While searching, where each hit is filed stands in for the line about it. */
   showFolder?: boolean;
   /** The row's drag is over, wherever it ended. */
   onDragDone?: () => void;
 }) {
   const folder = showFolder ? set.folder : null;
-  const sub = folder ?? set.description;
   // Pressed here and not yet dragged: where, and the set's file, read at once
   // so the OS drag can start the moment the pointer has moved far enough.
   const press = useRef<{ x: number; y: number; file: Promise<{ contents: string; name: string }> } | null>(null);
   const dragging = useRef(false);
+  const first = set.glance?.peek[0] ?? null;
+  const depth = pileDepth(set.cardCount);
   return (
     <Link
       href={`/flashcards/${set.id}`}
-      className="fc-row"
+      className="fc-tile"
       draggable={false}
-      title="Open the set, or drag it onto a folder, the desktop or another app"
+      title={`${set.description ? `${set.description}
+
+` : ''}Open the set, or drag it onto a folder, the desktop or another app`}
       onPointerDown={(e) => {
         if (e.button !== 0 || e.pointerType !== 'mouse') return;
         const file = prepareSetFile(set.id, set.title);
@@ -462,26 +465,69 @@ function SetRow({
         press.current = null;
       }}
     >
-      <span className="fc-row__badge" aria-label={plural(set.cardCount, 'term')}>
-        <span className="fc-row__count">{set.cardCount}</span>
-        <span className="fc-row__unit" aria-hidden="true">
-          {set.cardCount === 1 ? 'term' : 'terms'}
+      <span className={`fc-mini${first === null ? ' is-empty' : ''}`} aria-hidden="true">
+        {Array.from({ length: depth }, (_, i) => (
+          <span key={i} className="fc-mini__under" style={{ '--k': i + 1 } as CSSProperties} />
+        ))}
+        <span className="fc-mini__card">
+          <span className="fc-mini__side">term</span>
+          {first !== null && <span className={`fc-mini__text${first.length > 40 ? ' is-long' : ''}`}>{first}</span>}
         </span>
       </span>
-      <span className="fc-row__body">
+      <span className="fc-tile__info">
         <SetTitle setId={set.id}>
-          <span className="fc-row__name">{set.title}</span>
+          <span className="fc-tile__name">{set.title}</span>
         </SetTitle>
-        {sub && (
-          <span className="fc-row__meta">
-            <span className="fc-row__desc">
-              {folder && <IconFolder size={13} />}
-              {sub}
-            </span>
-          </span>
-        )}
+        <span className="fc-tile__facts">
+          {folder && <IconFolder size={12} />}
+          {folder ?? facts(set)}
+        </span>
       </span>
-      <IconChevronRight />
     </Link>
+  );
+}
+
+/** How many cards lie under the top one: more for a bigger set. */
+function pileDepth(n: number): number {
+  if (n <= 1) return 0;
+  if (n < 8) return 1;
+  if (n < 25) return 2;
+  return 3;
+}
+
+/** "30 terms · 4 learned · today" */
+function facts(set: SetSummaryDTO): string {
+  const g = set.glance;
+  if (set.cardCount === 0) return 'no cards yet';
+  const parts = [plural(set.cardCount, 'term')];
+  if (g?.learned) parts.push(`${g.learned} learned`);
+  parts.push(g?.studiedAt ? studiedAgo(g.studiedAt) : 'not studied yet');
+  return parts.join(' · ');
+}
+
+/**
+ * A folder lying open: its back with the tab, a card standing in it for each
+ * set (up to three) and the front pocket. An empty one holds a dashed card.
+ * Drawn in a 160 × 100 box, the tile's shape.
+ */
+function FolderPicture({ sets }: { sets: number }) {
+  const n = Math.min(3, sets);
+  return (
+    <span className="fc-folder" aria-hidden="true">
+      <svg className="fc-folder__back" viewBox="0 0 160 100" preserveAspectRatio="none">
+        <path d="M0 11 Q0 3 8 3 H45 Q50 3 53.5 6.5 L57 10 Q60 13 65 13 H152 Q160 13 160 21 V92 Q160 100 152 100 H8 Q0 100 0 92 Z" />
+      </svg>
+      {n === 0 ? (
+        <span className="fc-folder__card is-empty" style={{ '--k': 2 } as CSSProperties} />
+      ) : (
+        // Back to front; the front card is always the third place.
+        Array.from({ length: n }, (_, i) => (
+          <span key={i} className="fc-folder__card" style={{ '--k': 3 - n + i } as CSSProperties} />
+        ))
+      )}
+      <svg className="fc-folder__front" viewBox="0 0 160 100" preserveAspectRatio="none">
+        <path d="M3 58 Q4 52 10 52 H150 Q156 52 157 58 L160 92 Q160 100 152 100 H8 Q0 100 0 92 Z" />
+      </svg>
+    </span>
   );
 }

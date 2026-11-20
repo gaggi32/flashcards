@@ -79,8 +79,7 @@
   animation-delay: 240ms;
 }
 
-/* ---------- rows, tiles, buttons ---------- */
-.rt-page.fc-page .fc-row,
+/* ---------- tiles, buttons ---------- */
 .rt-page.fc-page .fc-mode {
   transition:
     border-color 0.18s ease,
@@ -88,21 +87,53 @@
     transform 0.22s var(--ease-out),
     box-shadow 0.22s var(--ease-out);
 }
-.rt-page.fc-page .fc-row:hover,
 .rt-page.fc-page .fc-mode:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 22px -12px rgba(0, 0, 0, 0.45);
 }
-.rt-page.fc-page .fc-row:active,
 .rt-page.fc-page .fc-mode:active {
   transform: translateY(0) scale(0.99);
   box-shadow: none;
 }
-.fc-row > svg {
-  transition: transform 0.22s var(--ease-out), color 0.18s ease;
+
+/* A set's top card lifts off its pile, the way a flip lifts the card in
+   Cards mode; a folder's cards rise out of it. A press sets them down. */
+.fc-mini__card,
+.fc-folder__card {
+  transition:
+    translate 0.25s var(--ease-out),
+    rotate 0.25s var(--ease-out),
+    box-shadow 0.25s ease,
+    border-color 0.15s ease;
 }
-.fc-row:hover > svg {
-  transform: translateX(3px);
+.fc-tile:hover .fc-mini__card {
+  translate: -2px -5px;
+  rotate: -1.2deg;
+  border-color: var(--rt-ink-faint);
+  box-shadow: var(--lift-hi);
+}
+/* Counted from the front (--k is 2 there), so two cards fan out the same
+   way as three: the front one lifts least, each behind it 2px more (the
+   back one stops at the folder's top edge) and a beat later. */
+.fc-tile:hover .fc-folder__card {
+  translate: 0 calc(-2px - (2 - var(--k)) * 2px);
+  transition-delay: calc((2 - var(--k)) * 50ms);
+}
+.fc-tile:hover .fc-folder__front path {
+  stroke: var(--rt-ink-faint);
+}
+.fc-tile:active .fc-mini__card {
+  translate: 0 0;
+  rotate: 0deg;
+  transition-duration: 0.08s;
+}
+.fc-tile:active .fc-folder__card {
+  translate: 0 0;
+  transition-duration: 0.08s;
+  transition-delay: 0s;
+}
+.fc-tile--folder.fc-dropon .fc-folder__card {
+  translate: 0 calc(-3px - (2 - var(--k)) * 2px);
 }
 
 .rt-page.fc-page .rt-btn {

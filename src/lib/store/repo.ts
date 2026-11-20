@@ -12,6 +12,7 @@ import {
   type LearnStatus,
   type ProgressDTO,
   type SetDTO,
+  type SetGlance,
   type SetSummaryDTO,
 } from '@/lib/flashcards/types';
 import { db, type Param, type Stmt } from './db';
@@ -94,7 +95,51 @@ export async function listSets(): Promise<SetSummary[]> {
   const rows = await db().select<SetRow>(
     `SELECT ${SET_COLUMNS} FROM sets s ORDER BY s.created_at DESC, s.id DESC`,
   );
-  return rows.map(toSummary);
+  const glances = await setGlances();
+  return rows.map((row) => ({
+    ...toSummary(row),
+    glance: glances.get(row.id) ?? { learned: 0, learning: 0, studiedAt: null, peek: [] },
+  }));
+}
+
+/** How many terms the library shows of each set. */
+const PEEK_TERMS = 4;
+
+/** Each set's learn progress, when it was last studied and its first terms, in three reads. */
+async function setGlances(): Promise<Map<number, SetGlance>> {
+  const [progress, sessions, peek] = await Promise.all([
+    db().select<{ set_id: number; learned: number; learning: number; last: string | null }>(
+      `SELECT c.set_id,
+              SUM(p.repetition_number >= ${LEARNED_REPETITIONS}) AS learned,
+              SUM(p.repetition_number < ${LEARNED_REPETITIONS}) AS learning,
+              MAX(p.last_reviewed_at) AS last
+       FROM cards c JOIN progress p ON p.card_id = c.id GROUP BY c.set_id`,
+    ),
+    db().select<{ set_id: number; last: string }>(
+      'SELECT set_id, MAX(updated_at) AS last FROM study_sessions GROUP BY set_id',
+    ),
+    db().select<{ set_id: number; term: string }>(
+      `SELECT set_id, term FROM (
+         SELECT set_id, term, ROW_NUMBER() OVER (PARTITION BY set_id ORDER BY position, id) AS n FROM cards
+       ) WHERE n <= ${PEEK_TERMS} ORDER BY set_id, n`,
+    ),
+  ]);
+  const out = new Map<number, SetGlance>();
+  const get = (id: number) => {
+    let g = out.get(id);
+    if (!g) out.set(id, (g = { learned: 0, learning: 0, studiedAt: null, peek: [] }));
+    return g;
+  };
+  const later = (a: string | null, b: string | null) => (a && b ? (a > b ? a : b) : (a ?? b));
+  for (const r of progress) {
+    const g = get(r.set_id);
+    g.learned = Number(r.learned);
+    g.learning = Number(r.learning);
+    g.studiedAt = later(g.studiedAt, r.last);
+  }
+  for (const r of sessions) get(r.set_id).studiedAt = later(get(r.set_id).studiedAt, r.last);
+  for (const r of peek) get(r.set_id).peek.push(r.term);
+  return out;
 }
 
 async function summary(id: number): Promise<SetSummary> {
