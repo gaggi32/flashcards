@@ -353,40 +353,49 @@
 .fc-stack > .fc-flip {
   z-index: 1;
 }
+.fc-stack {
+  /* Room under the deck for the cards peeking out below the shown one. */
+  margin-bottom: 18px;
+}
 .fc-stack__back {
   position: absolute;
   inset: 0;
-  border: 1px solid var(--fc-line);
+  border: 1px solid var(--fc-line-strong);
   border-radius: 18px;
   background: var(--rt-panel);
   box-shadow: var(--lift);
   pointer-events: none;
 }
+/* The lower a card lies, the more its edge shows and the dimmer it is. */
 .fc-stack__back.is-1 {
-  transform: translate(-5px, 7px) rotate(-1deg);
+  transform: translate(-4px, 9px) rotate(-1.2deg);
 }
 .fc-stack__back.is-2 {
-  transform: translate(7px, 12px) rotate(1.4deg);
+  transform: translate(6px, 17px) rotate(1.5deg);
+  background: var(--rt-panel-2);
 }
 .fc-stack.is-advancing .fc-stack__back {
-  transition: transform 0.36s var(--ease-out);
+  transition:
+    transform 0.36s var(--ease-out),
+    background-color 0.36s ease;
 }
 .fc-stack.is-advancing .fc-stack__back.is-1 {
   transform: none;
 }
 .fc-stack.is-advancing .fc-stack__back.is-2 {
-  transform: translate(-5px, 7px) rotate(-1deg);
+  transform: translate(-4px, 9px) rotate(-1.2deg);
+  background: var(--rt-panel);
 }
 @keyframes fx-settle-a {
   from {
     opacity: 0;
-    transform: translate(12px, 22px) rotate(2.4deg);
+    transform: translate(12px, 30px) rotate(2.6deg);
   }
 }
 @keyframes fx-settle-b {
   from {
     opacity: 0;
-    transform: translate(12px, 22px) rotate(2.4deg);
+    transform: translate(12px, 30px) rotate(2.6deg);
   }
 }
 .fc-stack.is-dealt-a .fc-stack__back.is-2 {
@@ -804,14 +813,17 @@
 }
 
 /* ---------- the overlay: the same motion, scaled to its small window ---------- */
+.ov__embed .fc-stack {
+  margin-bottom: 11px;
+}
 .ov__embed .fc-stack__back.is-1 {
-  transform: translate(-3px, 4px) rotate(-0.8deg);
+  transform: translate(-3px, 5px) rotate(-0.8deg);
 }
 .ov__embed .fc-stack__back.is-2 {
-  transform: translate(4px, 7px) rotate(1deg);
+  transform: translate(4px, 10px) rotate(1deg);
 }
 .ov__embed .fc-stack.is-advancing .fc-stack__back.is-2 {
-  transform: translate(-3px, 4px) rotate(-0.8deg);
+  transform: translate(-3px, 5px) rotate(-0.8deg);
 }
 .ov__embed .fc-swipehint {
   padding: 3px 8px;

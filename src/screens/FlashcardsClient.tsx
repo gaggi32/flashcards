@@ -84,8 +84,33 @@ const SWIPE_SHARE = 0.28;
 const FLICK_PX_PER_MS = 0.6;
 /** A mark made with a button or key: the stamp lands on the card first. */
 const STAMP_MS = 170;
-/** Then the card is thrown off to its pile, and the next one is dealt. */
-const THROW_MS = 360;
+/**
+ * Then the card is thrown off to its pile and the next one is dealt. A
+ * thrown card keeps the speed and direction the hand gave it; one let go
+ * slowly (or sent by a button) picks up speed so it clears the screen in
+ * about this long. A hard throw goes faster.
+ */
+const THROW_MS = 340;
+/** The share of the way off the screen at which the thrown card is gone and the next one dealt. */
+const THROW_DONE = 0.85;
+/** How quickly a slow card picks up speed, in px/ms². */
+const THROW_ACCEL = 0.012;
+/** The card follows the hand up and down at this share: held on a table, not lifted off it. */
+const Y_FOLLOW = 0.5;
+/** Only the last stretch of a drag says how fast the hand was moving when it let go. */
+const SPEED_WINDOW_MS = 90;
+
+/** Where the dragged card is drawn, sampled to know its speed on release. */
+type Sample = { x: number; y: number; t: number };
+
+function releaseSpeed(samples: Sample[], now: number): { vx: number; vy: number } {
+  const recent = samples.filter((s) => now - s.t <= SPEED_WINDOW_MS);
+  if (recent.length < 2) return { vx: 0, vy: 0 };
+  const a = recent[0];
+  const b = recent[recent.length - 1];
+  const dt = Math.max(8, b.t - a.t);
+  return { vx: (b.x - a.x) / dt, vy: (b.y - a.y) / dt };
+}
 
 function isTypingTarget(target: EventTarget | null): boolean {
   return (
@@ -203,8 +228,9 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
   // Swiping the card sorts it, as a pile of paper cards would be sorted: drag
   // it right if you knew it, left if you didn't. The card follows the finger
   // (or the mouse) and tilts, a stamp fades in to say which pile it is
-  // heading for, and letting go past the line throws it off and marks it.
-  // Short of the line it springs back. A press that never moved is a tap and
+  // heading for, and letting go past the line (or flicking it) throws it off
+  // and marks it: it flies on the way the hand sent it, at that speed. Short
+  // of the line it springs back. A press that never moved is a tap and
   // flips the card; a drag that starts upward or downward is left to the
   // page, which scrolls.
   //
@@ -220,26 +246,81 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
     id: number;
     x: number;
     y: number;
-    t: number;
     dx: number;
+    dy: number;
+    samples: Sample[];
     active: boolean;
   } | null>(null);
   const swiped = useRef(false);
-  /** The mark on its way, and its timers: a new mark finishes it at once. */
-  const flying = useRef<{ value: Mark; timers: number[] } | null>(null);
+  /** The mark on its way, and how to stop its motion: a new mark finishes it at once. */
+  const flying = useRef<{ value: Mark; timers: number[]; frame: number } | null>(null);
   /** A mark made while another card was still in the air: the next card's. */
   const pending = useRef<Mark | null>(null);
+  /** Where the card is drawn right now (dragged or in the air). */
+  const pos = useRef({ x: 0, y: 0 });
 
-  function paint(dx: number, settle: boolean) {
+  /** Draws the card at (dx, dy). `settle` springs it back there; `turn` is its tilt. */
+  function paint(dx: number, settle: boolean, dy = 0, turn = dx / 28) {
     const el = cardRef.current;
     if (!el) return;
+    pos.current = { x: dx, y: dy };
     const width = el.offsetWidth || 1;
     const share = Math.max(-1, Math.min(1, dx / (width * SWIPE_SHARE)));
-    el.style.transition = settle ? 'transform 0.2s ease' : 'none';
-    el.style.transform = dx === 0 ? '' : `translateX(${dx}px) rotate(${dx / 28}deg)`;
+    el.style.transition = settle ? 'transform 0.38s cubic-bezier(0.25, 1.35, 0.45, 1)' : 'none';
+    el.style.transform = dx === 0 && dy === 0 ? '' : `translate(${dx}px, ${dy}px) rotate(${turn}deg)`;
     el.style.opacity = '';
     el.style.setProperty('--swipe-ok', String(Math.max(0, share)));
     el.style.setProperty('--swipe-miss', String(Math.max(0, -share)));
+  }
+
+  /**
+   * Throws the card off the screen from wherever it is, at the speed it
+   * already has: it keeps a swipe's momentum and its drift up or down, and
+   * only speeds up when it is too slow to clear the screen in THROW_MS.
+   * Calls `done` once it is off.
+   */
+  function throwCard(dir: 1 | -1, v: { vx: number; vy: number }, done: () => void): number {
+    const el = cardRef.current;
+    if (!el) {
+      done();
+      return 0;
+    }
+    const start = { ...pos.current };
+    const turn0 = start.x / 28;
+    // How far it has to go: past the window's edge, with room for its tilt.
+    const rect = el.getBoundingClientRect();
+    const margin = rect.height * 0.35 + 24;
+    const travel = dir > 0 ? window.innerWidth - rect.left + margin : rect.right + margin;
+    const cruise = travel / THROW_MS;
+    let vx = v.vx;
+    const vy = Math.max(-1.6, Math.min(1.6, v.vy));
+    let x = start.x;
+    let y = start.y;
+    let last = performance.now();
+    const began = last;
+    const step = (now: number) => {
+      const dt = Math.min(32, now - last);
+      last = now;
+      if (dir * vx < cruise) vx = dir * Math.min(cruise, dir * vx + THROW_ACCEL * dt);
+      x += vx * dt;
+      y += vy * dt;
+      const gone = dir * (x - start.x) / travel;
+      const width = el.offsetWidth || 1;
+      const share = Math.max(-1, Math.min(1, x / (width * SWIPE_SHARE)));
+      el.style.transition = 'none';
+      el.style.transform = `translate(${x}px, ${y}px) rotate(${turn0 + (x - start.x) / 46}deg)`;
+      // It fades at the window's edge, and the next card is dealt as it
+      // goes, not after a wait on an empty deck.
+      el.style.opacity = String(Math.max(0, Math.min(1, (THROW_DONE - gone) / 0.3)));
+      el.style.setProperty('--swipe-ok', String(Math.max(0, share)));
+      el.style.setProperty('--swipe-miss', String(Math.max(0, -share)));
+      if (gone >= THROW_DONE || now - began > THROW_MS * 2.5) {
+        done();
+        return;
+      }
+      if (flying.current) flying.current.frame = requestAnimationFrame(step);
+    };
+    return requestAnimationFrame(step);
   }
 
   // Touch only. Cancelling a touchmove is the one way to stop the browser
@@ -271,7 +352,7 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
       return;
     }
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, dx: 0, active: false };
+    drag.current = { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0, samples: [], active: false };
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -296,7 +377,11 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
       }
     }
     d.dx = dx;
-    paint(dx, false);
+    d.dy = dy * Y_FOLLOW;
+    const now = performance.now();
+    d.samples.push({ x: d.dx, y: d.dy, t: now });
+    if (d.samples.length > 12) d.samples.shift();
+    paint(d.dx, false, d.dy);
   }
 
   function onPointerUp(e: React.PointerEvent) {
@@ -307,23 +392,29 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
     swiped.current = true;
     const el = cardRef.current;
     const width = el?.offsetWidth ?? 1;
-    const speed = Math.abs(d.dx) / Math.max(1, e.timeStamp - d.t);
-    if (Math.abs(d.dx) < width * SWIPE_SHARE && speed < FLICK_PX_PER_MS) {
+    const v = releaseSpeed(d.samples, performance.now());
+    // A flick decides by the way it was going; a slow release by where the
+    // card is. Short of the line and not flicked, it springs back.
+    let value: Mark | null = null;
+    if (Math.abs(v.vx) >= FLICK_PX_PER_MS) value = v.vx > 0 ? 'known' : 'missed';
+    else if (Math.abs(d.dx) >= width * SWIPE_SHARE) value = d.dx > 0 ? 'known' : 'missed';
+    if (value === null) {
       paint(0, true);
       return;
     }
-    fling(d.dx > 0 ? 'known' : 'missed');
+    fling(value, v);
   }
 
   /**
    * Sends the card off to its pile, then records it. Swipes, the mark
    * buttons and the 1 / 2 keys all land here. A mark from a button or key
    * first stamps the card (a swipe has shown its stamp all along), the card
-   * takes the hit, then flies off with a spin while the stack behind moves up
-   * and the next card is dealt. Nothing waits for it: a mark made meanwhile
+   * takes the hit, then is thrown off while the stack behind moves up and
+   * the next card is dealt. A swiped card goes on at the speed the swipe
+   * gave it (`speed`, px/ms). Nothing waits for it: a mark made meanwhile
    * lands the flying one at once and goes to the next card.
    */
-  function fling(value: Mark) {
+  function fling(value: Mark, speed?: { vx: number; vy: number }) {
     if (flying.current) {
       landFlight();
       pending.current = value;
@@ -334,31 +425,27 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
       markCard(value);
       return;
     }
+    const dir = value === 'known' ? 1 : -1;
     const el = cardRef.current;
     const dragged = !!el && el.style.transform !== '';
-    const flight = { value, timers: [] as number[] };
+    const flight = { value, timers: [] as number[], frame: 0 };
     flying.current = flight;
     if (!dragged) setStamp(value);
-    const wait = dragged ? 0 : STAMP_MS;
-    flight.timers.push(
-      window.setTimeout(() => {
-        const card = cardRef.current;
-        if (card) {
-          const dir = value === 'known' ? 1 : -1;
-          card.style.transition = `transform ${THROW_MS}ms cubic-bezier(0.5, 0, 0.75, 0.3), opacity ${THROW_MS}ms ease-in`;
-          card.style.transform = `translate(${dir * 120}%, -28px) rotate(${dir * 16}deg)`;
-          card.style.opacity = '0';
-        }
-        setAdvancing(true);
-      }, wait),
-      window.setTimeout(landFlight, wait + THROW_MS),
-    );
+    const away = () => {
+      setAdvancing(true);
+      // From a button or key the card sets off gently, lifting a little.
+      flight.frame = throwCard(dir, speed ?? { vx: dir * 0.5, vy: -0.2 }, landFlight);
+    };
+    // A swiped card is already moving: it goes on from the same frame.
+    if (dragged) away();
+    else flight.timers.push(window.setTimeout(away, STAMP_MS));
   }
   /** The flying card reaches its pile: recorded, and the next one is up. */
   function landFlight() {
     const flight = flying.current;
     if (!flight) return;
     flight.timers.forEach((t) => window.clearTimeout(t));
+    cancelAnimationFrame(flight.frame);
     flying.current = null;
     setStamp(null);
     setAdvancing(false);
@@ -382,6 +469,7 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
   useEffect(
     () => () => {
       flying.current?.timers.forEach((t) => window.clearTimeout(t));
+      if (flying.current) cancelAnimationFrame(flying.current.frame);
     },
     [],
   );
