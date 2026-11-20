@@ -21,7 +21,8 @@ same shape: `C:\dev\dash`, `C:\dev\lingo`.
 - `src/lib/store/` — what the web API routes did (`repo.ts`), export/import (`transfer.ts`).
 - `src/lib/flashcards/client.ts` — what the screens call, backed by the store.
 - `src/screens/`, `src/components/flashcards/` — the study screens.
-- `src/overlay/` — the hotkey window: Cards, Write and Learn (Test opens in the main window). One header line (mode tabs, the set as a button, "⋯", close; the set list and "⋯" are popovers); screens put their extra controls in "⋯" with `MoreControls` (`components/flashcards/overlaySlot.tsx`) and skip their setup screens there (`useInOverlay`).
+- `src/overlay/` — the hotkey window: Cards, Write, Learn and Test (Ctrl+1 to 4; Test keeps one fixed height and scrolls, no PDF there). One header line (mode tabs, the set as a button, "⋯", open in the main window, close; the set list and "⋯" are popovers); screens put their extra controls in "⋯" with `MoreControls` (`components/flashcards/overlaySlot.tsx`) and Write and Learn skip their setup screens there (`useInOverlay`).
+- `src/screens/SetsClient.tsx` — the library: sets as little decks (first term face up on a pile as thick as the set), folders as open folders with a card per set; the line under a set comes from `glance` (`listSets` in `repo.ts`).
 - `src/styles/` — `tokens.css` (every colour/font for light, dark and both eye-comfort sets; nothing else defines a token), `base.css` (shared `rt-*` pieces), `flashcards.css` (components), `motion.css` (all motion, the Motion setting's `data-motion` rules).
 - `src/components/motion/` — `CountUp`, `Confetti`, `SetTitle` (view-transition name), `useFlip` (lists glide). Screens slide via `<ViewTransition>` in `App.tsx`; `Link` tags the direction and primes the next screen's data (`lib/app/prime.ts`).
 - `/dev/motion` (`src/screens/MotionLab.tsx`, dev builds only) — every animation on one screen, with replay buttons.

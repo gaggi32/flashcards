@@ -1,15 +1,16 @@
-// The hotkey overlay: the main window's own Flashcards, Write and Learn
+// The hotkey overlay: the main window's own Flashcards, Write, Learn and Test
 // screens for the set you pick, in a compact frame, plus a quick-add form.
 // It is for a few quick answers, so it shows little: one header line (the
-// set and mode as one switch, a "⋯" menu, close) and only what a screen needs
-// to answer; the screens' other controls sit in the "⋯" menu (MoreControls),
-// Write and Learn skip their setup screens, and Test (a whole paper) opens
-// in the main window.
+// modes as tabs, the set as a button, a "⋯" menu, open in the main window,
+// close) and only what a screen needs to answer; the screens' other controls
+// sit in the "⋯" menu (MoreControls), and Write and Learn skip their setup
+// screens.
 //
 // It is the same session, not a copy: each mode keeps its place per set in
 // the database (study_sessions), which both windows share, so a round started
 // in the main window carries on here and the other way round. Answers go to
-// the same database. Every write is announced as a data
+// the same database. Test is the exception: a test is not saved (TestClient),
+// so the overlay's test is its own. Every write is announced as a data
 // change, and a window that was in the background picks up the other's
 // changes when it comes back (the overlay when the hotkey opens it, the main
 // window when it is focused). Links to the set page or the editor open the
@@ -22,8 +23,10 @@
 //
 // The window is as tall as the panel's content (useFitWindow): Rust zooms it
 // for the screen it is on and never makes it shorter than that, so nothing
-// in the panel has to be scrolled to. The header's menus open in the panel's
-// flow, under the header, so the window grows to show them.
+// in the panel has to be scrolled to. Test is the exception: a paper can be
+// long, so Test keeps one fixed height (setup, paper and score alike) and
+// the paper scrolls inside it. The header's menus float over the panel; the
+// panel grows to hold one on a short screen.
 
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState } from 'react';
@@ -39,6 +42,7 @@ import { asApiError } from '@/lib/store/errors';
 import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
 import { FlashcardsClient } from '@/screens/FlashcardsClient';
 import { LearnClient } from '@/screens/LearnClient';
+import { TestClient } from '@/screens/TestClient';
 import { WriteClient } from '@/screens/WriteClient';
 import { DialogHost } from '@/components/Dialogs';
 import { SetOptions } from '@/components/flashcards/SetOptions';
@@ -46,11 +50,11 @@ import { tabStops } from '@/components/flashcards/StudyHeader';
 import { OverlayContext } from '@/components/flashcards/overlaySlot';
 import { groupByFolder } from '@/lib/flashcards/folders';
 
-/** The modes studied in the overlay. Test (Ctrl+4) opens in the main window. */
-const MODES: { id: Exclude<OverlayMode, 'test'>; route: string; label: string; hint: string }[] = [
+const MODES: { id: OverlayMode; route: string; label: string; hint: string }[] = [
   { id: 'cards', route: 'cards', label: 'Cards', hint: 'Flip a card, mark it' },
   { id: 'write', route: 'write', label: 'Write', hint: 'Type the answers' },
   { id: 'learn', route: 'learn', label: 'Learn', hint: 'Multiple choice, then typed' },
+  { id: 'test', route: 'test', label: 'Test', hint: 'A test, marked at the end' },
 ];
 const SHORTCUT = isMacPlatform() ? '⌘' : 'Ctrl+';
 
@@ -87,8 +91,16 @@ function useFitWindow(panelRef: React.RefObject<HTMLDivElement | null>) {
       const pop = panel.querySelector<HTMLElement>('.ov__pop:not([hidden])');
       const popNeed = pop ? pop.offsetTop + pop.scrollHeight + 10 : 0;
       panel.style.minHeight = popNeed ? `${popNeed}px` : '';
+      // A fixed-height screen (Test) scrolls on purpose: that is not asked
+      // for. A fixed one is cut off by the panel instead while the window is
+      // shorter, which the panel's own scrollHeight counts.
       const scroller = panel.querySelector<HTMLElement>('.ov__embed, .ov__body');
-      const hidden = scroller ? Math.max(0, scroller.scrollHeight - scroller.clientHeight) : 0;
+      const fixed = scroller?.classList.contains('ov__embed--fixed');
+      const hidden = !scroller
+        ? 0
+        : fixed
+          ? Math.max(0, panel.scrollHeight - panel.clientHeight)
+          : Math.max(0, scroller.scrollHeight - scroller.clientHeight);
       const h = panel.offsetHeight + hidden + FRAME_PAD + 1;
       if (h === sent) return;
       window.clearTimeout(shrink);
@@ -133,9 +145,7 @@ function OverlayFrame() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [view, setView] = useState<'study' | 'add'>('study');
-  const [savedMode, setMode] = usePref('overlayMode');
-  // A mode saved as Test (by versions that studied it here) studies Cards.
-  const mode = savedMode === 'test' ? 'cards' : savedMode;
+  const [mode, setMode] = usePref('overlayMode');
   /** The header menu that is open: the set and mode switch, or "⋯". */
   const [menu, setMenu] = useState<'set' | 'more' | null>(null);
   /** Where the screens put their secondary controls (MoreControls). */
@@ -176,7 +186,7 @@ function OverlayFrame() {
   useEffect(() => {
     if (pathname === '/') return;
     const m = MODE_PATH.exec(pathname);
-    if (m && m[2] !== 'test') {
+    if (m) {
       const next = m[2] as OverlayMode;
       if (next !== mode) setMode(next);
       return;
@@ -273,10 +283,6 @@ function OverlayFrame() {
         // that is gone.
         if (panelRef.current?.querySelector('.dlg')) return;
         setMenu(null);
-        if (e.key === '4') {
-          openTest();
-          return;
-        }
         setView('study');
         setMode(MODES[Number(e.key) - 1].id);
       }
@@ -285,12 +291,6 @@ function OverlayFrame() {
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, setMode, menu, setId]);
-
-  /** Test is a whole paper: it opens in the main window, on this set. */
-  function openTest() {
-    setMenu(null);
-    void openMain(setId === null ? '/flashcards' : `/flashcards/${setId}/test`);
-  }
 
   // A press anywhere else in the panel closes an open menu.
   useEffect(() => {
@@ -368,6 +368,30 @@ function OverlayFrame() {
               <circle cx="12" cy="2" r="1.4" fill="currentColor" />
             </svg>
           </button>
+          {/* Used often enough to be a button of its own, not a menu item. */}
+          <button
+            type="button"
+            tabIndex={-1}
+            className="ov__icon"
+            title="Open this in the main window"
+            aria-label="Open in the main window"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setMenu(null);
+              void openMain(setId === null ? '/flashcards' : pathname);
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M14 4h6v6M20 4l-8.5 8.5M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
           <button
             type="button"
             tabIndex={-1}
@@ -425,24 +449,6 @@ function OverlayFrame() {
           >
             <span className="ov__popitem-main">{view === 'add' ? 'Back to studying' : 'Add a card'}</span>
           </button>
-          <button type="button" role="menuitem" className="ov__popitem" onClick={openTest}>
-            <span className="ov__popitem-main">Take a test</span>
-            <span className="ov__popitem-side">
-              {SHORTCUT}4 ↗
-            </span>
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            className="ov__popitem"
-            onClick={() => {
-              setMenu(null);
-              void openMain(setId === null ? '/flashcards' : pathname);
-            }}
-          >
-            <span className="ov__popitem-main">Open in the main window</span>
-            <span className="ov__popitem-side">↗</span>
-          </button>
         </div>
 
         {view === 'add' ? (
@@ -457,11 +463,12 @@ function OverlayFrame() {
             </button>
           </div>
         ) : (
-          <div className="ov__embed fc-app" key={resync}>
+          <div className={`ov__embed fc-app${pathname.endsWith('/test') ? ' ov__embed--fixed' : ''}`} key={resync}>
             <Routes>
               <Route path="/flashcards/:id/cards" element={<WithSetId render={(id) => <FlashcardsClient setId={id} />} />} />
               <Route path="/flashcards/:id/write" element={<WithSetId render={(id) => <WriteClient setId={id} />} />} />
               <Route path="/flashcards/:id/learn" element={<WithSetId render={(id) => <LearnClient setId={id} />} />} />
+              <Route path="/flashcards/:id/test" element={<WithSetId render={(id) => <TestClient setId={id} />} />} />
               <Route path="*" element={null} />
             </Routes>
           </div>
