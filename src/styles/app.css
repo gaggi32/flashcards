@@ -342,3 +342,50 @@
   max-width: min(520px, calc(100% - 32px));
   cursor: pointer;
 }
+
+/* ---------- the web version (data-web on <html>, src/web/pwa.ts) ---------- */
+.rt-page.fc-page .app-bar__web {
+  margin-left: 2px;
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: var(--rt-ink-soft);
+  border-color: var(--fc-line-strong);
+}
+.rt-chip--ok {
+  border-color: var(--rt-teal);
+  color: var(--rt-teal);
+}
+.web-notice {
+  border: 1px solid var(--fc-line);
+  border-radius: 14px;
+  background: var(--rt-panel);
+  padding: 14px 16px 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.web-notice p {
+  margin: 0 0 8px;
+  max-width: 68ch;
+}
+.web-notice__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.web-notice.web-notice--small {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--rt-ink-soft);
+}
+/* A phone has a home bar to pay back, and taps need room. */
+:root[data-web] .rt-page.fc-page {
+  padding-bottom: calc(40px + env(safe-area-inset-bottom));
+}

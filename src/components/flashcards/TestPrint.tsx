@@ -9,6 +9,7 @@ import { createPortal } from 'react-dom';
 
 import { isMacPlatform } from '@/lib/app/hotkey';
 import { savePdf } from '@/lib/app/native';
+import { IS_WEB } from '@/lib/app/platform';
 import { errorMessage } from '@/lib/flashcards/client';
 import { plural } from '@/lib/flashcards/format';
 import { KIND_LABEL, LETTERS, keyLines, numbered, progress, type Question, type Test } from '@/lib/flashcards/test';
@@ -16,8 +17,11 @@ import { answerOf, promptOf, type AnswerWith, type StudyCard } from '@/lib/flash
 
 const other = (s: AnswerWith): AnswerWith => (s === 'term' ? 'definition' : 'term');
 
-/** What the PDF button says: Windows saves the file, macOS opens the print panel (which has "Save as PDF"). */
-export const PDF_LABEL = isMacPlatform() ? 'print or PDF' : 'save as PDF';
+/**
+ * What the PDF button says: Windows saves the file, macOS and the web version
+ * open the print dialog (which has "Save as PDF").
+ */
+export const PDF_LABEL = IS_WEB || isMacPlatform() ? 'print or PDF' : 'save as PDF';
 
 type Sheet = { test: Test; withKey: boolean };
 

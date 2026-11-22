@@ -2,6 +2,7 @@
 import { useState } from 'react';
 
 import { showOverlay } from '@/lib/app/native';
+import { IS_WEB } from '@/lib/app/platform';
 import { usePref } from '@/lib/app/prefs';
 import { errorMessage, fetchFolders, updateSet } from '@/lib/flashcards/client';
 import { LIMITS, type SetDTO } from '@/lib/flashcards/types';
@@ -110,6 +111,7 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
           )}
         </div>
 
+        {!IS_WEB && (
         <div className={`fc-organize__card${studyingThis ? ' is-public' : ''}`}>
           <div className="fc-organize__head">
             <span className="fc-organize__icon">
@@ -141,6 +143,7 @@ export function OrganizeSet({ set }: { set: SetDTO }) {
             </div>
           )}
         </div>
+        )}
       </div>
     </section>
   );

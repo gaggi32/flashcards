@@ -7,7 +7,17 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEven
 import { useSearchParams } from 'react-router';
 
 import { addSetsFromText } from '@/components/SetFileDrop';
-import { clearOwnDrag, dragSetFile, ownDraggedSet, prepareSetFile } from '@/lib/app/setDrag';
+import {
+  WEB_SET_TYPE,
+  clearOwnDrag,
+  dragSetFile,
+  endWebDrag,
+  ownDraggedSet,
+  prepareSetFile,
+  startWebDrag,
+} from '@/lib/app/setDrag';
+import { IS_WEB } from '@/lib/app/platform';
+import { WebNotice } from '@/web/WebNotice';
 import { TodayPanel } from '@/components/TodayPanel';
 import { useDataVersion } from '@/lib/app/events';
 import { forget, primed } from '@/lib/app/prime';
@@ -28,8 +38,9 @@ import { useFlip } from '@/components/motion/useFlip';
 
 type Folder = { name: string; sets: number; cards: number };
 
-/** A set row of this window being dragged (an OS file drag, see setDrag.ts). */
-const isSetDrag = (e: DragEvent) => e.dataTransfer.types.includes('Files') && ownDraggedSet() !== null;
+/** A set row of this window being dragged (an OS file drag, see setDrag.ts; an HTML drag on the web). */
+const isSetDrag = (e: DragEvent) =>
+  e.dataTransfer.types.includes(IS_WEB ? WEB_SET_TYPE : 'Files') && ownDraggedSet() !== null;
 
 /** Past this many of your own sets, the list gets a search box. */
 const SEARCH_FROM = 6;
@@ -254,7 +265,7 @@ export function SetsClient() {
         </div>
       </div>
 
-      <TodayPanel version={version} />
+      {IS_WEB ? <WebNotice /> : <TodayPanel version={version} />}
 
       <section className="rt-section">
         {error && <div className="rt-note rt-note--err">{error}</div>}
@@ -430,12 +441,23 @@ function SetRow({
     <Link
       href={`/flashcards/${set.id}`}
       className="fc-tile"
-      draggable={false}
+      draggable={IS_WEB}
       title={`${set.description ? `${set.description}
 
-` : ''}Open the set, or drag it onto a folder, the desktop or another app`}
+` : ''}Open the set, or drag it onto a folder${IS_WEB ? '' : ', the desktop or another app'}`}
+      onDragStart={(e) => {
+        if (!IS_WEB) return;
+        e.dataTransfer.setData(WEB_SET_TYPE, String(set.id));
+        e.dataTransfer.effectAllowed = 'copy';
+        startWebDrag(set.id);
+      }}
+      onDragEnd={() => {
+        if (!IS_WEB) return;
+        endWebDrag(set.id);
+        onDragDone?.();
+      }}
       onPointerDown={(e) => {
-        if (e.button !== 0 || e.pointerType !== 'mouse') return;
+        if (IS_WEB || e.button !== 0 || e.pointerType !== 'mouse') return;
         const file = prepareSetFile(set.id, set.title);
         file.catch(() => {});
         press.current = { x: e.clientX, y: e.clientY, file };

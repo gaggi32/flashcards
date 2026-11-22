@@ -3,6 +3,10 @@
  *
  *     node scripts/make-icon.mjs
  *     npx tauri icon app-icon.png     # fans it out into src-tauri/icons/
+ *     node scripts/make-icon.mjs --web  # the web version's icons, in web/public/
+ *
+ * The web icons fill the whole square with the ink tile (the phone rounds or
+ * masks it itself); the cards sit inside the maskable safe zone.
  *
  * Two cards on the site's night-ink tile: one behind, drawn as an outline,
  * and one in front on the paper colour with a gold term line and two ink
@@ -15,8 +19,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const SIZE = 1024;
-const OUT = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'app-icon.png');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 const INK = [22, 19, 15];
 const PAPER = [233, 223, 201];
@@ -31,11 +34,17 @@ function box(x, y, cx, cy, hw, hh, r) {
   return outside + Math.min(Math.max(qx, qy), 0) - r;
 }
 
-const cover = (d) => Math.min(1, Math.max(0, 0.5 - d));
+/** One icon, `SIZE` px square; the shapes are laid out on a 1024 grid. */
+function draw(SIZE, fullBleed) {
+const k = 1024 / SIZE;
+// Distances are in grid units: one output pixel is `k` of them.
+const cover = (d) => Math.min(1, Math.max(0, 0.5 - d / k));
 
 const px = Buffer.alloc(SIZE * SIZE * 4);
-for (let y = 0; y < SIZE; y++) {
-  for (let x = 0; x < SIZE; x++) {
+for (let py = 0; py < SIZE; py++) {
+  for (let pxl = 0; pxl < SIZE; pxl++) {
+    const x = (pxl + 0.5) * k - 0.5;
+    const y = (py + 0.5) * k - 0.5;
     let c = [0, 0, 0];
     let a = 0;
     const paint = (col, alpha) => {
@@ -46,7 +55,7 @@ for (let y = 0; y < SIZE; y++) {
     };
 
     // Tile (macOS-style inset so it sits well beside other icons).
-    paint(INK, cover(box(x, y, 512, 512, 432, 432, 190)));
+    paint(INK, fullBleed ? 1 : cover(box(x, y, 512, 512, 432, 432, 190)));
     // Back card: outline only.
     const back = box(x, y, 580, 420, 250, 170, 44);
     paint(SOFT, cover(Math.abs(back) - 14));
@@ -57,12 +66,14 @@ for (let y = 0; y < SIZE; y++) {
     paint(INK, cover(box(x, y, 440, 620, 190, 16, 16)) * 0.75);
     paint(INK, cover(box(x, y, 390, 680, 140, 16, 16)) * 0.75);
 
-    const o = (y * SIZE + x) * 4;
+    const o = (py * SIZE + pxl) * 4;
     px[o] = Math.round(c[0]);
     px[o + 1] = Math.round(c[1]);
     px[o + 2] = Math.round(c[2]);
     px[o + 3] = Math.round(a * 255);
   }
+}
+return px;
 }
 
 // ---- PNG encoding -------------------------------------------------------------
@@ -86,6 +97,7 @@ function chunk(type, data) {
   return Buffer.concat([len, td, crc]);
 }
 
+function writePng(OUT, SIZE, px) {
 const raw = Buffer.alloc((SIZE * 4 + 1) * SIZE);
 for (let y = 0; y < SIZE; y++) px.copy(raw, y * (SIZE * 4 + 1) + 1, y * SIZE * 4, (y + 1) * SIZE * 4);
 
@@ -104,3 +116,12 @@ writeFileSync(
   ]),
 );
 console.log(`wrote ${OUT}`);
+}
+
+if (process.argv.includes('--web')) {
+  for (const [name, size] of [['icon-192.png', 192], ['icon-512.png', 512], ['apple-touch-icon.png', 180]]) {
+    writePng(resolve(ROOT, 'web', 'public', name), size, draw(size, true));
+  }
+} else {
+  writePng(resolve(ROOT, 'app-icon.png'), 1024, draw(1024, false));
+}

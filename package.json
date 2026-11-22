@@ -6,7 +6,10 @@
   "description": "Flashcards — a desktop study app with a hotkey overlay (Tauri v2 + React + SQLite).",
   "scripts": {
     "dev": "vite",
+    "dev:web": "vite --mode web",
     "build": "tsc --noEmit && vite build",
+    "build:web": "tsc --noEmit && vite build --mode web",
+    "publish:web": "node scripts/publish-web.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview",
@@ -23,6 +26,7 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^7.1.0",
+    "sql.js": "^1.17.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -30,6 +34,7 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/sql.js": "^1.16.0",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.6.3",
     "vite": "^6.0.3",

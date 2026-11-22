@@ -8,6 +8,7 @@ import {
   fetchAiKeyStatus,
   saveAiKey,
 } from '@/lib/flashcards/client';
+import { IS_WEB } from '@/lib/app/platform';
 import { formatUsd } from '@/lib/openrouter/format';
 import type { AiKeyStatus } from '@/lib/openrouter/types';
 
@@ -84,7 +85,8 @@ export function AiKeyPanel({
   }
 
   async function forget() {
-    if (!(await ask.confirm('Forget your OpenRouter key? It is removed from this computer’s credential store.', { danger: true, ok: 'forget' }))) return;
+    const where = IS_WEB ? 'this browser' : 'this computer’s credential store';
+    if (!(await ask.confirm(`Forget your OpenRouter key? It is removed from ${where}.`, { danger: true, ok: 'forget' }))) return;
     setBusy(true);
     setError(null);
     setNote(null);
@@ -121,7 +123,7 @@ export function AiKeyPanel({
         <p className="rt-small fc-keypanel__intro">
           Screenshots and notes go to <code className="rt-mono">{model}</code> through
           OpenRouter and come back as cards you check before saving. Every generation shows
-          what it cost. The food log&apos;s photo estimates use this same key.
+          what it cost.{!IS_WEB && <> The food log&apos;s photo estimates use this same key.</>}
         </p>
       )}
 
@@ -199,8 +201,8 @@ export function AiKeyPanel({
         </button>
       </div>
       <div className="rt-small">
-        Stored encrypted and never sent back to the browser. Create one at openrouter.ai/keys —
-        a key with a spend cap is the safe way to do this.
+        {!IS_WEB && 'Stored encrypted and never sent back to the browser. '}
+        Create one at openrouter.ai/keys — a key with a spend cap is the safe way to do this.
       </div>
 
       {note && <div className="rt-small fc-keypanel__note">{note}</div>}

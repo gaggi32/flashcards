@@ -5,6 +5,11 @@ and a hotkey brings up a small study card over whatever you are doing.
 
 Built with Tauri v2 (Rust), React and TypeScript, on a local SQLite database.
 
+There is also a web version at <https://404canvas.ch/flashcards> that runs in
+any browser, on a phone too, and works offline once opened. It is a separate
+app: its sets stay in that browser and are not synced with the desktop app;
+move them with export and import.
+
 ## What it does
 
 - **Hotkey overlay.** <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>

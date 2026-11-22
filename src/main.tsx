@@ -11,10 +11,13 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { startBackgroundJobs } from './lib/app/background';
 import { installLinkGuard } from './lib/app/guard';
+import { IS_WEB } from './lib/app/platform';
 import { adoptLocalPrefs } from './lib/app/prefs';
 import { applyCachedTheme } from './lib/app/theme';
 import { carryOverSessions } from './lib/flashcards/client';
+import { startWebApp } from './web/pwa';
 
+if (IS_WEB) startWebApp();
 applyCachedTheme();
 installLinkGuard();
 startBackgroundJobs();

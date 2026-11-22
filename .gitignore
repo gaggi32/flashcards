@@ -9,3 +9,6 @@ src-tauri/gen/schemas/
 
 # local dev-build identity override
 dev.json
+dist-web
+# the web build's mode file holds no secrets
+!.env.web

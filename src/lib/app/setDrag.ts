@@ -44,3 +44,18 @@ export async function dragSetFile(setId: number, file: { contents: string; name:
     if (active?.setId === setId) active.until = Date.now() + GRACE_MS;
   }
 }
+
+// --- the web version -------------------------------------------------------
+// A browser page cannot start an OS file drag, so there a set row is an
+// ordinary HTML drag carrying this type: it can be filed into a folder, and
+// never leaves the page as a file (sharing is "share set" on its page).
+
+export const WEB_SET_TYPE = 'application/x-flashcards-set';
+
+export function startWebDrag(setId: number): void {
+  active = { setId, until: Number.POSITIVE_INFINITY };
+}
+
+export function endWebDrag(setId: number): void {
+  if (active?.setId === setId) active.until = Date.now() + GRACE_MS;
+}

@@ -32,7 +32,10 @@ import {
   type Settings,
   type UpdateInfo,
 } from '@/lib/app/native';
+import { IS_WEB } from '@/lib/app/platform';
 import { useSettings } from '@/lib/app/settings';
+import { DESKTOP_PAGE } from '@/web/links';
+import { askToKeep, storageKept } from '@/web/pwa';
 import { asApiError } from '@/lib/store/errors';
 import { exportAll, importAll, parseExport } from '@/lib/store/transfer';
 
@@ -191,9 +194,14 @@ export function SettingsScreen() {
   const [note, setNote] = useState<{ kind: 'ok' | 'err'; text: string; at: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [model, setModel] = useState('');
+  /** The web version: whether the browser promised to keep the sets. */
+  const [kept, setKept] = useState<boolean | null>(null);
 
   useEffect(() => {
     appInfo().then(setInfo).catch(() => {});
+    if (IS_WEB) {
+      void storageKept().then(setKept);
+    }
     autostartEnabled().then(setAutostart).catch(() => setAutostart(null));
     // A check that got through (the 12-hourly one too) ends "could not reach GitHub".
     return onUpdate((u) => {
@@ -327,6 +335,7 @@ export function SettingsScreen() {
       </div>
       {noteFor('general')}
 
+      {!IS_WEB && (
       <Section title="overlay">
         <Row label="Hotkey" hint="Opens the study overlay from any app. Pressing it again hides it.">
           <HotkeyRecorder value={s.hotkey} onSave={async (hotkey) => void (await save({ ...s, hotkey }))} />
@@ -353,6 +362,7 @@ export function SettingsScreen() {
           The overlay runs the same Flashcards, Write, Learn and Test as this window. Flashcards, Write and Learn share their session: what you do in one carries on in the other. A test belongs to the window it was started in. Pick its set in the overlay, above your sets, or on a set&apos;s page.
         </p>
       </Section>
+      )}
 
       <Section title="answers">
         <Row
@@ -378,6 +388,7 @@ export function SettingsScreen() {
         </p>
       </Section>
 
+      {!IS_WEB && (
       <Section title="reminders">
         <Row label="Remind me" hint="One notification, if you have not studied yet that day and cards are still to learn.">
           <Switch label="Remind me" on={s.reminders} onChange={(v) => patch({ reminders: v })} />
@@ -393,6 +404,7 @@ export function SettingsScreen() {
           />
         </Row>
       </Section>
+      )}
 
       <Section title="look">
         <Row label="Theme">
@@ -442,8 +454,17 @@ export function SettingsScreen() {
         </Row>
         {noteFor('ai')}
         <p className="rt-small rt-ink-faint set-foot">
-          The key is kept in {isMac ? 'the macOS Keychain' : 'Windows Credential Manager'} and only ever sent to
-          openrouter.ai. Nothing else leaves this computer.
+          {IS_WEB ? (
+            <>
+              The key is kept in this browser on this device and only ever sent to openrouter.ai, straight from this
+              page. Nothing else leaves this browser.
+            </>
+          ) : (
+            <>
+              The key is kept in {isMac ? 'the macOS Keychain' : 'Windows Credential Manager'} and only ever sent to
+              openrouter.ai. Nothing else leaves this computer.
+            </>
+          )}
         </p>
       </Section>
 
@@ -461,6 +482,42 @@ export function SettingsScreen() {
             {busy === 'export' ? 'exporting…' : 'export…'}
           </button>
         </Row>
+        {IS_WEB ? (
+          <>
+            <Row
+              label="Where your sets are"
+              hint={
+                <>
+                  In this browser on this device. Not on a server, not in
+                  the desktop app, not on your other devices. Clearing this site&apos;s data deletes them: export now
+                  and then to keep a copy.
+                </>
+              }
+            >
+              <span className={`rt-chip${kept ? ' rt-chip--ok' : ''}`}>{kept ? 'kept' : 'may be cleared'}</span>
+            </Row>
+            {!kept && (
+              <Row
+                label="Keep them safe from clean-up"
+                hint="Asks the browser not to clear the sets when space runs low. Some browsers decide by themselves; installing the app (Add to Home Screen) helps."
+              >
+                <button
+                  type="button"
+                  className="rt-btn rt-btn--sm"
+                  onClick={() =>
+                    void askToKeep().then((yes) => {
+                      setKept(yes);
+                      if (!yes) say('data', 'err', 'The browser did not promise to keep them. Export a copy now and then.');
+                    })
+                  }
+                >
+                  ask the browser
+                </button>
+              </Row>
+            )}
+          </>
+        ) : (
+        <>
         <Row label="Daily backup" hint="A copy of the database once a day, in the app's backups folder.">
           <Switch label="Daily backup" on={s.autoBackup} onChange={(v) => patch({ autoBackup: v })} />
         </Row>
@@ -477,9 +534,29 @@ export function SettingsScreen() {
             open
           </button>
         </Row>
+        </>
+        )}
         {noteFor('data')}
       </Section>
 
+      {IS_WEB ? (
+        <Section id="updates" title="about">
+          <Row
+            label={`Version ${info?.version ?? ''}, web`}
+            hint="Updates by itself: the newest version loads the next time you open it."
+          >
+            <span className="rt-chip">web</span>
+          </Row>
+          <Row
+            label="The desktop app"
+            hint="Windows and macOS, with the hotkey overlay, reminders and daily backups. A separate app with its own sets: move them with export and import."
+          >
+            <a className="rt-btn rt-btn--sm" href={DESKTOP_PAGE}>
+              get it
+            </a>
+          </Row>
+        </Section>
+      ) : (
       <Section id="updates" title="system">
         <Row label="Start with the computer" hint="Starts quietly in the tray, so the hotkey always works.">
           <Switch label="Start with the computer" on={autostart === true} disabled={autostart === null} onChange={toggleAutostart} />
@@ -541,6 +618,7 @@ export function SettingsScreen() {
         {noteFor('update')}
         {noteFor('system')}
       </Section>
+      )}
       {import.meta.env.DEV && (
         <p className="rt-small" style={{ marginTop: 24 }}>
           <Link href="/dev/motion">Motion lab</Link> (development build only)

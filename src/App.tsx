@@ -12,6 +12,7 @@ import { SetEditor, type EditorPanel } from '@/components/flashcards/SetEditor';
 import { IconCards, IconSettings } from '@/components/flashcards/FlashcardIcons';
 import { SetFileDrop } from '@/components/SetFileDrop';
 import { latestUpdate, onUpdate } from '@/lib/app/background';
+import { IS_WEB } from '@/lib/app/platform';
 import { useDataVersion } from '@/lib/app/events';
 import { SettingsProvider, useSettings } from '@/lib/app/settings';
 import { useSetOrigins } from '@/lib/app/setOrigin';
@@ -84,6 +85,7 @@ function AppBar() {
       <Link href="/flashcards" className="fc-bar__title app-bar__home">
         <IconCards size={18} />
         Flashcards
+        {IS_WEB && <span className="rt-chip app-bar__web">web</span>}
       </Link>
       <span className="fc-bar__spacer" />
       {update?.newer && (
@@ -151,7 +153,7 @@ export function App() {
         <div className="rt-page fc-page">
           <div className="fc-app">
             <AppBar />
-            <WhatsNew />
+            {!IS_WEB && <WhatsNew />}
             <PageMotion>
             <Routes>
               <Route path="/" element={<Navigate to="/flashcards" replace />} />
