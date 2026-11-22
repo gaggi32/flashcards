@@ -1691,6 +1691,16 @@
   .fc-controls__word {
     display: none;
   }
+  /* "Cards · 5" on its own line, import and generate together below it. */
+  .fc-cardshead {
+    flex-wrap: wrap;
+  }
+  .fc-page .fc-cardshead__label {
+    flex-basis: 100%;
+  }
+  .fc-cardshead .rt-btn {
+    white-space: nowrap;
+  }
   /* A set's edit / delete get a line of their own instead of hanging off
      the right edge under the date. */
   .fc-page .rt-metarow__status {
@@ -1825,6 +1835,14 @@
   background: var(--fc-accent-soft);
   color: var(--fc-accent);
   font-weight: 600;
+}
+/* A phone's keyboard has its own digits: no switch, no digit marks
+   (SpecialKeys.tsx turns the shortcuts off there too). */
+@media (hover: none) and (pointer: coarse) {
+  .fc-key--setting,
+  .fc-key__digit {
+    display: none;
+  }
 }
 
 /* checkpoint (in-betweens like Quizlet) */
@@ -2749,6 +2767,29 @@
   .fc-tq__pair,
   .fc-match {
     grid-template-columns: 1fr;
+  }
+  /* The meter gets a line of its own above the buttons; squeezed between
+     them it had no width left, and "hand in" was pushed off the screen.
+     Not in the overlay, which has its own compact bar (overlay.css). */
+  .fc-test__bar:not(.ov__embed *) {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 10px 10px 10px 14px;
+  }
+  .fc-test__bar:not(.ov__embed *) .fc-meter {
+    order: -1;
+    flex: 1 1 100%;
+  }
+  .fc-test__bar .rt-btn {
+    white-space: nowrap;
+  }
+  .fc-test__handin:not(.ov__embed *) {
+    margin-left: auto;
+  }
+}
+@media (max-width: 380px) {
+  .fc-test__word:not(.ov__embed *) {
+    display: none;
   }
 }
 

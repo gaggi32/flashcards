@@ -389,7 +389,8 @@ function Paper({
       {!done && (
         <div className="fc-test__bar">
           <span className="fc-test__answered">
-            {answered} / {total} answered
+            {answered} / {total}
+            <span className="fc-test__word"> answered</span>
           </span>
           <div className="fc-meter" aria-hidden="true">
             <span className="fc-meter__fill" style={{ width: `${(answered / total) * 100}%` }} />

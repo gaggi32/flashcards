@@ -210,6 +210,37 @@
   outline-offset: 2px;
 }
 
+/* Phones: a control that leaves the words less than ~190px goes onto its own
+   line under them instead of squeezing them (the model field took the row's
+   whole width and left its label one letter per line). */
+@media (max-width: 600px) {
+  .set-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .set-row__text {
+    flex: 1 1 190px;
+  }
+  .set-row__control {
+    max-width: 100%;
+  }
+  .set-row__control:has(.set-model) {
+    flex: 1 1 100%;
+  }
+  .set-model {
+    width: 100%;
+  }
+  .set-model .rt-input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    font-size: 16px;
+  }
+  .set-choice {
+    flex-wrap: wrap;
+  }
+}
+
 /* ---------- dialogs ---------- */
 .dlg-backdrop {
   position: fixed;

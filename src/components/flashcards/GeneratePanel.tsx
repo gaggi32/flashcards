@@ -14,6 +14,7 @@ import {
   type GenerateResult,
   type GeneratedCard,
 } from '@/lib/flashcards/types';
+import { IS_WEB } from '@/lib/app/platform';
 import { AiKeyPanel, effectiveBalance } from './AiKeyPanel';
 import { AiReceipt } from './AiReceipt';
 import { IconClose, IconPlus } from './FlashcardIcons';
@@ -207,7 +208,7 @@ export function GeneratePanel({
     <section className="fc-panel fc-generate" aria-labelledby={`${uid}-title`}>
       <div className="fc-panel__head">
         <h2 id={`${uid}-title`} className="fc-panel__title">
-          generate with ai
+          generate with AI
         </h2>
         {phase.kind !== 'working' && (
           <button type="button" className="rt-linkbtn" onClick={onClose}>
@@ -220,7 +221,7 @@ export function GeneratePanel({
       <div hidden={!noKey}>
         <p className="rt-small fc-generate__nokey">
           Generating cards runs on your own OpenRouter key, so the cost lands on your account. Add
-          one to start — it is saved for the food log too.
+          one to start{IS_WEB ? '.' : ' — it is saved for the food log too.'}
         </p>
         <AiKeyPanel model={model} onStatus={setKeyStatus} intro={false} />
       </div>

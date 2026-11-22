@@ -107,7 +107,7 @@ export function AiKeyPanel({
   return (
     <div className="fc-keypanel">
       <div className="fc-keypanel__head">
-        <span className="fc-keypanel__title">openrouter key</span>
+        <span className="fc-keypanel__title">OpenRouter key</span>
         <span className="rt-chip">
           {status === null
             ? '…'

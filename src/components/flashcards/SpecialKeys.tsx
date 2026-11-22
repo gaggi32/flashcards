@@ -16,6 +16,12 @@ export function keepFocus(e: MouseEvent) {
 /** The digit that types the button at each position: 1–9, then 0 for the tenth. */
 const SHORTCUT_DIGITS = '1234567890';
 
+/** A touch screen with no mouse: the same test as the CSS that hides the switch. */
+const TOUCH_ONLY =
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+
 /**
  * Buttons that type characters the keyboard may not have into a controlled
  * text input, at the caret or over the selection.
@@ -42,7 +48,10 @@ export function SpecialKeys({
   inputRef: RefObject<HTMLInputElement | null>;
   tabbable?: boolean;
 }) {
-  const [shortcuts, setShortcuts] = usePref('specialKeys');
+  const [pref, setShortcuts] = usePref('specialKeys');
+  // A phone's own keyboard has the digits: there the number keys always type
+  // digits, and the switch and the digit marks are hidden (flashcards.css).
+  const shortcuts = pref && !TOUCH_ONLY;
 
   function insert(char: string) {
     const el = inputRef.current;
@@ -118,7 +127,7 @@ export function SpecialKeys({
             : 'Type these characters with the number keys.'
         }
         onMouseDown={keepFocus}
-        onClick={() => setShortcuts(!shortcuts)}
+        onClick={() => setShortcuts(!pref)}
       >
         <span aria-hidden="true">⌨</span> 1–9 {shortcuts ? 'on' : 'off'}
       </button>
