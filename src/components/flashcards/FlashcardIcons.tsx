@@ -88,6 +88,16 @@ export function IconShuffle({ size = 16 }: { size?: number }) {
   );
 }
 
+/** Two arrows passing each other — "swap the two sides". */
+export function IconSwap({ size = 16 }: { size?: number }) {
+  return (
+    <Frame size={size}>
+      <path d="M4 8h15M15 4l4 4-4 4" />
+      <path d="M20 16H5M9 12l-4 4 4 4" />
+    </Frame>
+  );
+}
+
 /** The return key — "enter does this". */
 export function IconEnter({ size = 14 }: { size?: number }) {
   return (

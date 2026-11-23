@@ -24,6 +24,7 @@ import {
   IconGenerate,
   IconImport,
   IconPlus,
+  IconSwap,
   IconTrash,
 } from './FlashcardIcons';
 import { GeneratePanel, type GeneratedReceipt } from './GeneratePanel';
@@ -182,6 +183,17 @@ function EditorForm({
 
   function changeRow(key: string, field: 'term' | 'definition', value: string) {
     edit((prev) => prev.map((row) => (row.key === key ? { ...row, [field]: value } : row)));
+  }
+
+  /** Term and definition trade places: on one card, or on every card. */
+  function swapSides(key?: string) {
+    edit((prev) =>
+      prev.map((row) =>
+        key === undefined || row.key === key
+          ? { ...row, term: row.definition, definition: row.term }
+          : row,
+      ),
+    );
   }
 
   function moveRow(index: number, delta: -1 | 1) {
@@ -399,6 +411,17 @@ function EditorForm({
               </button>
             </>
           )}
+          {filledCount > 0 && (
+            <button
+              type="button"
+              className="rt-btn rt-btn--sm"
+              onClick={() => swapSides()}
+              title="Swap term and definition on every card"
+            >
+              <IconSwap />
+              Swap all sides
+            </button>
+          )}
         </div>
 
         {panel === 'import' && (
@@ -429,6 +452,16 @@ function EditorForm({
               <div className="fc-editrow__head">
                 <span className="fc-editrow__num">{i + 1}</span>
                 <span className="fc-editrow__spacer" />
+                <button
+                  type="button"
+                  className="fc-iconbtn"
+                  onClick={() => swapSides(row.key)}
+                  disabled={isBlank(row)}
+                  aria-label={`Swap term and definition of card ${i + 1}`}
+                  title="Swap term and definition"
+                >
+                  <IconSwap />
+                </button>
                 <button
                   type="button"
                   className="fc-iconbtn"
