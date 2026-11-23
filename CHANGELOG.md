@@ -2,6 +2,13 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.8.0] — 2026-11-23
+### Added
+- Swap term and definition while making or editing a set: "Swap all sides" turns every card around, the ⇄ button on a card turns just that one.
+- A browser version at 404canvas.ch/flashcards, for phones and computers. It keeps its own sets in the browser; move sets between it and this app with export and import.
+### Fixed
+- In a narrow window, settings put their controls under the text, the Test bar wraps so "hand in" stays visible, and the editor's Import / Generate buttons wrap instead of squeezing.
+
 ## [1.7.1] — 2026-11-20
 ### Fixed
 - After an update the window opens again, instead of the app staying in the tray when it had been started at sign-in.
