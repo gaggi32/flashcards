@@ -2,6 +2,11 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.8.1] — 2026-11-24
+### Fixed
+- A test carries over between the overlay and the main window, answers and all, and is still there after a restart. A test is kept for 12 hours after you start it.
+- An answer you have started typing in Write, Learn or Test is still in the box when you switch to the other window or come back later.
+
 ## [1.8.0] — 2026-11-23
 ### Added
 - Swap term and definition while making or editing a set: "Swap all sides" turns every card around, the ⇄ button on a card turns just that one.
