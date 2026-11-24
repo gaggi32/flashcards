@@ -7,14 +7,16 @@
 // screens.
 //
 // It is the same session, not a copy: each mode keeps its place per set in
-// the database (study_sessions), which both windows share, so a round started
-// in the main window carries on here and the other way round. Answers go to
-// the same database. Test is the exception: a test is not saved (TestClient),
-// so the overlay's test is its own. Every write is announced as a data
-// change, and a window that was in the background picks up the other's
-// changes when it comes back (the overlay when the hotkey opens it, the main
-// window when it is focused). Links to the set page or the editor open the
-// main window. Esc or a click elsewhere hides the overlay.
+// the database (study_sessions), which both windows share, so a round (or a
+// test) started in the main window carries on here and the other way round,
+// down to what is typed in an answer box. Answers go to the same database.
+// Every write is announced as a data change, and a window that was in the
+// background picks up the other's changes when it comes back (the overlay
+// when the hotkey opens it, the main window when it is focused), and also
+// when one lands in the first moment after that, before anything was
+// pressed: the other window's last save, sent as it lost the focus. Links to
+// the set page or the editor open the main window. Esc or a click elsewhere
+// hides the overlay.
 
 // Showing and hiding are animated here, not by the OS: Rust shows the window
 // with the panel still invisible and sends "overlay-open"; on "overlay-close"
@@ -37,6 +39,7 @@ import { formatHotkey, isMacPlatform } from '@/lib/app/hotkey';
 import { hideOverlay, openMain, overlayClosed, overlayFit, overlayState } from '@/lib/app/native';
 import { studySetFrom, usePref, type OverlayMode } from '@/lib/app/prefs';
 import { useSettings } from '@/lib/app/settings';
+import { flushTypingSaves } from '@/lib/flashcards/client';
 import type { SetSummaryDTO } from '@/lib/flashcards/types';
 import { asApiError } from '@/lib/store/errors';
 import { addCards, lastUsedSetId, listSets } from '@/lib/store/repo';
@@ -62,6 +65,8 @@ const MODE_PATH = /^\/flashcards\/(\d+)\/(cards|write|learn|test)$/;
 
 /** The .ov padding round the panel, top and bottom together. */
 const FRAME_PAD = 12;
+/** How long after opening the main window's last save still counts as before it. */
+const LATE_SAVE_MS = 1500;
 /** How long a shorter panel has to stay shorter before the window follows. */
 const SHRINK_AFTER_MS = 180;
 
@@ -207,8 +212,11 @@ function OverlayFrame() {
   versionNow.current = version;
   const viewNow = useRef(view);
   viewNow.current = view;
+  /** When the overlay last opened; 0 once something was pressed in it. */
+  const openedAt = useRef(0);
   useEffect(() => {
     const off = listen('overlay-open', () => {
+      openedAt.current = performance.now();
       if (syncedVersion.current !== versionNow.current) {
         syncedVersion.current = versionNow.current;
         setResync((n) => n + 1);
@@ -222,6 +230,25 @@ function OverlayFrame() {
     });
     return () => void off.then((f) => f());
   }, []);
+
+  // The main window's last save can land just after the overlay opened.
+  useEffect(() => {
+    const pressed = () => {
+      openedAt.current = 0;
+    };
+    window.addEventListener('keydown', pressed, true);
+    window.addEventListener('pointerdown', pressed, true);
+    return () => {
+      window.removeEventListener('keydown', pressed, true);
+      window.removeEventListener('pointerdown', pressed, true);
+    };
+  }, []);
+  useEffect(() => {
+    if (syncedVersion.current === version || !openedAt.current) return;
+    if (performance.now() - openedAt.current > LATE_SAVE_MS) return;
+    syncedVersion.current = version;
+    setResync((n) => n + 1);
+  }, [version]);
 
   useEffect(() => {
     const off = listen<number>('overlay-close', (e) => {
@@ -378,6 +405,8 @@ function OverlayFrame() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               setMenu(null);
+              // Before the main window reads the round: what was just typed.
+              flushTypingSaves();
               void openMain(setId === null ? '/flashcards' : pathname);
             }}
           >

@@ -15,13 +15,17 @@ import {
   legacySnapshots,
   packDeck,
   packLearn,
+  packTest,
   packWrite,
+  resumeLearn,
+  resumeWrite,
   unpackDeck,
-  unpackLearn,
-  unpackWrite,
+  unpackTest,
+  type Resumed,
   type StudyMode,
 } from './saved';
 import type { Quality } from './sm2';
+import type { Test } from './test';
 import type {
   CardDTO,
   GenerateCount,
@@ -83,6 +87,7 @@ export function updateSet(id: number, meta: Partial<SetMeta>): Promise<{ set: Se
  * session back.
  */
 export function resetLearnProgress(id: number): Promise<{ ok: true; reset: number }> {
+  cancelTypingSave(sessionKey(id, 'learn'));
   known.delete(sessionKey(id, 'learn'));
   return inOrder(() => write(async () => ({ ok: true as const, reset: await repo.resetProgress(id) })));
 }
@@ -213,8 +218,50 @@ function canonical(value: unknown): string {
   );
 }
 
-function saveSession(setId: number, mode: StudyMode, data: unknown): void {
+/**
+ * How long a save made by typing waits for the next key: one write per pause,
+ * not one per key. Any other save of that round goes at once and takes the
+ * waiting one's place.
+ */
+const TYPING_SAVE_MS = 300;
+const typingSaves = new Map<string, { timer: ReturnType<typeof setTimeout>; run: () => void }>();
+
+/** Sends the saves still waiting for typing to pause, now. */
+export function flushTypingSaves(): void {
+  for (const { timer, run } of [...typingSaves.values()]) {
+    clearTimeout(timer);
+    run();
+  }
+}
+
+// Leaving the window (for the other one, or closing it) must not leave the
+// last keys behind.
+if (typeof window !== 'undefined') {
+  window.addEventListener('blur', flushTypingSaves);
+  window.addEventListener('pagehide', flushTypingSaves);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushTypingSaves();
+  });
+}
+
+function cancelTypingSave(key: string): void {
+  const waiting = typingSaves.get(key);
+  if (!waiting) return;
+  clearTimeout(waiting.timer);
+  typingSaves.delete(key);
+}
+
+function saveSession(setId: number, mode: StudyMode, data: unknown, typing = false): void {
   const key = sessionKey(setId, mode);
+  cancelTypingSave(key);
+  if (typing) {
+    const run = () => {
+      typingSaves.delete(key);
+      saveSession(setId, mode, data);
+    };
+    typingSaves.set(key, { timer: setTimeout(run, TYPING_SAVE_MS), run });
+    return;
+  }
   const json = canonical(data);
   if (data !== null && known.get(key) === json) return;
   known.set(key, json);
@@ -225,6 +272,8 @@ function saveSession(setId: number, mode: StudyMode, data: unknown): void {
 }
 
 function loadSession(setId: number, mode: StudyMode): Promise<unknown> {
+  // What this window typed a moment ago comes back with the round.
+  flushTypingSaves();
   return inOrder(async () => {
     await carryOverSessions();
     const data = await read(() => repo.getSession(setId, mode));
@@ -242,26 +291,41 @@ export function saveDeck(setId: number, deck: Deck): void {
   saveSession(setId, 'cards', deck.done ? null : packDeck(deck));
 }
 
-/** Write's saved round over the set's cards now (in set order), or null. */
-export async function loadWrite(setId: number, cards: StudyCard[]): Promise<WriteSession | null> {
-  return unpackWrite(await loadSession(setId, 'write'), cards);
+/** How a save came about: `typing` (a key in the answer box) waits for a pause. */
+type SaveHow = { typing?: boolean };
+
+/** Write's saved round over the set's cards now (in set order) and its answer box, or null. */
+export async function loadWrite(setId: number, cards: StudyCard[]): Promise<Resumed<WriteSession> | null> {
+  return resumeWrite(await loadSession(setId, 'write'), cards);
 }
 
-export function saveWrite(setId: number, session: WriteSession): void {
-  saveSession(setId, 'write', session.step.kind === 'summary' ? null : packWrite(session));
+/** `typed`: what is in the answer box, not checked yet. */
+export function saveWrite(setId: number, session: WriteSession, typed = '', how: SaveHow = {}): void {
+  saveSession(setId, 'write', session.step.kind === 'summary' ? null : packWrite(session, typed), how.typing);
 }
 
-/** Learn's saved session over `queue` (learnQueue: the cards with their progress now), or null. */
+/** Learn's saved session over `queue` (learnQueue: the cards with their progress now) and its answer box, or null. */
 export async function loadLearn(
   setId: number,
   queue: LearnCardDTO[],
   pool: StudyCard[],
-): Promise<LearnSession | null> {
-  return unpackLearn(await loadSession(setId, 'learn'), queue, pool);
+): Promise<Resumed<LearnSession> | null> {
+  return resumeLearn(await loadSession(setId, 'learn'), queue, pool);
 }
 
-export function saveLearn(setId: number, session: LearnSession): void {
-  saveSession(setId, 'learn', session.step.kind === 'summary' ? null : packLearn(session));
+/** `typed`: what is in the answer box, not checked yet. */
+export function saveLearn(setId: number, session: LearnSession, typed = '', how: SaveHow = {}): void {
+  saveSession(setId, 'learn', session.step.kind === 'summary' ? null : packLearn(session, typed), how.typing);
+}
+
+/** The test this set has on the go, or handed in a moment ago, over its cards now; or null. */
+export async function loadTest(setId: number, cards: readonly StudyCard[]): Promise<Test | null> {
+  return unpackTest(await loadSession(setId, 'test'), cards);
+}
+
+/** Keeps the test, answers and all; `typing` for a written answer being typed. */
+export function saveTest(setId: number, test: Test, how: SaveHow = {}): void {
+  saveSession(setId, 'test', packTest(test), how.typing);
 }
 
 export function clearSession(setId: number, mode: StudyMode): void {

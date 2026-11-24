@@ -27,6 +27,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("../schema/002_study_sessions.sql"),
     include_str!("../schema/003_study_sides.sql"),
     include_str!("../schema/004_folders.sql"),
+    include_str!("../schema/005_test_sessions.sql"),
 ];
 
 pub struct Db(pub Arc<Mutex<Connection>>);
@@ -287,6 +288,43 @@ mod tests {
             .collect::<Result<_, _>>()
             .unwrap();
         assert_eq!(names, vec!["Uni".to_string()]);
+    }
+
+    #[test]
+    fn the_test_sessions_step_keeps_the_rounds_and_lets_test_in() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
+        for sql in &MIGRATIONS[..4] {
+            conn.execute_batch(sql).unwrap();
+        }
+        conn.pragma_update(None, "user_version", 4).unwrap();
+        conn.execute_batch(
+            "INSERT INTO sets (title, created_at, updated_at) VALUES ('a', 'n', 'n');
+             INSERT INTO study_sessions VALUES (1, 'write', '{\"w\":1}', 'then'), (1, 'learn', '{}', 'then');",
+        )
+        .unwrap();
+        assert!(conn.execute("INSERT INTO study_sessions VALUES (1, 'test', '{}', 'n')", []).is_err());
+        migrate(&conn).unwrap();
+        let rows: Vec<(String, String, String)> = conn
+            .prepare("SELECT mode, data, updated_at FROM study_sessions ORDER BY mode")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                ("learn".into(), "{}".into(), "then".into()),
+                ("write".into(), r#"{"w":1}"#.into(), "then".into())
+            ]
+        );
+        conn.execute("INSERT INTO study_sessions VALUES (1, 'test', '{}', 'n')", []).unwrap();
+        assert!(conn.execute("INSERT INTO study_sessions VALUES (1, 'quiz', '{}', 'n')", []).is_err());
+        assert!(conn.execute("INSERT INTO study_sessions VALUES (2, 'cards', '{}', 'n')", []).is_err(), "still needs its set");
+        conn.execute("DELETE FROM sets WHERE id = 1", []).unwrap();
+        let n: i64 = conn.query_row("SELECT COUNT(*) FROM study_sessions", [], |r| r.get(0)).unwrap();
+        assert_eq!(n, 0, "deleting the set still takes its rounds");
     }
 
     #[test]

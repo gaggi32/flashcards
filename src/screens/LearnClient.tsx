@@ -101,6 +101,9 @@ export function LearnClient({ setId }: { setId: number }) {
 
 type Today = { queue: LearnCardDTO[]; stats: LearnStatsDTO };
 
+/** Which box the text in it belongs to: a new card, or a new step on one, starts with an empty one. */
+const boxAt = (s: LearnSession) => `${s.index}:${s.step.kind}`;
+
 /**
  * Each card's streak (repetitionNumber) as last seen from the server, null
  * for a card never reviewed. Sent with every review so a retried request is
@@ -119,6 +122,11 @@ function LearnMode({ set }: { set: SetDTO }) {
   // Fresh from the server on every load, so a resumed session saved before a
   // reload still sends the streaks the server has now.
   const streaks = useRef<Streaks>(new Map());
+  // What is in the answer box, and the card and step it was typed on: it is
+  // kept with that card and step only, so the answer just checked is never
+  // saved with the next one (and a hint or a switch of sides keeps it).
+  const typed = useRef<{ at: string; text: string } | null>(null);
+  const typedFor = (s: LearnSession) => (typed.current?.at === boxAt(s) ? typed.current.text : '');
 
   const load = useCallback(() => {
     let live = true;
@@ -126,6 +134,7 @@ function LearnMode({ set }: { set: SetDTO }) {
     setLoadError(null);
     setSession(null);
     setSavedSession(null);
+    typed.current = null;
     Promise.all([fetchLearnQueue(set.id), fetchLearnStats(set.id), loadSide(set.id, 'learn')])
       .then(async ([queue, stats, side]) => [queue, stats, side, await loadLearn(set.id, queue.cards, set.cards)] as const)
       .then(([queue, stats, side, saved]) => {
@@ -139,10 +148,12 @@ function LearnMode({ set }: { set: SetDTO }) {
         // A session in progress, saved by this window or the other one, over
         // the cards as they are now.
         if (saved) {
-          setSavedSession(saved);
-          // Carry straight on: the overlay and the main window share this
-          // session, so switching between them should not stop at a prompt.
-          setSession(saved);
+          setSavedSession(saved.session);
+          // Carry straight on, answer box and all: the overlay and the main
+          // window share this session, so switching between them should not
+          // stop at a prompt or lose what was being typed.
+          typed.current = { at: boxAt(saved.session), text: saved.typed };
+          setSession(saved.session);
         }
       })
       .catch((err: unknown) => {
@@ -174,8 +185,16 @@ function LearnMode({ set }: { set: SetDTO }) {
   // Kept on every change, without waiting for it.
   useEffect(() => {
     if (!session || !today) return;
-    saveLearn(set.id, session);
+    saveLearn(set.id, session, typedFor(session));
   }, [session, set.id, today]);
+
+  const onTyped = useCallback(
+    (s: LearnSession, text: string) => {
+      typed.current = { at: boxAt(s), text };
+      saveLearn(set.id, s, text, { typing: true });
+    },
+    [set.id],
+  );
 
   // The overlay is for a quick round: no setup screen, Learn starts at once on
   // the side last used, after every load (a reset included). A saved session
@@ -185,6 +204,7 @@ function LearnMode({ set }: { set: SetDTO }) {
   useEffect(() => {
     if (!inOverlay || !today || session || startedFor.current === today || today.queue.length === 0) return;
     startedFor.current = today;
+    typed.current = null;
     clearSession(set.id, 'learn');
     rememberSide(set.id, 'learn', answerWith);
     setSession(startLearn(sessionOrder(today.queue), set.cards, answerWith));
@@ -243,6 +263,7 @@ function LearnMode({ set }: { set: SetDTO }) {
           if (savedSession) setSession(savedSession);
         }}
         onStart={() => {
+          typed.current = null;
           clearSession(set.id, 'learn');
           rememberSide(set.id, 'learn', answerWith);
           setSession(startLearn(sessionOrder(today.queue), set.cards, answerWith));
@@ -277,6 +298,8 @@ function LearnMode({ set }: { set: SetDTO }) {
     <Play
       session={session}
       setSession={setSession}
+      typed={typedFor(session)}
+      onTyped={onTyped}
       streaks={streaks}
       onSwitchSides={onSwitchSides}
       onReset={resetLearn}
@@ -419,18 +442,28 @@ const LEARN_RESET_TITLE = 'Make every card in this set new again in Learn. Flash
 function Play({
   session,
   setSession,
+  typed,
+  onTyped,
   streaks,
   onSwitchSides,
   onReset,
 }: {
   session: LearnSession;
   setSession: React.Dispatch<React.SetStateAction<LearnSession | null>>;
+  /** What was in the answer box when this session was saved (by either window). */
+  typed: string;
+  /** A key in the answer box: kept with the session. */
+  onTyped: (session: LearnSession, text: string) => void;
   streaks: React.RefObject<Streaks>;
   /** Answer with the other side from this card on. */
   onSwitchSides: () => void;
   onReset: () => Promise<void>;
 }) {
-  const [text, setText] = useState('');
+  const [text, setTextState] = useState(typed);
+  const setText = (value: string) => {
+    setTextState(value);
+    onTyped(session, value);
+  };
   const [retypeWrong, setRetypeWrong] = useState(false);
   const [save, setSave] = useState<SaveState>({ status: 'idle' });
   // Set by a button that means "and move on": the move waits for the save.
@@ -465,8 +498,14 @@ function Play({
   // focused element so no choice button inherits :focus-visible from the
   // previous selection — which would make it look like that option is still
   // highlighted on the new card.
+  //
+  // The first time is the card the screen opened on: its box keeps what was
+  // typed there before (in this window or the other one).
+  const shownFor = useRef<string | null>(null);
   useEffect(() => {
-    setText('');
+    const at = boxAt(session);
+    if (shownFor.current !== null && shownFor.current !== at) setTextState('');
+    shownFor.current = at;
     setRetypeWrong(false);
     const target = inputRef.current ?? continueRef.current;
     if (target) target.focus();

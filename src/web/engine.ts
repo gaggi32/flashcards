@@ -17,9 +17,10 @@ import s001 from '../../src-tauri/schema/001_init.sql?raw';
 import s002 from '../../src-tauri/schema/002_study_sessions.sql?raw';
 import s003 from '../../src-tauri/schema/003_study_sides.sql?raw';
 import s004 from '../../src-tauri/schema/004_folders.sql?raw';
+import s005 from '../../src-tauri/schema/005_test_sessions.sql?raw';
 
 /** Schema steps, counted in `PRAGMA user_version`, as in db.rs. Append only. */
-export const MIGRATIONS = [s001, s002, s003, s004];
+export const MIGRATIONS = [s001, s002, s003, s004, s005];
 
 /** Where the file is kept. The browser's is IndexedDB (persist.ts); tests use memory. */
 export interface Persist {

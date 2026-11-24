@@ -636,7 +636,7 @@ export function streakFrom(daysDesc: string[], today: string): number {
 // Each mode's unfinished round per set, as JSON in the shapes of
 // lib/flashcards/saved.ts. The store only keeps it; saved.ts reads it.
 
-const modeField = z.enum(['cards', 'write', 'learn']);
+const modeField = z.enum(['cards', 'write', 'learn', 'test']);
 export type StudyMode = z.infer<typeof modeField>;
 
 /** Far above any real round (a 2000-card Learn session is ~100 kB). */

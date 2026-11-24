@@ -16,7 +16,17 @@ import {
   startLearn,
   type LearnSession,
 } from './learn';
-import { isLegacySessionKey, legacySnapshots, packLearn, packWrite, unpackLearn, unpackWrite } from './saved';
+import {
+  TEST_KEPT_MS,
+  isLegacySessionKey,
+  legacySnapshots,
+  packLearn,
+  packWrite,
+  unpackLearn,
+  unpackTest,
+  unpackWrite,
+} from './saved';
+import { TEST_KINDS, answer, buildTest, finish, matchPair } from './test';
 import type { LearnCardDTO } from './types';
 import { advance as next, dontKnow, startSession, submitAnswer, type WriteSession } from './write';
 import { testDb } from '@/lib/store/testDb';
@@ -134,8 +144,8 @@ describe('a round is kept per set and mode', () => {
 
     // Loads wait for this window's saves, so no flush is needed.
     expect(await client.loadDeck(setId, ids)).toEqual(deck);
-    expect(packWrite((await client.loadWrite(setId, cards))!)).toEqual(packWrite(write));
-    const back = (await client.loadLearn(setId, queue, pool))!;
+    expect(packWrite((await client.loadWrite(setId, cards))!.session)).toEqual(packWrite(write));
+    const back = (await client.loadLearn(setId, queue, pool))!.session;
     expect(packLearn(back)).toEqual(packLearn(learn));
     expect(back.question).toEqual(learn.question);
 
@@ -226,7 +236,7 @@ describe('a round over cards changed since', () => {
     await repo.updateCard(cards[2].id, { term: 'edited' });
     await repo.deleteCard(cards[1].id);
     const now = (await repo.getSet(setId)).cards;
-    const back = (await client.loadWrite(setId, now))!;
+    const back = (await client.loadWrite(setId, now))!.session;
     expect(back.cards.map((c) => c.term)).toEqual(['term 0', 'edited', 'term 3']);
     expect(back.queue).toEqual([cards[0].id, cards[2].id, cards[3].id]);
     // The card whose answer was showing is gone: the next one is asked.
@@ -258,7 +268,7 @@ describe('a round over cards changed since', () => {
     await repo.deleteCard(wrong.id);
     const queue = await repo.learnQueue(setId);
     const pool = (await repo.getSet(setId)).cards;
-    const back = (await client.loadLearn(setId, queue, pool))!;
+    const back = (await client.loadLearn(setId, queue, pool))!.session;
     expect(back.turns.some((t) => t.card.id === wrong.id)).toBe(false);
     expect(back.cards.some((c) => c.id === wrong.id)).toBe(false);
     expect(currentCard(back)!.id).toBe(answer.id);
@@ -328,12 +338,12 @@ describe('the carry-over from localStorage', () => {
 
     // Each comes back as the round it was.
     expect(await client.loadDeck(a.setId, ids)).toEqual(deck);
-    expect(packWrite((await client.loadWrite(a.setId, a.cards))!)).toEqual(packWrite(write));
-    const backLearn = (await client.loadLearn(a.setId, queue, pool))!;
+    expect(packWrite((await client.loadWrite(a.setId, a.cards))!.session)).toEqual(packWrite(write));
+    const backLearn = (await client.loadLearn(a.setId, queue, pool))!.session;
     expect(packLearn(backLearn)).toEqual(packLearn(learn));
     expect(backLearn.step).toEqual(learn.step);
     const qb = await repo.learnQueue(b.setId);
-    const backB = (await client.loadLearn(b.setId, qb, (await repo.getSet(b.setId)).cards))!;
+    const backB = (await client.loadLearn(b.setId, qb, (await repo.getSet(b.setId)).cards))!.session;
     expect(packLearn(backB)).toEqual(packLearn(newer));
   });
 
@@ -342,7 +352,7 @@ describe('the carry-over from localStorage', () => {
     const write = submitAnswer(startSession(cards, { answerWith: 'term', shuffled: false }), 'term 0');
     storage.setItem(`fc-write-session-${setId}`, legacy(write));
     const back = await client.loadWrite(setId, cards);
-    expect(back && packWrite(back)).toEqual(packWrite(write));
+    expect(back && packWrite(back.session)).toEqual(packWrite(write));
     expect(storage.getItem(`fc-write-session-${setId}`)).toBeNull();
   });
 
@@ -354,7 +364,7 @@ describe('the carry-over from localStorage', () => {
     storage.setItem(`fc-write-session-${setId}`, legacy(old));
 
     await client.carryOverSessions();
-    expect(packWrite((await client.loadWrite(setId, cards))!)).toEqual(packWrite(mine));
+    expect(packWrite((await client.loadWrite(setId, cards))!.session)).toEqual(packWrite(mine));
     expect(storage.getItem(`fc-write-session-${setId}`)).toBeNull();
   });
 
@@ -402,7 +412,7 @@ describe('the carry-over from localStorage', () => {
 
     settingsFile.failMark = false;
     const back = await client.loadWrite(setId, cards);
-    expect(back && packWrite(back)).toEqual(packWrite(write));
+    expect(back && packWrite(back.session)).toEqual(packWrite(write));
     expect(settingsFile.sessionsCarriedOver).toBe(true);
     expect(rows()).toHaveLength(1);
     expect(storage.getItem(key)).toBeNull();
@@ -508,5 +518,125 @@ describe('the side a set was last studied with', () => {
     await repo.deleteSet(setId);
     expect(raw.prepare('SELECT COUNT(*) AS n FROM study_sides WHERE set_id = ?').get(setId)).toEqual({ n: 0 });
     expect(await client.loadSide(other.setId, 'learn')).toBe('definition');
+  });
+});
+
+describe('what is typed in an answer box goes with the round', () => {
+  it('Write keeps the box with its card and step, and drops it when that card is deleted', async () => {
+    const { setId, cards } = await setWith(4);
+    const write = startSession(cards, { answerWith: 'term', shuffled: false });
+    client.saveWrite(setId, write, 'TER');
+    const back = (await client.loadWrite(setId, cards))!;
+    expect(back.typed).toBe('TER');
+    expect(packWrite(back.session)).toEqual(packWrite(write));
+
+    // Missed: the retype box is kept as well.
+    const missed = dontKnow(write);
+    client.saveWrite(setId, missed, 'TERM');
+    expect((await client.loadWrite(setId, cards))!.typed).toBe('TERM');
+
+    await repo.deleteCard(cards[0].id);
+    const gone = (await client.loadWrite(setId, (await repo.getSet(setId)).cards))!;
+    expect(gone.session.step).toEqual({ kind: 'ask' });
+    expect(gone.typed).toBe('');
+  });
+
+  it('a round saved before boxes were kept loads with an empty one', async () => {
+    const { setId, cards } = await setWith(2);
+    await repo.saveSession(setId, 'write', packWrite(startSession(cards, { answerWith: 'term', shuffled: false })));
+    expect((await client.loadWrite(setId, cards))!.typed).toBe('');
+    // One that can't be read costs the box, not the round.
+    await repo.saveSession(setId, 'write', {
+      ...packWrite(startSession(cards, { answerWith: 'term', shuffled: false })),
+      typed: 42,
+    });
+    const back = (await client.loadWrite(setId, cards))!;
+    expect(back.typed).toBe('');
+    expect(back.session.index).toBe(0);
+  });
+
+  it('Learn keeps the box of a written question, not of a choice one', async () => {
+    const { setId } = await setWith(8);
+    const { s, queue, pool } = await learnUnderway(setId);
+    const written: LearnSession = { ...s, question: { kind: 'written' } };
+    client.saveLearn(setId, written, 'TERM 3');
+    expect((await client.loadLearn(setId, queue, pool))!.typed).toBe('TERM 3');
+
+    if (s.question?.kind === 'choice') {
+      client.saveLearn(setId, s, 'stray');
+      expect((await client.loadLearn(setId, queue, pool))!.typed).toBe('');
+    }
+  });
+
+  it('a save made by typing waits for a pause; a load, or any other save, sends it at once', async () => {
+    const { setId, cards } = await setWith(3);
+    const write = startSession(cards, { answerWith: 'term', shuffled: false });
+    client.saveWrite(setId, write, 'T', { typing: true });
+    client.saveWrite(setId, write, 'TE', { typing: true });
+    expect(rows()).toEqual([]);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(JSON.parse(rows()[0].data).typed).toBe('TE');
+
+    client.saveWrite(setId, write, 'TER', { typing: true });
+    expect((await client.loadWrite(setId, cards))!.typed).toBe('TER');
+
+    // Answered right after a key: the answer's save takes the key's place.
+    client.saveWrite(setId, write, 'TERM 0', { typing: true });
+    const answered = submitAnswer(write, 'TERM 0');
+    client.saveWrite(setId, answered);
+    await new Promise((r) => setTimeout(r, 400));
+    const kept = JSON.parse(rows()[0].data);
+    expect(kept.step.kind).toBe('correct');
+    expect(kept.typed).toBeUndefined();
+  });
+
+  it('starting Learn over drops a key still waiting to be saved', async () => {
+    const { setId } = await setWith(8);
+    const { s } = await learnUnderway(setId);
+    client.saveLearn(setId, s);
+    client.saveLearn(setId, { ...s, question: { kind: 'written' } }, 'x', { typing: true });
+    await client.resetLearnProgress(setId);
+    await new Promise((r) => setTimeout(r, 400));
+    expect(rows().filter((r) => r.mode === 'learn')).toEqual([]);
+  });
+});
+
+describe('a test is kept like the other rounds', () => {
+  const options = { count: 6, answerWith: 'both' as const, kinds: TEST_KINDS };
+
+  it('saves and loads the paper and its answers, card text only as typed', async () => {
+    const { setId, cards } = await setWith(8);
+    let test = buildTest(cards, options, seeded());
+    for (const q of test.questions) {
+      if (q.kind === 'written') test = answer(test, q.id, 'TYPED');
+      if (q.kind === 'truefalse') test = answer(test, q.id, false);
+      if (q.kind === 'choice') test = answer(test, q.id, q.options[1]);
+      if (q.kind === 'matching') test = matchPair(test, q.id, q.cardIds[0], q.answers[1]);
+    }
+    client.saveTest(setId, test);
+    expect(await client.loadTest(setId, cards)).toEqual(test);
+    expect(rows()[0].data).not.toMatch(/term \d|definition \d/);
+
+    // Handed in, it stays: its marks show in the other window too.
+    const done = finish(test);
+    client.saveTest(setId, done);
+    expect(await client.loadTest(setId, cards)).toEqual(done);
+
+    client.clearSession(setId, 'test');
+    expect(await client.loadTest(setId, cards)).toBeNull();
+  });
+
+  it('drops questions about deleted cards, and starts afresh the next day', async () => {
+    const { setId, cards } = await setWith(8);
+    const test = buildTest(cards, { ...options, count: 8, kinds: ['written'] }, seeded());
+    client.saveTest(setId, test);
+    await repo.deleteCard(cards[0].id);
+    const back = (await client.loadTest(setId, (await repo.getSet(setId)).cards))!;
+    expect(back.questions).toHaveLength(7);
+
+    const raw = JSON.parse(rows()[0].data);
+    expect(unpackTest(raw, cards, test.startedAt + TEST_KEPT_MS - 1000)).not.toBeNull();
+    expect(unpackTest(raw, cards, test.startedAt + TEST_KEPT_MS + 1000)).toBeNull();
+    expect(unpackTest({ ...raw, questions: 'x' }, cards)).toBeNull();
   });
 });

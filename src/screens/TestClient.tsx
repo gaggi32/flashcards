@@ -1,10 +1,11 @@
 // Test: the set as one paper. Pick how many questions and which kinds (they
 // come mixed, each labelled with its kind), answer them in any order, hand it
-// in, and see what was right, with every question marked. A test in progress
-// stays while the app runs (leave for another set and come back to it), but
-// it is not saved: a test is short, and one sat again tomorrow should be new.
-// Each window keeps its own: a test started in the overlay is not the main
-// window's.
+// in, and see what was right, with every question marked. The test is kept
+// in the database with the other modes' rounds (study_sessions), answers and
+// all, so the overlay and the main window share one test and it survives a
+// restart; a handed-in one stays too, so its marks show in both. It is kept
+// for TEST_KEPT_MS after it was started (saved.ts): a test sat again the next
+// day is a new one.
 
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 
@@ -18,6 +19,7 @@ import { PDF_LABEL, useTestPdf } from '@/components/flashcards/TestPrint';
 import { StudyArea, StudyHeader } from '@/components/flashcards/StudyHeader';
 import { SetLoadState, useSet } from '@/components/flashcards/useSet';
 import { useSettings } from '@/lib/app/settings';
+import { clearSession, errorMessage, loadTest, saveTest } from '@/lib/flashcards/client';
 import { computeDiff } from '@/lib/flashcards/diff';
 import { plural } from '@/lib/flashcards/format';
 import { specialCharsOf } from '@/lib/flashcards/specialChars';
@@ -50,8 +52,7 @@ import { answerOf, normalizeAnswer, promptOf, type AnswerCheck, type AnswerWith,
 import { CountUp } from '@/components/motion/CountUp';
 import { Confetti } from '@/components/motion/Confetti';
 
-/** Tests in progress (and the last options), per set, for as long as the app runs. */
-const papers = new Map<number, Test>();
+/** The options last picked, per set, while the app runs (the next setup starts from them). */
 const lastOptions = new Map<number, TestOptions>();
 /** Whether a PDF gets the answer key on its last page; kept while the app runs. */
 let pdfWithKey = true;
@@ -87,18 +88,42 @@ export function TestClient({ setId }: { setId: number }) {
 
 function TestMode({ set }: { set: SetDTO }) {
   const check = useSettings().settings?.answerCheck ?? 'exact';
-  const [test, setTestState] = useState<Test | null>(() => {
-    const kept = papers.get(set.id);
-    return kept ? reconcile(kept, set.cards) : null;
-  });
+  const [test, setTestState] = useState<Test | null>(null);
+  /** The saved test has been read (or found missing); until then nothing shows. */
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+
+  // The test saved for this set, by this window or the other one, over the
+  // cards as they are now. The cards are read here once; changes to them
+  // after that are the reconcile below.
+  const cardsNow = useRef(set.cards);
+  cardsNow.current = set.cards;
+  useEffect(() => {
+    let live = true;
+    setLoaded(false);
+    setLoadError(null);
+    loadTest(set.id, cardsNow.current)
+      .then((saved) => {
+        if (!live) return;
+        setTestState(saved);
+        setLoaded(true);
+      })
+      .catch((err: unknown) => live && setLoadError(errorMessage(err, 'Could not load the test.')));
+    return () => {
+      live = false;
+    };
+  }, [set.id, attempt]);
+
   // The set changed under the test (a card deleted in the editor or the overlay).
   useEffect(() => {
     setTestState((t) => (t ? reconcile(t, set.cards) : t));
   }, [set.cards]);
 
-  function setTest(next: Test | null) {
-    if (next) papers.set(set.id, next);
-    else papers.delete(set.id);
+  /** `typing`: a key in a written answer, saved once typing pauses. */
+  function setTest(next: Test | null, typing = false) {
+    if (next) saveTest(set.id, next, { typing });
+    else clearSession(set.id, 'test');
     setTestState(next);
   }
 
@@ -114,6 +139,27 @@ function TestMode({ set }: { set: SetDTO }) {
       {pdf.note.text}
     </div>
   );
+
+  if (loadError) {
+    return (
+      <div className="rt-section">
+        <div className="rt-note rt-note--err">{loadError}</div>
+        <div className="rt-btnrow" style={{ marginTop: 16 }}>
+          <button type="button" className="rt-btn" onClick={() => setAttempt((n) => n + 1)}>
+            try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <div className="fc-loading" aria-busy="true" aria-label="Loading the test">
+        <div className="fc-skel" style={{ height: 220 }} />
+      </div>
+    );
+  }
 
   if (!test) {
     return (
@@ -276,7 +322,7 @@ function Setup({
 
       <p className="rt-small fc-setup__rules">
         The kinds come mixed. Answer in any order, then hand it in to see your score and every answer marked. Nothing is
-        marked until then. A test is kept while Flashcards is open, not after.
+        marked until then. A test is kept for 12 hours after it is started, even when Flashcards is closed.
       </p>
 
       <div className="fc-test__pdfrow">
@@ -323,7 +369,8 @@ function Paper({
   set: SetDTO;
   test: Test;
   check: AnswerCheck;
-  onChange: (t: Test) => void;
+  /** `typing`: a key in a written answer. */
+  onChange: (t: Test, typing?: boolean) => void;
   onNew: () => void;
   onMissed: (cardIds: number[]) => void;
   onSettings: () => void;
@@ -437,7 +484,7 @@ function QuestionCard({
   byId: ReadonlyMap<number, StudyCard>;
   check: AnswerCheck;
   allCards: readonly StudyCard[];
-  onChange: (t: Test) => void;
+  onChange: (t: Test, typing?: boolean) => void;
 }) {
   const done = test.finishedAt !== null;
   const marks = done ? markQuestion(test, q, byId, check) : null;
@@ -670,7 +717,7 @@ function Written({
   check: AnswerCheck;
   marks: Mark[] | null;
   allCards: readonly StudyCard[];
-  onChange: (t: Test) => void;
+  onChange: (t: Test, typing?: boolean) => void;
 }) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -681,7 +728,7 @@ function Written({
   const done = test.finishedAt !== null;
   const given = typeof test.answers[q.id] === 'string' ? (test.answers[q.id] as string) : '';
   const expected = answerOf(card, q.answerWith);
-  const set = (v: string) => onChange(answer(test, q.id, v));
+  const set = (v: string) => onChange(answer(test, q.id, v), true);
 
   if (done && marks) {
     const right = marks[0].right;

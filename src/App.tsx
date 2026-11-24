@@ -108,26 +108,55 @@ function AppBar() {
   );
 }
 
+/** How long after coming to the front the other window's last save still counts as before it. */
+const LATE_SAVE_MS = 1500;
+
+const isStudying = () => /^\/flashcards\/\d+\/(cards|write|learn|test)$/.test(window.location.hash.slice(1));
+
 /**
  * Each screen fades up as it arrives. A study screen is also started afresh
  * from what is saved when the window comes back to the front after the
  * overlay changed the data, sessions included (both windows share the saved
- * sessions, and every save is announced as a data change).
+ * sessions, and every save is announced as a data change). The other
+ * window's last save (what it sends as it loses the focus) can land just
+ * after this one is in front: a change in the first moment, before anything
+ * was pressed here, starts the screen afresh too.
  */
 function PageMotion({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const [resync, setResync] = useState(0);
   const version = useDataVersion();
   const syncedVersion = useRef(version);
+  /** When the window came to the front; 0 once something was pressed here. */
+  const frontAt = useRef(0);
 
   useEffect(() => {
     const onFocus = () => {
-      const studying = /^\/flashcards\/\d+\/(cards|write|learn)$/.test(window.location.hash.slice(1));
-      if (studying && syncedVersion.current !== version) setResync((n) => n + 1);
+      if (isStudying() && syncedVersion.current !== version) setResync((n) => n + 1);
       syncedVersion.current = version;
+      frontAt.current = performance.now();
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
+  }, [version]);
+
+  useEffect(() => {
+    const pressed = () => {
+      frontAt.current = 0;
+    };
+    window.addEventListener('keydown', pressed, true);
+    window.addEventListener('pointerdown', pressed, true);
+    return () => {
+      window.removeEventListener('keydown', pressed, true);
+      window.removeEventListener('pointerdown', pressed, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (syncedVersion.current === version || !document.hasFocus()) return;
+    if (!frontAt.current || performance.now() - frontAt.current > LATE_SAVE_MS || !isStudying()) return;
+    syncedVersion.current = version;
+    setResync((n) => n + 1);
   }, [version]);
 
   // Moving between screens is a view transition (Link tags its direction):

@@ -51,6 +51,9 @@ const CORRECT_PAUSE_MS = 900;
  */
 const STRAY_ENTER_MS = 400;
 
+/** Which box the text in it belongs to: a new card, or a new step on one, starts with an empty one. */
+const boxAt = (s: WriteSession) => `${s.round}:${s.index}:${s.step.kind}`;
+
 const SIDE_NAME: Record<AnswerWith, { prompt: string; answer: string }> = {
   term: { prompt: 'definition', answer: 'term' },
   definition: { prompt: 'term', answer: 'definition' },
@@ -92,6 +95,11 @@ function WriteMode({ set }: { set: SetDTO }) {
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // What is in the answer box, and the card and step it was typed on: it is
+  // kept with that card and step only, so the answer just checked is never
+  // saved with the next one (and a hint on the same card keeps it).
+  const typed = useRef<{ at: string; text: string } | null>(null);
+  const typedFor = (s: WriteSession) => (typed.current?.at === boxAt(s) ? typed.current.text : '');
 
   // The round saved for this set, by this window or the other one. Cards
   // deleted since drop out of it; edited ones show their new text.
@@ -105,12 +113,14 @@ function WriteMode({ set }: { set: SetDTO }) {
         // A new round starts on the side this set was last studied with.
         if (side) setAnswerWith(side);
         if (saved) {
-          setSavedSession(saved);
-          setAnswerWith(saved.answerWith);
-          setShuffled(saved.shuffled);
-          // Carry straight on: the overlay and the main window share this
-          // session, so switching between them should not stop at a prompt.
-          setSession(saved);
+          setSavedSession(saved.session);
+          setAnswerWith(saved.session.answerWith);
+          setShuffled(saved.session.shuffled);
+          // Carry straight on, answer box and all: the overlay and the main
+          // window share this session, so switching between them should not
+          // stop at a prompt or lose what was being typed.
+          typed.current = { at: boxAt(saved.session), text: saved.typed };
+          setSession(saved.session);
         }
         setLoaded(true);
       })
@@ -123,10 +133,19 @@ function WriteMode({ set }: { set: SetDTO }) {
   // Kept on every change, without waiting for it.
   useEffect(() => {
     if (!session) return;
-    saveWrite(set.id, session);
+    saveWrite(set.id, session, typedFor(session));
   }, [session, set.id]);
 
+  const onTyped = useCallback(
+    (s: WriteSession, text: string) => {
+      typed.current = { at: boxAt(s), text };
+      saveWrite(set.id, s, text, { typing: true });
+    },
+    [set.id],
+  );
+
   function begin() {
+    typed.current = null;
     clearSession(set.id, 'write');
     setSavedSession(null);
     rememberSide(set.id, 'write', answerWith);
@@ -220,6 +239,8 @@ function WriteMode({ set }: { set: SetDTO }) {
     <Play
       session={session}
       setSession={setSession}
+      typed={typedFor(session)}
+      onTyped={onTyped}
       onSwitchSides={onSwitchSides}
       onReset={() => {
         // Back to the setup screen, so a fresh round asks again which side to
@@ -331,17 +352,27 @@ function Setup(props: {
 function Play({
   session,
   setSession,
+  typed,
+  onTyped,
   onSwitchSides,
   onReset,
 }: {
   session: WriteSession;
   setSession: React.Dispatch<React.SetStateAction<WriteSession | null>>;
+  /** What was in the answer box when this round was saved (by either window). */
+  typed: string;
+  /** A key in the answer box: kept with the round. */
+  onTyped: (session: WriteSession, text: string) => void;
   /** Answer with the other side from this card on. */
   onSwitchSides: () => void;
   /** Write over from round 1, same settings. */
   onReset: () => void;
 }) {
-  const [text, setText] = useState('');
+  const [text, setTextState] = useState(typed);
+  const setText = (value: string) => {
+    setTextState(value);
+    onTyped(session, value);
+  };
   const [retypeWrong, setRetypeWrong] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const inputId = useId();
@@ -358,9 +389,14 @@ function Play({
   // and the caret in it. The box stays mounted and focused through "correct" —
   // Enter there skips the pause — so a phone's keyboard does not close and then
   // fail to reopen for the next card.
+  // The first time is the card the screen opened on: its box keeps what was
+  // typed there before (in this window or the other one).
   const shownAt = useRef(0);
+  const shownFor = useRef<string | null>(null);
   useEffect(() => {
-    setText('');
+    const at = boxAt(session);
+    if (shownFor.current !== null && shownFor.current !== at) setTextState('');
+    shownFor.current = at;
     setRetypeWrong(false);
     shownAt.current = performance.now();
     inputRef.current?.focus();

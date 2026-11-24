@@ -55,7 +55,7 @@ describe('the web database', () => {
       expect.arrayContaining(['cards', 'folders', 'progress', 'reviews', 'sets', 'study_sessions', 'study_sides']),
     );
     expect(store.saves()).toBe(1);
-    expect(MIGRATIONS).toHaveLength(4);
+    expect(MIGRATIONS).toHaveLength(5);
   });
 
   it('runs a batch as one transaction with $lastId, and saves it', async () => {
