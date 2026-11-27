@@ -1,6 +1,6 @@
 
 import Link from '@/components/Link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { usePref } from '@/lib/app/prefs';
 import { motionLevel } from '@/lib/app/theme';
@@ -421,7 +421,6 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
       return;
     }
     if (motionLevel() === 'off') {
-      paint(0, false);
       markCard(value);
       return;
     }
@@ -449,12 +448,18 @@ export function Deck({ set, saved, persist = true }: { set: SetDTO; saved: DeckS
     flying.current = null;
     setStamp(null);
     setAdvancing(false);
-    // The next card mounts fresh (the button is keyed by card), so there is
-    // nothing to reset — unless this was the last card and the same element
-    // stays up for the summary's sake.
-    paint(0, false);
+    // The flown card is left where it is, faded out: the next card mounts
+    // fresh (the button is keyed by card) and the old one goes. Putting it
+    // back here would show it in the next card's place, its green or red
+    // fading, until React gets round to removing it. An element that stays
+    // is put back by the layout effect below, before anything is drawn.
     markCard(flight.value);
   }
+  // After a mark, the card shown is new, or the same element put back in
+  // place (a card that stays up has nothing to fly from).
+  useLayoutEffect(() => {
+    if (!flying.current && !drag.current) paint(0, false);
+  }, [deck.index, deck.round, deck.done]);
   const flingRef = useRef(fling);
   flingRef.current = fling;
 
