@@ -2,6 +2,10 @@
 
 All notable changes to Flashcards (desktop). Versions match the GitHub releases.
 
+## [1.8.2] — 2026-11-27
+### Fixed
+- Swiping a card in Flashcards no longer flashes green or red on the card underneath.
+
 ## [1.8.1] — 2026-11-24
 ### Fixed
 - A test carries over between the overlay and the main window, answers and all, and is still there after a restart. A test is kept for 12 hours after you start it.
